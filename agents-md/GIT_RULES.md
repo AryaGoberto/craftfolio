@@ -83,20 +83,38 @@ npm run build
 
 ---
 
-## 5. Alur Kerja Harian (Quick Reference)
+## 5. Alur Kerja Harian — GitHub Flow (Selalu Branch dari `main`)
+
+Proyek ini menggunakan **GitHub Flow**: setiap branch fitur **wajib dibuat dari `main` terbaru**, di-merge kembali ke `main` setelah selesai, lalu branch fitur tersebut **dihapus**. **Dilarang** membuat branch fitur baru dari branch fitur lain (`main → fitur-1 → fitur-2`) agar riwayat commit tidak menumpuk atau berulang.
+
+```text
+main ────●──────────────────────●──────────────────────●────▶
+          \                    / \                    /
+           feat/fitur-1 ──────●   feat/fitur-2 ──────●
+```
+
+### Langkah Praktis (Siklus 1 Fitur)
 
 ```bash
-# 1. Pastikan berada di main terbaru
+# 1. Selalu mulai dari main terbaru
 git checkout main
 git pull origin main
 
-# 2. Buat branch baru untuk tugas saat ini
-git checkout -b feat/nama-fitur
+# 2. Buat branch fitur dari main
+git checkout -b feat/fitur-1
 
-# 3. Setelah selesai & lolos tsc + lint + build:
+# 3. Kerjakan, verifikasi (tsc + lint + build), lalu commit
 git add <file-terkait>
 git commit -m "feat(scope): deskripsi singkat perubahan"
 
-# 4. Push branch ke remote
-git push -u origin feat/nama-fitur
+# 4. Merge kembali ke main (lokal) atau via Pull Request (Squash & Merge)
+git checkout main
+git pull origin main
+git merge --no-ff feat/fitur-1   # atau gunakan Squash & Merge di GitHub
+git push origin main
+
+# 5. Hapus branch fitur yang sudah selesai
+git branch -d feat/fitur-1
 ```
+
+Saat mulai **Fitur 2**, ulangi lagi dari langkah **#1** (`git checkout main` → `git checkout -b feat/fitur-2`).
