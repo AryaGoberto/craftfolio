@@ -60,35 +60,37 @@ Dokumen ini adalah target daftar tugas (*task list target*) yang disusun menggun
 
 ---
 
-### Task 3: Setup Vitest & Unit Test Lengkap untuk `ats-linter.ts`
+### Task 3: Setup Vitest & Unit Test Lengkap untuk `ats-linter.ts` ✅
 
 **Description:** Mengonfigurasi test runner `vitest` di proyek dan menulis rangkaian pengujian unit otomatis (branch `test/ats-linter`) untuk memverifikasi seluruh 11 aturan deterministik pada `runAtsLint` (`src/lib/ats-linter.ts`) serta fungsi ekstraksi teks linear `extractLinearResumeText` (`src/components/preview/AtsXRayView.tsx`).
 
 **Acceptance criteria:**
-- [ ] Script `"test": "vitest run"` terdaftar di `package.json` dan dapat mengeksekusi file test TypeScript dengan alias `@/`.
-- [ ] `src/lib/__tests__/ats-linter.test.ts` menguji seluruh skenario aturan `fix` (`contact-completeness`, `placeholder-text`), `review` (`empty-section`, `missing-dates`, `inconsistent-dates`, `long-bullet`, `first-person-pronoun`, `summary-word-count`, `non-standard-heading`, `page-overflow`), dan `good` (`core-structure-ok`).
-- [ ] Pengujian mencakup verifikasi `extractLinearResumeText` bahwa item dan section dengan `isVisible: false` tidak bocor ke hasil teks linear ATS.
+- [x] Script `"test": "vitest run"` terdaftar di `package.json` dan dapat mengeksekusi file test TypeScript dengan alias `@/`.
+- [x] `src/lib/__tests__/ats-linter.test.ts` menguji seluruh skenario aturan `fix` (`contact-completeness`, `placeholder-text`), `review` (`empty-section`, `missing-dates`, `inconsistent-dates`, `long-bullet`, `first-person-pronoun`, `summary-word-count`, `non-standard-heading`, `page-overflow`), dan `good` (`core-structure-ok`).
+- [x] Pengujian mencakup verifikasi `extractLinearResumeText` bahwa item dan section dengan `isVisible: false` tidak bocor ke hasil teks linear ATS.
 
 **Verification:**
-- [ ] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
-- [ ] Build succeeds: `npm run build`
-- [ ] Manual check: Jalankan `npm test` di terminal dan pastikan seluruh test case hijau.
+- [x] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
+- [x] Build succeeds: `npm run build`
+- [x] Manual check: Jalankan `npm test` di terminal dan pastikan seluruh test case hijau (2 files, 35 tests passed).
 
 **Dependencies:** None
 
 **Files likely touched:**
 - `package.json`
+- `package-lock.json`
 - `vitest.config.ts`
 - `src/lib/__tests__/ats-linter.test.ts`
+- `src/lib/__tests__/url-utils.test.ts`
 
-**Estimated scope:** Small (3 files)
+**Estimated scope:** Small (4-5 files)
 
 ---
 
 ## Checkpoint 1: After Tasks 1–3 (MVP Complete)
-- [ ] Seluruh unit test lulus (`npm test`)
-- [ ] Pengecekan tipe dan linter bersih (`npx tsc --noEmit && npm run lint`)
-- [ ] Aplikasi berhasil di-build untuk production (`npm run build`)
+- [x] Seluruh unit test lulus (`npm test`)
+- [x] Pengecekan tipe dan linter bersih (`npx tsc --noEmit && npm run lint`)
+- [x] Aplikasi berhasil di-build untuk production (`npm run build`)
 - [ ] Alur inti MVP (*Landing Page → Galeri Template → Split-Screen Editor → ATS Checker → Export PDF Vector & JSON Backup*) berjalan end-to-end tanpa error
 - [ ] Review dengan human sebelum lanjut ke Fase 2
 

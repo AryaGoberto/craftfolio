@@ -66,7 +66,7 @@ Checklist ini memecah roadmap di [PRD.md](./PRD.md) menjadi tugas-tugas kecil ya
 ### 4.1 Rule-Based ATS Readability Checker
 - [x] Implementasikan fungsi murni `runAtsLint` di `src/lib/ats-linter.ts` mencakup seluruh aturan `fix`, `review`, dan `good`.
 - [x] Buat UI modal `AtsCheckerModal` dengan badge status (`Good` / `Review` / `Fix`) dan klik-untuk-lompat ke section terkait.
-- [ ] Tulis unit test untuk `runAtsLint` (kasus kontak kosong, format tanggal campur, bullet panjang, placeholder, dan CV valid).
+- [x] Tulis unit test untuk `runAtsLint` (kasus kontak kosong, format tanggal campur, bullet panjang, placeholder, dan CV valid).
 
 ### 4.2 Landing Page, Galeri Template & Pengujian
 - [x] Buat Landing Page di `src/app/page.tsx` dengan CTA langsung ke `/editor` ("Buat CV Sekarang — Gratis, Tanpa Login").

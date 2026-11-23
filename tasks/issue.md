@@ -1,46 +1,40 @@
-# ISSUE-002: Registrasi Font `.ttf` Lokal & Perbaikan Clickable Links pada Ekspor PDF
+# ISSUE-003: Setup Vitest & Unit Test Lengkap untuk `ats-linter.ts` dan `extractLinearResumeText`
 
 | Atribut | Detail |
 | :--- | :--- |
-| **Referensi Plan** | `tasks/todo.md` — Phase 1, **Task 2** |
-| **Branch Git** | `feat/pdf-font-sync` *(buat dari `main` terbaru sesuai `agents-md/GIT_RULES.md`)* |
+| **Referensi Plan** | `tasks/todo.md` — Phase 1, **Task 3** |
+| **Branch Git** | `test/ats-linter` *(dibuat dari `main` terbaru sesuai `agents-md/GIT_RULES.md`)* |
 | **Target Eksekutor** | Junior Developer / AI Coding Model Ringan |
-| **Estimasi Scope** | Medium (5–6 file kode + aset font `.ttf` di `public/fonts/`) |
-| **Prasyarat** | Task 1 (`/templates`) sudah selesai; `npm install` sudah berjalan |
+| **Estimasi Scope** | Small (3–4 file) |
+| **Prasyarat** | Task 1 (`/templates`) & Task 2 (`feat/pdf-font-sync`) sudah ter-merge di `main` |
 
 ---
 
 ## 1. Latar Belakang & Masalah Saat Ini
 
-Saat ini terdapat **3 kesenjangan teknis** antara *Live HTML Preview* (`src/components/preview/ResumeHtmlRenderer.tsx`) dan hasil ekspor PDF (`src/components/pdf/PdfDocument.tsx`):
+Saat ini proyek **FormaCV** belum memiliki *test runner* otomatis di `package.json`. Padahal fungsi deterministik berikut adalah pondasi kualitas ATS dan akan terus dipakai di Fase 2:
 
-1. **Font PDF tidak cocok dengan HTML Preview:**
-   - Di `src/lib/template-tokens.ts` baris 88–93, `PDF_FONT_FAMILIES` masih memetakan seluruh font ke font bawaan PDF (`Helvetica` dan `Times-Roman`), bukan ke *Inter*, *Roboto*, *EB Garamond*, dan *Merriweather*.
-   - Di `src/lib/template-tokens.ts` baris 83, `HTML_FONT_FAMILIES.roboto` juga masih meminjam `var(--font-inter)` karena `Roboto` belum dimuat di `src/app/layout.tsx`.
-2. **Pemenggalan Kata Otomatis (*Auto-Hyphenation*) pada PDF:**
-   - Secara default, `@react-pdf/renderer` memotong kata panjang di ujung baris dengan tanda `-`. Hal ini mengganggu keterbacaan dan dapat memecah *keyword* saat di-parse mesin ATS.
-3. **Hyperlink PDF Tidak Dapat Diklik (*Non-Clickable*):**
-   - Di `src/components/pdf/PdfDocument.tsx`, email (`basics.email`), tautan kontak (`basics.links`), URL proyek (`item.url`), dan URL sertifikasi (`item.url`) masih dirender dengan `<Text>` biasa (dan `item.url` pada sertifikasi bahkan belum dirender), bukan dengan komponen `<Link>` dari `@react-pdf/renderer`. Padahal `agents-md/PRD.md` Bagian 6.1 mewajibkan semua hyperlink di PDF memiliki anotasi URL yang aktif.
+1. **`runAtsLint` (`src/lib/ats-linter.ts`):** Mengandung **11 aturan deterministik** (`fix`, `review`, `good`) termasuk validasi kontak, deteksi placeholder, panjang summary, section kosong, judul non-standar, tanggal kosong/campur, bullet terlalu panjang (`> 220` karakter), kata ganti orang pertama, *page overflow*, dan `core-structure-ok`.
+2. **`extractLinearResumeText` (`src/components/preview/AtsXRayView.tsx`):** Menyusun urutan teks linear ATS dari `ResumeDocument` dan wajib memastikan item/section/bullet dengan `isVisible: false` tidak bocor ke teks output.
+3. **`normalizeUrl` & `toMailtoHref` (`src/lib/url-utils.ts`):** Baru ditambahkan pada Task 2 untuk sanitasi dan normalisasi tautan PDF (`https://`, `mailto:`, blokir `javascript:`/`data:`).
+
+Tanpa unit test otomatis, perubahan kecil pada regex atau struktur `ResumeDocument` dapat memicu regresi diam-diam.
 
 ---
 
 ## 2. Tujuan & Ruang Lingkup (*Scope*)
 
 ### Yang HARUS Dikerjakan (*In Scope*)
-1. Menyediakan file font **statis `.ttf`** (Regular, Bold, Italic, Bold Italic) untuk 4 keluarga font di `public/fonts/`:
-   - `Inter`
-   - `Roboto`
-   - `EB Garamond`
-   - `Merriweather`
-2. Membuat modul registrasi font client-side `src/lib/pdf-fonts.ts` yang mendaftarkan ke-4 keluarga font tersebut ke `@react-pdf/renderer` sekaligus mematikan *auto-hyphenation*.
-3. Memperbarui `PDF_FONT_FAMILIES` (dan melengkapi `Roboto` di `layout.tsx` + `HTML_FONT_FAMILIES`) agar ke-4 pilihan font konsisten antara HTML Preview dan PDF.
-4. Membuat helper normalisasi URL (`normalizeUrl` & `toMailtoHref`) dan memperbarui `src/components/pdf/PdfDocument.tsx` agar seluruh tautan (**email**, **contact links**, **project URL**, dan **certification URL**) dirender menggunakan `<Link src={...}>` yang *clickable* dan tetap mengikuti gaya monokromatis `agents-md/brand-guideline.md`.
+1. Menginstal `vitest` sebagai `devDependency` dan menambahkan script `"test": "vitest run"` (serta opsional `"test:watch": "vitest"`) di `package.json`.
+2. Membuat konfigurasi `vitest.config.ts` di root proyek dengan alias `@` → `./src` dan `esbuild: { jsx: "automatic" }` agar `.tsx` (seperti `AtsXRayView.tsx`) dapat diimpor langsung tanpa error JSX.
+3. Membuat `src/lib/__tests__/ats-linter.test.ts` yang menguji **seluruh aturan `fix`, `review`, dan `good`** di `runAtsLint`, termasuk *edge cases* (batas 220 karakter, *word boundary* kata ganti, visibilitas `isVisible: false`, dan kondisi `lastPageFillRatio < 0.15`).
+4. Menguji `extractLinearResumeText` (di dalam `src/lib/__tests__/ats-linter.test.ts` atau file terpisah `src/lib/__tests__/ats-xray.test.ts`) untuk memastikan urutan `config.sectionOrder` diikuti dan seluruh entitas `isVisible: false` (links, summary, section, item, bullet, custom section) tidak muncul di hasil ekstraksi.
+5. Menambahkan pengujian singkat untuk `normalizeUrl` dan `toMailtoHref` (`src/lib/__tests__/url-utils.test.ts`).
 
 ### Yang DILARANG / Di Luar Ruang Lingkup (*Out of Scope*)
-- **JANGAN** mengubah layout *split-screen* editor, store `useResumeStore`, atau skema Zod `ResumeDocument`.
-- **JANGAN** mengganti `@react-pdf/renderer` ke Playwright/Typst atau mengubah PDF menjadi `<canvas>` / gambar.
-- **JANGAN** menggunakan file font `.woff2` atau *variable font* untuk `@react-pdf/renderer` (lihat Bagian 5 — Jebakan Umum).
-- **JANGAN** mengubah tampilan warna PDF menjadi biru link default browser (tetap monokromatis `#18181B` / `#09090B`).
+- **JANGAN** mengubah logika produksi di `src/lib/ats-linter.ts`, `src/components/preview/AtsXRayView.tsx`, atau `src/lib/url-utils.ts` kecuali ditemukan bug nyata yang jelas melanggar spesifikasi (jika ada, catat di PR).
+- **JANGAN** menginstal library berat yang tidak perlu (`jest`, `playwright`, `jsdom`, `@testing-library/react`). Seluruh fungsi yang diuji adalah *pure functions* yang berjalan cepat di environment `node` bawaan Vitest.
+- **JANGAN** mengubah file `.gitignore` atau `skills-lock.json`.
 
 ---
 
@@ -48,390 +42,257 @@ Saat ini terdapat **3 kesenjangan teknis** antara *Live HTML Preview* (`src/comp
 
 | Aksi | Path File | Ringkasan Perubahan |
 | :--- | :--- | :--- |
-| **Buat (Aset)** | `public/fonts/*.ttf` | 16 file static `.ttf` (4 font × 4 varian: Regular, Bold, Italic, BoldItalic) |
-| **Buat** | `src/lib/pdf-fonts.ts` | Fungsi idempoten `registerPdfFonts()` + `Font.registerHyphenationCallback` |
-| **Buat** | `src/lib/url-utils.ts` | Helper murni `normalizeUrl(url)` dan `toMailtoHref(email)` |
-| **Ubah** | `src/lib/template-tokens.ts` | Update `PDF_FONT_FAMILIES` ke nama font terdaftar & `HTML_FONT_FAMILIES.roboto` ke `var(--font-roboto)` |
-| **Ubah** | `src/app/layout.tsx` | Muat `Roboto` dari `next/font/google` dengan variable `--font-roboto` |
-| **Ubah** | `src/components/pdf/PdfDocument.tsx` | Panggil `registerPdfFonts()`, ganti email & URL menjadi `<Link>` dari `@react-pdf/renderer` |
+| **Ubah** | `package.json` & `package-lock.json` | Tambah `vitest` di `devDependencies` dan script `"test": "vitest run"` |
+| **Buat** | `vitest.config.ts` | Konfigurasi Vitest (`environment: "node"`, alias `@` → `src`, `esbuild.jsx: "automatic"`) |
+| **Buat** | `src/lib/__tests__/ats-linter.test.ts` | Unit test lengkap untuk seluruh aturan `runAtsLint` + `extractLinearResumeText` |
+| **Buat** | `src/lib/__tests__/url-utils.test.ts` | Unit test untuk `normalizeUrl` & `toMailtoHref` |
 
 ---
 
 ## 4. Panduan Implementasi Langkah demi Langkah
 
-### Langkah 1 — Buat Branch Fitur Baru
-Pastikan berada di `main` terbaru, lalu buat branch `feat/pdf-font-sync`:
+### Langkah 1 — Pastikan Berada di Branch `test/ats-linter`
 ```bash
-git checkout main
-git pull origin main
-git checkout -b feat/pdf-font-sync
+git branch --show-current
+# Pastikan outputnya: test/ats-linter
 ```
 
 ---
 
-### Langkah 2 — Siapkan Aset Font `.ttf` Statis di `public/fonts/`
-Buat folder `public/fonts/` dan simpan **file `.ttf` statis** (*bukan variable font, bukan `.woff2`*) dengan penamaan tepat seperti di bawah ini:
-
-```text
-public/fonts/
-├── Inter-Regular.ttf
-├── Inter-Bold.ttf
-├── Inter-Italic.ttf
-├── Inter-BoldItalic.ttf
-├── Roboto-Regular.ttf
-├── Roboto-Bold.ttf
-├── Roboto-Italic.ttf
-├── Roboto-BoldItalic.ttf
-├── EBGaramond-Regular.ttf
-├── EBGaramond-Bold.ttf
-├── EBGaramond-Italic.ttf
-├── EBGaramond-BoldItalic.ttf
-├── Merriweather-Regular.ttf
-├── Merriweather-Bold.ttf
-├── Merriweather-Italic.ttf
-└── Merriweather-BoldItalic.ttf
-```
-
-**Sumber pengunduhan resmi (aman & open-source SIL OFL / Apache 2.0):**
-- **Google Fonts GitHub (`google/fonts`)** folder `static/` untuk masing-masing keluarga font:
-  - Inter: `ofl/inter/static/` (atau release resmi `rsms/inter` folder `extras/ttf/`)
-  - Roboto: `ofl/roboto/static/`
-  - EB Garamond: `ofl/ebgaramond/static/`
-  - Merriweather: `ofl/merriweather/static/`
-- **Atau via package `@fontsource` sementara** (lalu salin `.ttf` jika tersedia — catatan: `@fontsource` umumnya hanya berisi `.woff`/`.woff2`, jadi **Google Fonts static `.ttf`** adalah sumber paling aman).
-
-**Wajib verifikasi keabsahan file `.ttf` setelah mengunduh:**
-Jalankan perintah berikut di terminal dan pastikan **semua** file terdeteksi sebagai `TrueType Font data` (bukan `HTML document` akibat URL salah/404):
+### Langkah 2 — Install `vitest` & Tambah Script di `package.json`
+Jalankan perintah berikut:
 ```bash
-file public/fonts/*.ttf
+npm install -D vitest
 ```
-Contoh output yang benar:
-```text
-public/fonts/Inter-Regular.ttf: TrueType Font data, ...
+
+Lalu tambahkan script `"test"` dan `"test:watch"` di bagian `"scripts"` pada `package.json`:
+```json
+"scripts": {
+  "dev": "next dev",
+  "build": "next build",
+  "start": "next start",
+  "lint": "eslint",
+  "test": "vitest run",
+  "test:watch": "vitest"
+}
 ```
 
 ---
 
-### Langkah 3 — Buat `src/lib/pdf-fonts.ts`
-Buat file baru `src/lib/pdf-fonts.ts` dengan kode lengkap berikut. Gunakan guard `fontsRegistered` agar registrasi hanya terjadi **1 kali** di client-side:
+### Langkah 3 — Buat `vitest.config.ts`
+Buat file `vitest.config.ts` di root proyek:
 
 ```typescript
-"use client";
+import path from "node:path";
+import { defineConfig } from "vitest/config";
 
-import { Font } from "@react-pdf/renderer";
-
-let fontsRegistered = false;
-
-export const PDF_REGISTERED_FAMILIES = {
-  INTER: "Inter",
-  ROBOTO: "Roboto",
-  EB_GARAMOND: "EB Garamond",
-  MERRIWEATHER: "Merriweather",
-} as const;
-
-export function registerPdfFonts(): void {
-  if (fontsRegistered) return;
-
-  Font.register({
-    family: PDF_REGISTERED_FAMILIES.INTER,
-    fonts: [
-      { src: "/fonts/Inter-Regular.ttf", fontWeight: 400, fontStyle: "normal" },
-      { src: "/fonts/Inter-Bold.ttf", fontWeight: 700, fontStyle: "normal" },
-      { src: "/fonts/Inter-Italic.ttf", fontWeight: 400, fontStyle: "italic" },
-      { src: "/fonts/Inter-BoldItalic.ttf", fontWeight: 700, fontStyle: "italic" },
-    ],
-  });
-
-  Font.register({
-    family: PDF_REGISTERED_FAMILIES.ROBOTO,
-    fonts: [
-      { src: "/fonts/Roboto-Regular.ttf", fontWeight: 400, fontStyle: "normal" },
-      { src: "/fonts/Roboto-Bold.ttf", fontWeight: 700, fontStyle: "normal" },
-      { src: "/fonts/Roboto-Italic.ttf", fontWeight: 400, fontStyle: "italic" },
-      { src: "/fonts/Roboto-BoldItalic.ttf", fontWeight: 700, fontStyle: "italic" },
-    ],
-  });
-
-  Font.register({
-    family: PDF_REGISTERED_FAMILIES.EB_GARAMOND,
-    fonts: [
-      { src: "/fonts/EBGaramond-Regular.ttf", fontWeight: 400, fontStyle: "normal" },
-      { src: "/fonts/EBGaramond-Bold.ttf", fontWeight: 700, fontStyle: "normal" },
-      { src: "/fonts/EBGaramond-Italic.ttf", fontWeight: 400, fontStyle: "italic" },
-      { src: "/fonts/EBGaramond-BoldItalic.ttf", fontWeight: 700, fontStyle: "italic" },
-    ],
-  });
-
-  Font.register({
-    family: PDF_REGISTERED_FAMILIES.MERRIWEATHER,
-    fonts: [
-      { src: "/fonts/Merriweather-Regular.ttf", fontWeight: 400, fontStyle: "normal" },
-      { src: "/fonts/Merriweather-Bold.ttf", fontWeight: 700, fontStyle: "normal" },
-      { src: "/fonts/Merriweather-Italic.ttf", fontWeight: 400, fontStyle: "italic" },
-      { src: "/fonts/Merriweather-BoldItalic.ttf", fontWeight: 700, fontStyle: "italic" },
-    ],
-  });
-
-  // Nonaktifkan pemenggalan kata otomatis (-) agar teks ATS utuh
-  Font.registerHyphenationCallback((word) => [word]);
-
-  fontsRegistered = true;
-}
-```
-
----
-
-### Langkah 4 — Buat `src/lib/url-utils.ts`
-Pengguna sering mengetik URL tanpa protokol (contoh: `linkedin.com/in/rakapratama` atau `github.com/rakapratama`). Jika langsung diberikan ke `<Link src="...">`, banyak PDF viewer tidak mengenalinya sebagai tautan web eksternal.
-
-Buat `src/lib/url-utils.ts`:
-
-```typescript
-/**
- * Memastikan URL eksternal memiliki protokol yang valid untuk anotasi hyperlink PDF.
- * Mengembalikan string kosong jika input kosong atau memakai protokol berbahaya (mis. javascript:).
- */
-export function normalizeUrl(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return "";
-
-  const lower = trimmed.toLowerCase();
-  if (lower.startsWith("javascript:") || lower.startsWith("data:")) {
-    return "";
-  }
-
-  if (
-    lower.startsWith("http://") ||
-    lower.startsWith("https://") ||
-    lower.startsWith("mailto:")
-  ) {
-    return trimmed;
-  }
-
-  return `https://${trimmed}`;
-}
-
-/**
- * Mengubah alamat email menjadi href mailto: yang valid.
- */
-export function toMailtoHref(email: string): string {
-  const trimmed = email.trim();
-  if (!trimmed) return "";
-  return trimmed.toLowerCase().startsWith("mailto:")
-    ? trimmed
-    : `mailto:${trimmed}`;
-}
-```
-
----
-
-### Langkah 5 — Sinkronkan `src/app/layout.tsx` & `src/lib/template-tokens.ts`
-
-#### 5.1 Update `src/app/layout.tsx`
-Tambahkan `Roboto` dari `next/font/google`:
-```tsx
-import { Inter, Roboto, EB_Garamond, Merriweather } from "next/font/google";
-
-const roboto = Roboto({
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-  variable: "--font-roboto",
+export default defineConfig({
+  esbuild: {
+    jsx: "automatic",
+  },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  test: {
+    environment: "node",
+    include: ["src/**/__tests__/**/*.test.ts"],
+  },
 });
 ```
-Lalu tambahkan `${roboto.variable}` pada `className` elemen `<html>`.
 
-#### 5.2 Update `src/lib/template-tokens.ts`
-Ubah bagian `HTML_FONT_FAMILIES` dan `PDF_FONT_FAMILIES` (baris 81–93) menjadi:
-```typescript
-export const HTML_FONT_FAMILIES: Record<FontFamilyPreset, string> = {
-  inter: "var(--font-inter), ui-sans-serif, system-ui, sans-serif",
-  roboto: "var(--font-roboto), ui-sans-serif, system-ui, sans-serif",
-  serif: "var(--font-garamond), Georgia, 'Times New Roman', serif",
-  georgia: "var(--font-merriweather), Georgia, serif",
-};
-
-export const PDF_FONT_FAMILIES: Record<FontFamilyPreset, string> = {
-  inter: "Inter",
-  roboto: "Roboto",
-  serif: "EB Garamond",
-  georgia: "Merriweather",
-};
-```
-*(Catatan: Jangan import `pdf-fonts.ts` di `template-tokens.ts` karena `template-tokens.ts` juga dipakai oleh komponen non-PDF / SSR!)*
+> **Kenapa `esbuild: { jsx: "automatic" }` wajib ada?**
+> Karena `extractLinearResumeText` berada di dalam `src/components/preview/AtsXRayView.tsx` yang mengandung JSX. Tanpa opsi ini, Vitest tanpa `@vitejs/plugin-react` bisa melempar `ReferenceError: React is not defined` saat me-load file `.tsx` tersebut.
 
 ---
 
-### Langkah 6 — Update `src/components/pdf/PdfDocument.tsx`
+### Langkah 4 — Pahami Detail Perilaku Aktual `ats-linter.ts` Sebelum Menulis Test
 
-1. **Import `Link` dari `@react-pdf/renderer`**, `registerPdfFonts` dari `@/lib/pdf-fonts`, serta `normalizeUrl` dan `toMailtoHref` dari `@/lib/url-utils`.
-2. **Panggil `registerPdfFonts()`** di awal komponen `ResumePdfDocument` (sebelum `StyleSheet.create(...)`).
-3. **Tambahkan style `link` di `StyleSheet.create`:**
-   ```typescript
-   link: {
-     color: "#18181B",
-     textDecoration: isClassic ? "underline" : "none",
-   },
-   inlineLink: {
-     color: "#18181B",
-     textDecoration: "underline",
-   },
-   ```
-4. **Ubah daftar kontak (baris 107–113 dan 364–368)** dari `string[]` biasa menjadi array terstruktur agar setiap segmen tahu apakah ia teks biasa atau hyperlink:
-   ```typescript
-   type ContactEntry = { text: string; href?: string };
+Rujuk `src/lib/ats-linter.ts` baris 43–277. Berikut tabel kontrak aturan yang **wajib** dicakup di test:
 
-   const contactEntries: ContactEntry[] = [];
-   if (basics.phone?.trim()) {
-     contactEntries.push({ text: basics.phone.trim() });
-   }
-   if (basics.email?.trim()) {
-     contactEntries.push({
-       text: basics.email.trim(),
-       href: toMailtoHref(basics.email),
-     });
-   }
-   for (const link of visibleLinks) {
-     const href = normalizeUrl(link.url);
-     contactEntries.push({
-       text: link.url.trim(),
-       href: href || undefined,
-     });
-   }
-   if (!isClassic && basics.location?.trim()) {
-     contactEntries.push({ text: basics.location.trim() });
-   }
-   ```
-   Lalu render di dalam `<View style={styles.header}>`:
-   ```tsx
-   {contactEntries.length > 0 ? (
-     <Text style={styles.contact}>
-       {contactEntries.map((entry, idx) => (
-         <Text key={`${entry.text}-${idx}`}>
-           {idx > 0 ? (isClassic ? "  |  " : "  •  ") : ""}
-           {entry.href ? (
-             <Link src={entry.href} style={styles.link}>
-               {entry.text}
-             </Link>
-           ) : (
-             entry.text
-           )}
-         </Text>
-       ))}
-     </Text>
-   ) : null}
-   ```
-5. **Ubah URL pada bagian `projects` (baris 253–255):**
-   ```tsx
-   {item.url && normalizeUrl(item.url) ? (
-     <Link
-       src={normalizeUrl(item.url)}
-       style={[styles.italicSubText, styles.inlineLink]}
-     >
-       {item.url.trim()}
-     </Link>
-   ) : null}
-   ```
-6. **Ubah bagian `certifications` (baris 298–306):**
-   Jika `item.url` terisi dan valid (`normalizeUrl(item.url)`), bungkus `item.name` dengan `<Link src={normalizeUrl(item.url)} style={styles.inlineLink}>`:
-   ```tsx
-   {items.map((item) => {
-     const certHref = item.url ? normalizeUrl(item.url) : "";
-     return (
-       <View key={item.id} style={styles.rowBetween}>
-         <Text>
-           {certHref ? (
-             <Link src={certHref} style={[styles.boldTitle, styles.inlineLink]}>
-               {item.name}
-             </Link>
-           ) : (
-             <Text style={styles.boldTitle}>{item.name}</Text>
-           )}
-           {item.issuer ? ` — ${item.issuer}` : ""}
-         </Text>
-         {item.date ? <Text style={styles.dateText}>{item.date}</Text> : null}
-       </View>
-     );
-   })}
-   ```
+| # | Rule ID | Status | Kondisi Pemicu Persis di Kode |
+| :--- | :--- | :--- | :--- |
+| 1 | `contact-completeness` | `fix` | `fullName` kosong, email tidak cocok `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`, atau `phone` kosong/undefined. |
+| 2 | `placeholder-text` | `fix` | Ditemukan `"lorem ipsum"` atau `"[isi di sini]"` (case-insensitive) pada `fullName`, `summary.text`, `experience.items[].company`, atau `experience.items[].bullets[].text`. |
+| 3 | `summary-word-count` | `review` | `summary.isVisible === true`, teks tidak kosong, dan jumlah kata `< 15` atau `> 80`. *(Jika `isVisible: false`, tidak memicu).* |
+| 4 | `empty-section-<key>` | `review` | Built-in section (`experience`, `education`, `projects`, `skills`, `certifications`, `awards`, `volunteering`, `languages`) punya `isVisible: true` tetapi 0 item dengan `isVisible: true`. |
+| 5 | `non-standard-heading-<key>` | `review` | Built-in section aktif punya `title` non-kosong yang tidak mengandung satu pun kata dari `STANDARD_HEADING_KEYWORDS` (misal `"My Cool Journey"`). |
+| 6 | `missing-dates` | `review` | Item `isVisible: true` di `experience` atau `education` memiliki `startDate` kosong atau `endDate` kosong. |
+| 7 | `inconsistent-dates` | `review` | Lebih dari 1 pola tanggal berbeda (`YYYY`, `MMM YYYY`, `MM/YYYY`, `YYYY-MM`, `OTHER`) ditemukan di antara item aktif `experience` + `education`. *(Catatan: `"Present"`, `"Sekarang"`, `"Current"` diabaikan).* |
+| 8 | `long-bullet` | `review` | Ada bullet `isVisible: true` pada item `isVisible: true` (`experience`, `projects`, atau `volunteering`) dengan `text.trim().length > 220`. *(220 karakter tepat = aman; 221 karakter = memicu).* |
+| 9 | `first-person-pronoun` | `review` | Cocok `/\b(saya|aku|kami|i|me|my|we)\b/i` pada `summary` (jika `isVisible`) atau bullet aktif. *(Kata seperti `"time"`, `"implement"`, `"system"` TIDAK boleh memicu karena `\b`).* |
+| 10 | `page-overflow` | `review` | `pageCount > config.targetPages` **ATAU** `(pageCount > 1 && lastPageFillRatio > 0 && lastPageFillRatio < 0.15)`. |
+| 11 | `core-structure-ok` | `good` | Ditambahkan di indeks 0 (`unshift`) **hanya jika `fixCount === 0`**. Jika ada minimal 1 `fix`, `core-structure-ok` **tidak** muncul (`summary.good === 0`). |
+
+---
+
+### Langkah 5 — Buat `src/lib/__tests__/ats-linter.test.ts`
+
+Buat helper `makeCleanResume()` di awal file test yang menghasilkan `ResumeDocument` **100% bersih** (0 `fix`, 0 `review`, 1 `good`) agar setiap test case hanya memutasi 1 kondisi yang sedang diuji.
+
+> **PERHATIAN PENTING (Gotcha #1):**
+> `createSampleResume()` dari `src/lib/default-resume.ts` memakai `"Jan 2023"` (`MMM YYYY`) pada `experience` dan `"2018"` (`YYYY`) pada `education`, sehingga `runAtsLint(createSampleResume())` **akan memicu `inconsistent-dates`**!
+> Oleh karena itu, pada helper `makeCleanResume()`, seragamkan tanggal `education` menjadi `"Aug 2018"` & `"Jul 2022"` (format `MMM YYYY`) agar baseline memiliki `summary = { good: 1, review: 0, fix: 0 }`.
+
+Struktur kerangka test yang wajib diimplementasikan di `src/lib/__tests__/ats-linter.test.ts`:
+
+```typescript
+import { describe, expect, it } from "vitest";
+import { runAtsLint } from "@/lib/ats-linter";
+import { createSampleResume } from "@/lib/default-resume";
+import { extractLinearResumeText } from "@/components/preview/AtsXRayView";
+import type { ResumeDocument } from "@/lib/schemas/resume";
+
+function makeCleanResume(): ResumeDocument {
+  const doc = createSampleResume("2026-01-01T00:00:00.000Z");
+  // Seragamkan format tanggal education agar sama (MMM YYYY) dengan experience
+  doc.sections.education.items[0].startDate = "Aug 2018";
+  doc.sections.education.items[0].endDate = "Jul 2022";
+  return doc;
+}
+
+describe("runAtsLint", () => {
+  it("returns good (core-structure-ok) with 0 fix and 0 review for a clean resume", () => {
+    const report = runAtsLint(makeCleanResume(), 1, 0.85);
+    expect(report.summary).toEqual({ good: 1, review: 0, fix: 0 });
+    expect(report.items.map((i) => i.id)).toEqual(["core-structure-ok"]);
+  });
+
+  // 1. contact-completeness (fix):
+  //    - uji fullName kosong
+  //    - uji email tidak valid (mis. "not-an-email")
+  //    - uji phone kosong
+  //    - pastikan status === "fix", targetSection === "basics", dan core-structure-ok TIDAK muncul (summary.good === 0)
+
+  // 2. placeholder-text (fix):
+  //    - uji "Lorem ipsum" di summary (case-insensitive)
+  //    - uji "[isi di sini]" di bullet experience
+  //    - pastikan id === "placeholder-text", status === "fix", summary.good === 0
+
+  // 3. summary-word-count (review):
+  //    - uji < 15 kata memicu summary-word-count
+  //    - uji > 80 kata memicu summary-word-count
+  //    - uji summary.isVisible = false dengan 3 kata TIDAK memicu
+
+  // 4. empty-section-<key> (review):
+  //    - uji section aktif dengan semua item isVisible = false memicu "empty-section-projects"
+  //    - uji section dengan isVisible = false TIDAK memicu
+
+  // 5. non-standard-heading-<key> (review):
+  //    - uji mengubah title section experience menjadi "Petualangan Karier" memicu "non-standard-heading-experience"
+  //    - uji judul standar ID ("Pengalaman Kerja") dan EN ("Work Experience") TIDAK memicu
+
+  // 6. missing-dates (review):
+  //    - uji startDate atau endDate kosong pada item aktif experience/education memicu "missing-dates"
+  //    - uji item dengan isVisible = false yang tanggalnya kosong TIDAK memicu
+
+  // 7. inconsistent-dates (review):
+  //    - uji campuran "Jan 2023" (MMM YYYY) dan "2022" (YYYY) memicu "inconsistent-dates"
+  //    - uji "Jan 2023" + "Present" / "Sekarang" TIDAK dianggap tidak konsisten
+
+  // 8. long-bullet (review):
+  //    - uji bullet sepanjang 220 karakter TIDAK memicu
+  //    - uji bullet sepanjang 221 karakter memicu "long-bullet"
+  //    - uji bullet 250 karakter dengan isVisible = false TIDAK memicu
+
+  // 9. first-person-pronoun (review):
+  //    - uji "Saya mengembangkan fitur..." memicu "first-person-pronoun"
+  //    - uji "Built my own parser" memicu "first-person-pronoun"
+  //    - uji "Implemented real-time API system" TIDAK memicu (cek word boundary)
+
+  // 10. page-overflow (review):
+  //    - uji pageCount = 2 saat targetPages = 1 memicu "page-overflow"
+  //    - uji pageCount = 2, targetPages = 2, lastPageFillRatio = 0.1 (< 0.15) memicu "page-overflow"
+  //    - uji pageCount = 2, targetPages = 2, lastPageFillRatio = 0.5 TIDAK memicu
+});
+
+describe("extractLinearResumeText", () => {
+  // 1. Mengikuti urutan config.sectionOrder (mis. memindahkan "skills" sebelum "experience" membuat SKILLS muncul sebelum EXPERIENCE di teks output)
+  // 2. Tidak membocorkan data dengan isVisible: false:
+  //    - link dengan isVisible: false tidak muncul
+  //    - summary dengan isVisible: false tidak muncul
+  //    - section dengan isVisible: false tidak muncul
+  //    - item experience/projects/education dengan isVisible: false tidak muncul
+  //    - bullet point dengan isVisible: false tidak muncul
+  //    - customSection yang isVisible: false tidak muncul, sedangkan customSection isVisible: true muncul lengkap dengan judul & bullet aktifnya
+  // 3. Menghormati bahasa dokumen (doc.language === "id" -> "RINGKASAN PROFESIONAL", "en" -> "SUMMARY")
+});
+```
+
+---
+
+### Langkah 6 — Buat `src/lib/__tests__/url-utils.test.ts`
+Tulis unit test singkat untuk `normalizeUrl` dan `toMailtoHref` di `src/lib/__tests__/url-utils.test.ts`:
+- `normalizeUrl("github.com/AryaGoberto")` → `"https://github.com/AryaGoberto"`
+- `normalizeUrl("https://example.com/path")` → `"https://example.com/path"`
+- `normalizeUrl("http://example.com")` → `"http://example.com"`
+- `normalizeUrl("  ")` → `""`
+- `normalizeUrl("javascript:alert(1)")` → `""`
+- `normalizeUrl("DATA:text/html,<h1>x</h1>")` → `""`
+- `toMailtoHref("raka@email.com")` → `"mailto:raka@email.com"`
+- `toMailtoHref("mailto:raka@email.com")` → `"mailto:raka@email.com"`
+- `toMailtoHref("   ")` → `""`
 
 ---
 
 ## 5. Jebakan Umum yang Harus Dihindari (*Gotchas*)
 
-1. **Error `Could not resolve font for <Family>, fontWeight 700`:**
-   - Pastikan **keempat varian** (`400 normal`, `700 normal`, `400 italic`, `700 italic`) terdaftar pada `Font.register`. Di `PdfDocument.tsx`, ada penggunaan `fontWeight: "bold"` (700) dan `fontStyle: "italic"`. Jika satu saja varian tidak terdaftar, `@react-pdf/renderer` akan gagal saat klik **Download PDF**.
-2. **Error `Unknown font format` atau PDF korup:**
-   - Terjadi jika memakai `.woff2` atau *variable font* `.ttf`. Pastikan semua file di `public/fonts/` adalah **static `.ttf`** dan lolos pemeriksaan `file public/fonts/*.ttf`.
-3. **Jangan Import `@react-pdf/renderer` ke File Server/Shared:**
-   - Pastikan `src/lib/pdf-fonts.ts` memiliki `"use client"` dan hanya di-import oleh `src/components/pdf/PdfDocument.tsx` (yang sudah dimuat via `next/dynamic(..., { ssr: false })` di `EditorTopBar.tsx`).
-4. **URL Relatif Tidak Bisa Diklik di PDF Reader:**
-   - Selalu lewati semua URL melalui `normalizeUrl(...)` agar `github.com/user` menjadi `https://github.com/user`, dan email melalui `toMailtoHref(...)` agar menjadi `mailto:user@domain.com`.
-5. **Tampilan Link Tidak Boleh Berwarna Biru Mencolok:**
-   - `@react-pdf/renderer` default-nya mewarnai `<Link>` menjadi biru. Selalu pasang `color: "#18181B"` pada style `<Link>` agar konsisten dengan palet monokromatis `agents-md/brand-guideline.md`.
+1. **Asumsi Keliru tentang `createSampleResume()`:**
+   - Seperti dijelaskan di Langkah 5, `createSampleResume()` mencampur format tanggal `MMM YYYY` (Experience) dan `YYYY` (Education). Jangan jadikan `createSampleResume()` langsung sebagai fixture "0 review" tanpa menyeragamkan tanggalnya di `makeCleanResume()`.
+2. **Error JSX saat Import `AtsXRayView.tsx` di Vitest:**
+   - Wajib pasang `esbuild: { jsx: "automatic" }` di `vitest.config.ts` agar import `extractLinearResumeText` dari `AtsXRayView.tsx` berjalan mulus di Node environment.
+3. **ESLint / TypeScript Conflict pada File Test:**
+   - Pastikan tidak ada `any` atau variabel tidak terpakai di file test agar `npx tsc --noEmit && npm run lint` tetap bersih (0 error, 0 warning).
+4. **Mutasi Antar Test Case:**
+   - Selalu panggil `makeCleanResume()` baru di dalam setiap `it(...)` — jangan berbagi satu objek `ResumeDocument` yang dimutasi antar test.
 
 ---
 
 ## 6. Kriteria Penerimaan (*Acceptance Criteria*)
 
-- [x] Terdapat 16 file static `.ttf` valid di `public/fonts/` (`Inter`, `Roboto`, `EB Garamond`, `Merriweather` × Regular/Bold/Italic/BoldItalic).
-- [x] `src/lib/pdf-fonts.ts` mendaftarkan keempat keluarga font dan memanggil `Font.registerHyphenationCallback((word) => [word])`.
-- [x] `src/lib/url-utils.ts` menormalisasi URL (`https://`) dan email (`mailto:`) serta menolak protokol berbahaya (`javascript:`, `data:`).
-- [x] `src/app/layout.tsx` memuat `Roboto` (`--font-roboto`) dan `src/lib/template-tokens.ts` memetakan ke-4 font secara akurat untuk HTML & PDF.
-- [x] Seluruh tautan di `src/components/pdf/PdfDocument.tsx` (`basics.email`, `basics.links`, `projects[].url`, `certifications[].url`) dirender dengan `<Link>` berwarna `#18181B` (bukan biru default).
-- [x] Tidak ada error SSR/hydration saat mengakses `/`, `/templates`, maupun `/editor`.
+- [x] `vitest` (`vitest@^4`) terpasang di `devDependencies` pada `package.json`, dan script `"test": "vitest run"` berjalan sukses (2 test files, 35 tests hijau).
+- [x] `vitest.config.ts` mengonfigurasi alias `@/` (Vite 8 / Oxc pada Vitest v4 sudah mendukung JSX transform otomatis tanpa `esbuild.jsx`).
+- [x] `src/lib/__tests__/ats-linter.test.ts` menguji seluruh 11 aturan `runAtsLint` (`fix`, `review`, `good`) serta batas *edge case* (`220` vs `221` karakter, *word boundary*, `isVisible: false`, `lastPageFillRatio < 0.15`).
+- [x] Pengujian `extractLinearResumeText` memverifikasi urutan `sectionOrder`, bahasa `id`/`en`, `customSections`, dan menjamin tidak ada konten `isVisible: false` yang bocor ke output.
+- [x] `src/lib/__tests__/url-utils.test.ts` menguji `normalizeUrl` dan `toMailtoHref` termasuk pemblokiran protokol berbahaya (`javascript:`, `data:`).
 
 ---
 
-## 7. Checklist Verifikasi Wajib Sebelum Merge
+## 7. Checklist Verifikasi Wajib Sebelum Commit / PR
 
-### A. Verifikasi Otomatis (Terminal)
-- [x] `file public/fonts/*.ttf` — ke-16 file terverifikasi `TrueType Font data`.
-- [x] `npx tsc --noEmit && npm run lint` — 0 error dan 0 warning.
-- [x] `npm run build` — exit code 0 (`/`, `/editor`, `/templates` berhasil di-build).
-- [x] Verifikasi render `@react-pdf/renderer` untuk ke-4 font (`Inter`, `Roboto`, `EB Garamond`, `Merriweather`) & anotasi hyperlink (`mailto:`, `https://`).
+- [x] `npm test` — 2 test files, 35 tests passed.
+- [x] `npx tsc --noEmit && npm run lint` — 0 error, 0 warning.
+- [x] `npm run build` — exit code 0.
 
 ```bash
-# 1. Pastikan semua file font adalah TrueType valid
-file public/fonts/*.ttf
+# 1. Jalankan seluruh unit test (semua harus hijau)
+npm test
 
-# 2. Cek TypeScript & ESLint (wajib 0 error)
+# 2. Cek TypeScript & ESLint (wajib 0 error, 0 warning)
 npx tsc --noEmit && npm run lint
 
 # 3. Cek Production Build Next.js (wajib exit code 0)
 npm run build
 ```
 
-### B. Verifikasi Manual di Browser & PDF Viewer
-Jalankan `npm run dev` dan buka `http://localhost:3000/editor`:
-1. Uji ekspor **Download PDF** untuk **keempat pilihan font** di popover layout:
-   - [ ] `Inter` → PDF terunduh tanpa error, tampil sans-serif Inter.
-   - [ ] `Roboto` → PDF terunduh tanpa error, tampil sans-serif Roboto (sama dengan HTML preview).
-   - [ ] `EB Garamond` (`serif`) → PDF terunduh tanpa error, tampil serif akademik LaTeX-style.
-   - [ ] `Merriweather` (`georgia`) → PDF terunduh tanpa error, tampil serif editorial.
-2. Buka hasil PDF di macOS Preview / Chrome PDF Viewer:
-   - [ ] **Selectable Text:** Blok & copy teks dari PDF lalu paste ke Notepad — urutan baca harus linear dari atas ke bawah dan **tidak ada kata terpotong dengan tanda `-`** di akhir baris.
-   - [ ] **Clickable Links:** Klik email (membuka mail client `mailto:`), klik tautan LinkedIn/GitHub (membuka `https://...`), klik URL Proyek, dan klik Sertifikasi yang memiliki URL.
-   - [ ] **Multi-Halaman:** Tambahkan beberapa pengalaman hingga menjadi 2 halaman, lalu ekspor PDF dan pastikan tidak ada teks terpotong atau tumpang tindih.
-
 ---
 
-## 8. Prosedur Commit & Merge (GitHub Flow)
+## 8. Prosedur Commit, Push & Pull Request (GitHub Flow)
 
-Setelah seluruh checklist di Bagian 6 dan 7 lulus, centang Task 2 di `tasks/todo.md`, `tasks/plan.md`, `agents-md/TASKS.md`, dan `agents-md/FEATURES.md`, lalu jalankan:
+Setelah seluruh test & build hijau, centang **Task 3** di `tasks/todo.md`, `tasks/plan.md`, `agents-md/TASKS.md`, dan `agents-md/FEATURES.md`, lalu jalankan:
 
 ```bash
-git add public/fonts/ src/lib/pdf-fonts.ts src/lib/url-utils.ts src/lib/template-tokens.ts src/app/layout.tsx src/components/pdf/PdfDocument.tsx tasks/todo.md tasks/plan.md agents-md/TASKS.md agents-md/FEATURES.md
-git commit -m "feat(pdf): register local TTF fonts, disable hyphenation, and add clickable PDF links"
-
-git checkout main
-git merge --no-ff feat/pdf-font-sync
-git push origin main
-git branch -d feat/pdf-font-sync
+git add package.json package-lock.json vitest.config.ts src/lib/__tests__/ tasks/issue.md tasks/todo.md tasks/plan.md agents-md/TASKS.md agents-md/FEATURES.md
+git commit -m "test(ats): setup vitest and add unit tests for ats-linter, xray, and url-utils"
+git push -u origin test/ats-linter
 ```
+
+Lalu buat Pull Request ke `main` (hubungkan dengan issue GitHub untuk Task 3 jika sudah dibuat).
 
 ---
 
-## 9. Antrean Issue Berikutnya
+## 9. Checkpoint 1 & Antrean Issue Berikutnya
 
-Setelah **ISSUE-002** di-merge ke `main`, issue berikutnya sesuai `tasks/todo.md` adalah:
-- **ISSUE-003 (Task 3 — `test/ats-linter`):** Setup `vitest` dan unit test lengkap untuk `src/lib/ats-linter.ts` serta `extractLinearResumeText`.
+Setelah **ISSUE-003 (Task 3)** di-merge ke `main`, **Phase 1 (MVP)** selesai (**Checkpoint 1** di `tasks/todo.md`). Issue berikutnya masuk ke **Phase 2**:
+- **ISSUE-004 (Task 4 — `feat/pdf-xray-parser`):** Meningkatkan *ATS X-Ray Mode* agar mengekstrak teks langsung dari blob PDF asli menggunakan `pdfjs-dist`.
