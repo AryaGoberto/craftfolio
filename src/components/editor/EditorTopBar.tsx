@@ -1,11 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useRef, useState } from "react";
 import {
   Check,
   ChevronDown,
   FileJson,
+  LayoutGrid,
   Redo2,
   SlidersHorizontal,
   Undo2,
@@ -129,14 +131,14 @@ export function EditorTopBar({
     <header className="h-12 px-3 sm:px-4 bg-white border-b border-[#E4E4E7] flex items-center justify-between gap-2 shrink-0 z-30">
       {/* Left: Brand + Document Title + Save status */}
       <div className="flex items-center gap-2.5 min-w-0">
-        <div className="flex items-center gap-2 shrink-0">
+        <Link href="/" className="flex items-center gap-2 shrink-0">
           <div className="w-7 h-7 rounded-lg bg-[#18181B] text-white flex items-center justify-center font-bold text-[13px] select-none">
             F
           </div>
           <span className="text-[14px] font-semibold tracking-[-0.01em] text-[#09090B] hidden sm:inline">
             FormaCV
           </span>
-        </div>
+        </Link>
 
         <span className="h-4 w-px bg-[#E4E4E7] hidden sm:inline-block" />
 
@@ -157,8 +159,16 @@ export function EditorTopBar({
 
       {/* Right Controls */}
       <div className="flex items-center gap-1.5 sm:gap-2">
-        {/* Template Selector */}
-        <div className="hidden lg:flex items-center">
+        {/* Template Selector & Gallery Link */}
+        <div className="hidden lg:flex items-center gap-1.5">
+          <Link
+            href="/templates"
+            title="Lihat Galeri Template ATS"
+            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md bg-white border border-[#E4E4E7] text-[12px] font-medium text-[#52525B] hover:text-[#09090B] hover:bg-[#F4F4F5] transition-colors"
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+            <span>Galeri</span>
+          </Link>
           <select
             value={doc.config.templateId}
             onChange={(e) =>
@@ -196,9 +206,18 @@ export function EditorTopBar({
           {showLayoutMenu && (
             <div className="absolute right-0 mt-1.5 w-64 bg-white border border-[#E4E4E7] rounded-lg shadow-xl p-3 space-y-3 z-50">
               <div>
-                <label className="block text-[11px] font-medium text-[#52525B] mb-1">
-                  Template ATS
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] font-medium text-[#52525B]">
+                    Template ATS
+                  </label>
+                  <Link
+                    href="/templates"
+                    onClick={() => setShowLayoutMenu(false)}
+                    className="text-[11px] font-medium text-[#18181B] hover:underline"
+                  >
+                    Lihat galeri →
+                  </Link>
+                </div>
                 <select
                   value={doc.config.templateId}
                   onChange={(e) =>

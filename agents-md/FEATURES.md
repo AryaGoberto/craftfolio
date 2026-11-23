@@ -14,9 +14,9 @@ Dokumen ini merangkum seluruh fitur **FormaCV** berdasarkan [PRD.md](./PRD.md), 
 - [x] **Landing Page (`/`)**
   - **Penjelasan:** Halaman depan bergaya editorial monokromatis dengan penjelasan nilai produk dan tombol CTA langsung ke `/editor` (*Guest Mode*, tanpa login).
   - **File:** `src/app/page.tsx`
-- [ ] **Galeri Template (`/templates`)** — *Branch: `feat/templates-page`*
+- [x] **Galeri Template (`/templates`)** — *Branch: `feat/templates-page`*
   - **Penjelasan:** Halaman untuk melihat pratinjau visual 4 template ATS sebelum memilih dan langsung masuk ke `/editor` dengan template terpilih.
-  - **Target:** `src/app/templates/page.tsx`
+  - **File:** `src/app/templates/page.tsx`
 
 ### 1.2 Split-Screen Workspace & State Management
 - [x] **Split-Screen Live Editor (`/editor`)**

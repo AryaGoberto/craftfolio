@@ -11,8 +11,8 @@ export function generateId(prefix = "id"): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export function createSampleResume(): ResumeDocument {
-  const now = new Date().toISOString();
+export function createSampleResume(timestamp?: string): ResumeDocument {
+  const now = timestamp ?? new Date().toISOString();
   return {
     id: "resume-default-1",
     schemaVersion: 1,

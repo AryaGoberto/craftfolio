@@ -70,7 +70,7 @@ Checklist ini memecah roadmap di [PRD.md](./PRD.md) menjadi tugas-tugas kecil ya
 
 ### 4.2 Landing Page, Galeri Template & Pengujian
 - [x] Buat Landing Page di `src/app/page.tsx` dengan CTA langsung ke `/editor` ("Buat CV Sekarang — Gratis, Tanpa Login").
-- [ ] Buat halaman `/templates` untuk pratinjau pilihan template sebelum masuk editor.
+- [x] Buat halaman `/templates` untuk pratinjau pilihan template sebelum masuk editor.
 - [ ] Uji hasil ekspor PDF dengan skenario CV pendek (1 halaman) dan CV panjang (2 halaman): pastikan teks 100% *selectable*, urutan baca linear, dan tautan *clickable*.
 - [ ] Cek responsivitas mobile (`Edit` / `Preview`) dan navigasi keyboard secara langsung *(cek `npx tsc --noEmit`, `npm run lint`, dan `npm run build` sudah lulus)*.
 - [ ] Deploy MVP ke Vercel / container Docker production.
