@@ -80,14 +80,14 @@ export const DENSITY_TOKENS: Record<DensityPreset, DensityTokens> = {
 
 export const HTML_FONT_FAMILIES: Record<FontFamilyPreset, string> = {
   inter: "var(--font-inter), ui-sans-serif, system-ui, sans-serif",
-  roboto: "var(--font-inter), ui-sans-serif, system-ui, sans-serif",
+  roboto: "var(--font-roboto), ui-sans-serif, system-ui, sans-serif",
   serif: "var(--font-garamond), Georgia, 'Times New Roman', serif",
   georgia: "var(--font-merriweather), Georgia, serif",
 };
 
 export const PDF_FONT_FAMILIES: Record<FontFamilyPreset, string> = {
-  inter: "Helvetica",
-  roboto: "Helvetica",
-  serif: "Times-Roman",
-  georgia: "Times-Roman",
+  inter: "Inter",
+  roboto: "Roboto",
+  serif: "EB Garamond",
+  georgia: "Merriweather",
 };
