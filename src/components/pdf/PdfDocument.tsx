@@ -43,10 +43,10 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
       textAlign: isModern || isExecutive ? "left" : "center",
     },
     name: {
-      fontSize: density.nameSizePt,
+      fontSize: density.nameSizePt + (isClassic ? 2 : 0),
       fontWeight: "bold",
       textTransform: isClassic ? "none" : "uppercase",
-      marginBottom: 3,
+      marginBottom: 2,
     },
     headline: {
       fontSize: bodySize + 0.5,
@@ -71,6 +71,7 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
     },
     itemBlock: {
       marginBottom: density.itemGapPt,
+      paddingLeft: isClassic ? 11 : 0,
     },
     rowBetween: {
       flexDirection: "row",

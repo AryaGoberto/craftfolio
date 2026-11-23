@@ -42,18 +42,20 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
       style={{
         fontSize: `${density.headingSizePt + (isClassic ? 1 : 0)}pt`,
         fontVariant: isClassic ? "small-caps" : "normal",
-        letterSpacing: isClassic ? "0.03em" : isModern ? "0.04em" : "0.06em",
-        borderBottom: isModern ? "1px solid #D4D4D8" : "0.75pt solid #18181B",
-        paddingBottom: "1.5pt",
-        marginBottom: "5pt",
+        letterSpacing: isClassic ? "0.02em" : isModern ? "0.04em" : "0.06em",
+        borderBottom: isModern ? "1px solid #D4D4D8" : "0.75pt solid #000000",
+        paddingBottom: "1pt",
+        marginBottom: "4pt",
       }}
       className={`${
         isClassic ? "font-normal capitalize" : "font-bold uppercase"
-      } text-[#09090B]`}
+      } text-[#000000]`}
     >
       {isClassic ? title.toLowerCase() : title}
     </h2>
   );
+
+  const listIndentClass = isClassic ? "pl-[11pt]" : "";
 
   const renderSection = (key: SectionKey) => {
     if (key === "summary") {
@@ -133,7 +135,10 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
         return (
           <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
             {renderSectionHeading(group.title)}
-            <div className="flex flex-col" style={{ gap: `${density.itemGapPt}pt` }}>
+            <div
+              className={`flex flex-col ${listIndentClass}`}
+              style={{ gap: `${density.itemGapPt}pt` }}
+            >
               {visibleItems.map((item) => (
                 <div key={item.id}>
                   {/* Line 1: Bold Role/Position (left) + Dates (right) */}
@@ -191,7 +196,10 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
         return (
           <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
             {renderSectionHeading(group.title)}
-            <div className="flex flex-col" style={{ gap: `${density.itemGapPt}pt` }}>
+            <div
+              className={`flex flex-col ${listIndentClass}`}
+              style={{ gap: `${density.itemGapPt}pt` }}
+            >
               {visibleItems.map((item) => (
                 <div key={item.id}>
                   {/* Line 1: Bold Institution (left) + Location (right) */}
@@ -238,7 +246,10 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
         return (
           <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
             {renderSectionHeading(group.title)}
-            <div className="flex flex-col" style={{ gap: `${density.itemGapPt}pt` }}>
+            <div
+              className={`flex flex-col ${listIndentClass}`}
+              style={{ gap: `${density.itemGapPt}pt` }}
+            >
               {visibleItems.map((item) => (
                 <div key={item.id}>
                   <div className="flex items-baseline justify-between gap-4">
@@ -296,7 +307,10 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
         return (
           <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
             {renderSectionHeading(group.title)}
-            <div className="flex flex-col" style={{ gap: `${density.bulletGapPt}pt` }}>
+            <div
+              className={`flex flex-col ${listIndentClass}`}
+              style={{ gap: `${density.bulletGapPt}pt` }}
+            >
               {visibleItems.map((item) => (
                 <div key={item.id} className="text-[#18181B]">
                   {item.category ? (
@@ -408,8 +422,12 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
         className={isModern || isExecutive ? "text-left" : "text-center"}
       >
         <h1
-          style={{ fontSize: `${density.nameSizePt}pt`, lineHeight: 1.15 }}
-          className={`font-bold text-[#09090B] ${
+          style={{
+            fontSize: `${density.nameSizePt + (isClassic ? 2 : 0)}pt`,
+            fontVariant: isClassic ? "small-caps" : "normal",
+            lineHeight: 1.15,
+          }}
+          className={`font-bold text-[#000000] ${
             isClassic ? "tracking-normal" : "tracking-wide uppercase"
           }`}
         >
