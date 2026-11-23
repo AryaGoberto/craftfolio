@@ -2,18 +2,28 @@
 
 import {
   Document,
+  Link,
   Page,
   StyleSheet,
   Text,
   View,
 } from "@react-pdf/renderer";
 import type { ResumeDocument, SectionKey } from "@/lib/schemas/resume";
+import { registerPdfFonts } from "@/lib/pdf-fonts";
 import {
   DENSITY_TOKENS,
   PDF_FONT_FAMILIES,
 } from "@/lib/template-tokens";
+import { normalizeUrl, toMailtoHref } from "@/lib/url-utils";
+
+interface ContactEntry {
+  text: string;
+  href?: string;
+}
 
 export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
+  registerPdfFonts();
+
   const { basics, sections, config } = doc;
   const density = DENSITY_TOKENS[config.density];
   const fontFamily = PDF_FONT_FAMILIES[config.fontFamily];
@@ -56,6 +66,14 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
     contact: {
       fontSize: bodySize - 0.5,
       color: "#18181B",
+    },
+    link: {
+      color: "#18181B",
+      textDecoration: isClassic ? "underline" : "none",
+    },
+    inlineLink: {
+      color: "#18181B",
+      textDecoration: "underline",
     },
     section: {
       marginBottom: density.sectionGapPt,
@@ -105,12 +123,26 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
   });
 
   const visibleLinks = basics.links.filter((l) => l.isVisible && l.url.trim());
-  const contactParts = [
-    basics.phone?.trim(),
-    basics.email?.trim(),
-    ...visibleLinks.map((l) => l.url.trim()),
-    ...(isClassic ? [] : [basics.location?.trim()]),
-  ].filter(Boolean);
+  const contactEntries: ContactEntry[] = [];
+  if (basics.phone?.trim()) {
+    contactEntries.push({ text: basics.phone.trim() });
+  }
+  if (basics.email?.trim()) {
+    contactEntries.push({
+      text: basics.email.trim(),
+      href: toMailtoHref(basics.email),
+    });
+  }
+  for (const link of visibleLinks) {
+    const href = normalizeUrl(link.url);
+    contactEntries.push({
+      text: link.url.trim(),
+      href: href || undefined,
+    });
+  }
+  if (!isClassic && basics.location?.trim()) {
+    contactEntries.push({ text: basics.location.trim() });
+  }
 
   const renderSection = (key: SectionKey) => {
     if (key === "summary") {
@@ -239,30 +271,38 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
         return (
           <View key={key} style={styles.section}>
             <Text style={styles.sectionHeading}>{g.title}</Text>
-            {items.map((item) => (
-              <View key={item.id} style={styles.itemBlock}>
-                <View style={styles.rowBetween}>
-                  <Text>
-                    <Text style={styles.boldTitle}>{item.name}</Text>
-                    {item.techStack ? ` | ${item.techStack}` : ""}
-                  </Text>
-                  {item.date ? (
-                    <Text style={styles.dateText}>{item.date}</Text>
+            {items.map((item) => {
+              const projectHref = item.url ? normalizeUrl(item.url) : "";
+              return (
+                <View key={item.id} style={styles.itemBlock}>
+                  <View style={styles.rowBetween}>
+                    <Text>
+                      <Text style={styles.boldTitle}>{item.name}</Text>
+                      {item.techStack ? ` | ${item.techStack}` : ""}
+                    </Text>
+                    {item.date ? (
+                      <Text style={styles.dateText}>{item.date}</Text>
+                    ) : null}
+                  </View>
+                  {projectHref ? (
+                    <Link
+                      src={projectHref}
+                      style={[styles.italicSubText, styles.inlineLink]}
+                    >
+                      {item.url?.trim()}
+                    </Link>
                   ) : null}
+                  {item.bullets
+                    .filter((b) => b.isVisible && b.text.trim())
+                    .map((b) => (
+                      <View key={b.id} style={styles.bulletRow}>
+                        <Text style={styles.bulletDot}>•</Text>
+                        <Text style={styles.bulletText}>{b.text}</Text>
+                      </View>
+                    ))}
                 </View>
-                {item.url ? (
-                  <Text style={styles.italicSubText}>{item.url}</Text>
-                ) : null}
-                {item.bullets
-                  .filter((b) => b.isVisible && b.text.trim())
-                  .map((b) => (
-                    <View key={b.id} style={styles.bulletRow}>
-                      <Text style={styles.bulletDot}>•</Text>
-                      <Text style={styles.bulletText}>{b.text}</Text>
-                    </View>
-                  ))}
-              </View>
-            ))}
+              );
+            })}
           </View>
         );
       }
@@ -295,15 +335,29 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
         return (
           <View key={key} style={styles.section}>
             <Text style={styles.sectionHeading}>{g.title}</Text>
-            {items.map((item) => (
-              <View key={item.id} style={styles.rowBetween}>
-                <Text>
-                  <Text style={styles.boldTitle}>{item.name}</Text>
-                  {item.issuer ? ` — ${item.issuer}` : ""}
-                </Text>
-                {item.date ? <Text style={styles.dateText}>{item.date}</Text> : null}
-              </View>
-            ))}
+            {items.map((item) => {
+              const certHref = item.url ? normalizeUrl(item.url) : "";
+              return (
+                <View key={item.id} style={styles.rowBetween}>
+                  <Text>
+                    {certHref ? (
+                      <Link
+                        src={certHref}
+                        style={[styles.boldTitle, styles.inlineLink]}
+                      >
+                        {item.name}
+                      </Link>
+                    ) : (
+                      <Text style={styles.boldTitle}>{item.name}</Text>
+                    )}
+                    {item.issuer ? ` — ${item.issuer}` : ""}
+                  </Text>
+                  {item.date ? (
+                    <Text style={styles.dateText}>{item.date}</Text>
+                  ) : null}
+                </View>
+              );
+            })}
           </View>
         );
       }
@@ -361,9 +415,20 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
           {basics.headline?.trim() && isExecutive ? (
             <Text style={styles.headline}>{basics.headline}</Text>
           ) : null}
-          {contactParts.length > 0 ? (
+          {contactEntries.length > 0 ? (
             <Text style={styles.contact}>
-              {contactParts.join(isClassic ? "  |  " : "  •  ")}
+              {contactEntries.map((entry, idx) => (
+                <Text key={`${entry.text}-${idx}`}>
+                  {idx > 0 ? (isClassic ? "  |  " : "  •  ") : ""}
+                  {entry.href ? (
+                    <Link src={entry.href} style={styles.link}>
+                      {entry.text}
+                    </Link>
+                  ) : (
+                    entry.text
+                  )}
+                </Text>
+              ))}
             </Text>
           ) : null}
         </View>

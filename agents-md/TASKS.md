@@ -50,7 +50,7 @@ Checklist ini memecah roadmap di [PRD.md](./PRD.md) menjadi tugas-tugas kecil ya
 - [x] Bangun banner peringatan *Page Overflow* (`< 15%` di halaman terakhir atau melebihi `targetPages`) dengan tombol cepat ke `Compact`.
 
 ### 3.2 Template ATS (HTML & PDF)
-- [ ] Siapkan file font `.ttf` (`Inter`, `Roboto`, `EB Garamond`, `Merriweather`) di `public/fonts/` dan buat `src/lib/pdf-fonts.ts`.
+- [x] Siapkan file font `.ttf` (`Inter`, `Roboto`, `EB Garamond`, `Merriweather`) di `public/fonts/` dan buat `src/lib/pdf-fonts.ts`.
 - [x] Buat 4 template HTML Preview (*Classic Academic*, *Modern Minimalist*, *Compact*, *Executive Standard*) di `src/components/preview/ResumeHtmlRenderer.tsx`.
 - [x] Buat template `@react-pdf/renderer` yang memetakan token yang sama di `src/components/pdf/PdfDocument.tsx`.
 - [x] Buat `PdfExportButton` dengan `next/dynamic(..., { ssr: false })`, kustomisasi nama file (`Nama_Lengkap_CV.pdf`), dan metadata PDF.

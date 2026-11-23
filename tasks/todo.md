@@ -6,7 +6,7 @@ Dokumen ini adalah target daftar tugas (*task list target*) yang disusun menggun
 
 ## Phase 1: Penyelesaian & Verifikasi MVP (Prioritas Utama)
 
-### Task 1: Halaman Galeri Template (`/templates`) & Navigasi Landing Page
+### Task 1: Halaman Galeri Template (`/templates`) & Navigasi Landing Page ✅
 
 **Description:** Merapikan perubahan working tree saat ini lalu membangun halaman Galeri Template (`/templates`, branch `feat/templates-page`) yang menampilkan pratinjau visual ke-4 template ATS single-column (*Classic Academic*, *Modern Minimalist*, *Compact*, *Executive Standard*). Pengguna dapat memilih salah satu template dan langsung diarahkan ke `/editor` dengan `config.templateId` serta `fontFamily` yang sesuai, ditambah tautan navigasi ke `/templates` dari Landing Page (`/`).
 
@@ -18,7 +18,7 @@ Dokumen ini adalah target daftar tugas (*task list target*) yang disusun menggun
 **Verification:**
 - [x] Tests pass: `npx tsc --noEmit && npm run lint`
 - [x] Build succeeds: `npm run build`
-- [ ] Manual check: Buka `/templates`, pilih template *Classic Academic* atau *Executive Standard*, dan pastikan `/editor` langsung merender CV dengan template tersebut.
+- [x] Manual check: Buka `/templates`, pilih template *Classic Academic* atau *Executive Standard*, dan pastikan `/editor` langsung merender CV dengan template tersebut.
 
 **Dependencies:** None
 
@@ -26,6 +26,7 @@ Dokumen ini adalah target daftar tugas (*task list target*) yang disusun menggun
 - `src/app/templates/page.tsx`
 - `src/app/page.tsx`
 - `src/components/editor/EditorTopBar.tsx`
+- `src/lib/default-resume.ts`
 
 **Estimated scope:** Small (2-3 files)
 
@@ -36,21 +37,23 @@ Dokumen ini adalah target daftar tugas (*task list target*) yang disusun menggun
 **Description:** Menyelesaikan kesamaan tipografi antara Live HTML Preview dan hasil cetak `@react-pdf/renderer` (branch `feat/pdf-font-sync`). Menyimpan file font `.ttf` (*Inter, Roboto, EB Garamond, Merriweather*) di `public/fonts/`, mendaftarkannya via `Font.register` beserta penonaktifan *hyphenation* di `src/lib/pdf-fonts.ts`, memperbarui `PDF_FONT_FAMILIES` di `src/lib/template-tokens.ts`, serta mengganti elemen URL/email di `src/components/pdf/PdfDocument.tsx` menjadi komponen `<Link>` yang *clickable*.
 
 **Acceptance criteria:**
-- [ ] `src/lib/pdf-fonts.ts` mendaftarkan font `.ttf` lokal untuk `Inter`, `Roboto`, `EB Garamond`, dan `Merriweather` serta menonaktifkan *auto-hyphenation* (`Font.registerHyphenationCallback((word) => [word])`).
-- [ ] `PDF_FONT_FAMILIES` di `src/lib/template-tokens.ts` memetakan ke-4 pilihan font ke keluarga font yang telah didaftarkan tanpa error saat mengekspor PDF.
-- [ ] Seluruh tautan kontak (`email`, `links`) dan URL proyek/sertifikasi di `src/components/pdf/PdfDocument.tsx` dirender dengan anotasi hyperlink aktif (`<Link src={...}>`).
+- [x] `src/lib/pdf-fonts.ts` mendaftarkan font `.ttf` lokal untuk `Inter`, `Roboto`, `EB Garamond`, dan `Merriweather` serta menonaktifkan *auto-hyphenation* (`Font.registerHyphenationCallback((word) => [word])`).
+- [x] `PDF_FONT_FAMILIES` di `src/lib/template-tokens.ts` memetakan ke-4 pilihan font ke keluarga font yang telah didaftarkan tanpa error saat mengekspor PDF.
+- [x] Seluruh tautan kontak (`email`, `links`) dan URL proyek/sertifikasi di `src/components/pdf/PdfDocument.tsx` dirender dengan anotasi hyperlink aktif (`<Link src={...}>`).
 
 **Verification:**
-- [ ] Tests pass: `npx tsc --noEmit && npm run lint`
-- [ ] Build succeeds: `npm run build`
+- [x] Tests pass: `npx tsc --noEmit && npm run lint`
+- [x] Build succeeds: `npm run build`
 - [ ] Manual check: Ekspor PDF dengan keempat pilihan font (`inter`, `roboto`, `serif`, `georgia`) dan pastikan teks 100% *selectable*, tanpa pemenggalan kata otomatis, dan tautan dapat diklik.
 
 **Dependencies:** None
 
 **Files likely touched:**
-- `public/fonts/` (aset `.ttf`)
+- `public/fonts/` (16 aset `.ttf`)
 - `src/lib/pdf-fonts.ts`
+- `src/lib/url-utils.ts`
 - `src/lib/template-tokens.ts`
+- `src/app/layout.tsx`
 - `src/components/pdf/PdfDocument.tsx`
 
 **Estimated scope:** Medium (4 files)
