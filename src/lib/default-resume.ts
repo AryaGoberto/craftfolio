@@ -1,4 +1,15 @@
-import type { ResumeDocument } from "@/lib/schemas/resume";
+import type {
+  BuiltinSectionKey,
+  CustomSectionItem,
+  ResumeDocument,
+} from "@/lib/schemas/resume";
+
+export function generateId(prefix = "id"): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+  }
+  return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 export function createSampleResume(): ResumeDocument {
   const now = new Date().toISOString();
@@ -227,4 +238,73 @@ export function createEmptyResume(id: string, title = "CV Baru"): ResumeDocument
       customSections: [],
     },
   };
+}
+
+export function createEmptyItemForSection(
+  key: BuiltinSectionKey | `custom:${string}`
+) {
+  const id = generateId("item");
+  if (key.startsWith("custom:")) {
+    const item: CustomSectionItem = {
+      id,
+      isVisible: true,
+      title: "",
+      subtitle: "",
+      date: "",
+      bullets: [{ id: generateId("b"), isVisible: true, text: "" }],
+    };
+    return item;
+  }
+
+  switch (key as BuiltinSectionKey) {
+    case "experience":
+    case "volunteering":
+      return {
+        id,
+        isVisible: true,
+        company: "",
+        position: "",
+        location: "",
+        startDate: "",
+        endDate: "",
+        bullets: [{ id: generateId("b"), isVisible: true, text: "" }],
+      };
+    case "education":
+      return {
+        id,
+        isVisible: true,
+        institution: "",
+        degree: "",
+        location: "",
+        startDate: "",
+        endDate: "",
+        gpa: "",
+        bullets: [],
+      };
+    case "projects":
+      return {
+        id,
+        isVisible: true,
+        name: "",
+        techStack: "",
+        date: "",
+        url: "",
+        bullets: [{ id: generateId("b"), isVisible: true, text: "" }],
+      };
+    case "skills":
+      return { id, isVisible: true, category: "", skills: "" };
+    case "certifications":
+      return { id, isVisible: true, name: "", issuer: "", date: "", url: "" };
+    case "awards":
+      return {
+        id,
+        isVisible: true,
+        title: "",
+        issuer: "",
+        date: "",
+        description: "",
+      };
+    case "languages":
+      return { id, isVisible: true, language: "", proficiency: "" };
+  }
 }

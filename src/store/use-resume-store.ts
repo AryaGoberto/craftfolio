@@ -11,15 +11,13 @@ import {
   type ResumeDocument,
   type SectionKey,
 } from "@/lib/schemas/resume";
-import { createEmptyResume, createSampleResume } from "@/lib/default-resume";
+import {
+  createEmptyItemForSection,
+  createEmptyResume,
+  createSampleResume,
+  generateId,
+} from "@/lib/default-resume";
 import { DEFAULT_SECTION_TITLES, type AppLanguage } from "@/lib/i18n";
-
-function generateId(prefix = "id"): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
-  }
-  return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
-}
 
 export type SaveStatus = "saved" | "saving" | "unsaved";
 
@@ -27,6 +25,9 @@ interface PersistedResumeState {
   documents: Record<string, ResumeDocument>;
   activeDocumentId: string;
 }
+
+type ItemSectionKey = BuiltinSectionKey | `custom:${string}`;
+type GenericItem = { id: string; isVisible: boolean; bullets?: BulletPoint[] };
 
 export interface ResumeStoreState extends PersistedResumeState {
   saveStatus: SaveStatus;
@@ -42,7 +43,6 @@ export interface ResumeStoreState extends PersistedResumeState {
   setPreviewZoom: (zoom: number) => void;
   setPreviewMode: (mode: "visual" | "xray") => void;
 
-  // Document lifecycle
   createDocument: (title?: string) => void;
   duplicateDocument: (id: string) => void;
   renameDocument: (id: string, title: string) => void;
@@ -53,11 +53,9 @@ export interface ResumeStoreState extends PersistedResumeState {
   importResumeJson: (rawJson: string) => { ok: boolean; error?: string };
   exportResumeJson: () => string;
 
-  // Config & language
   updateConfig: (patch: Partial<ResumeDocument["config"]>) => void;
   setLanguage: (lang: AppLanguage) => void;
 
-  // Basics & Summary
   updateBasics: (
     patch: Partial<
       Pick<
@@ -74,53 +72,39 @@ export interface ResumeStoreState extends PersistedResumeState {
   removeLink: (id: string) => void;
   updateSummary: (patch: Partial<{ text: string; isVisible: boolean }>) => void;
 
-  // Section order & visibility
   reorderSections: (newOrder: SectionKey[]) => void;
   moveSection: (key: SectionKey, direction: "up" | "down") => void;
   toggleSectionVisibility: (key: SectionKey) => void;
   updateSectionTitle: (key: SectionKey, title: string) => void;
 
-  // Builtin & Custom section items
-  addSectionItem: (key: BuiltinSectionKey | `custom:${string}`) => void;
+  addSectionItem: (key: ItemSectionKey) => void;
   updateSectionItem: (
-    key: BuiltinSectionKey | `custom:${string}`,
+    key: ItemSectionKey,
     itemId: string,
     patch: Record<string, unknown>
   ) => void;
-  removeSectionItem: (
-    key: BuiltinSectionKey | `custom:${string}`,
-    itemId: string
-  ) => void;
-  toggleItemVisibility: (
-    key: BuiltinSectionKey | `custom:${string}`,
-    itemId: string
-  ) => void;
+  removeSectionItem: (key: ItemSectionKey, itemId: string) => void;
+  toggleItemVisibility: (key: ItemSectionKey, itemId: string) => void;
   reorderSectionItems: (
-    key: BuiltinSectionKey | `custom:${string}`,
+    key: ItemSectionKey,
     oldIndex: number,
     newIndex: number
   ) => void;
 
-  // Bullets
-  addBullet: (key: BuiltinSectionKey | `custom:${string}`, itemId: string) => void;
+  addBullet: (key: ItemSectionKey, itemId: string) => void;
   updateBullet: (
-    key: BuiltinSectionKey | `custom:${string}`,
+    key: ItemSectionKey,
     itemId: string,
     bulletId: string,
     text: string
   ) => void;
-  removeBullet: (
-    key: BuiltinSectionKey | `custom:${string}`,
-    itemId: string,
-    bulletId: string
-  ) => void;
+  removeBullet: (key: ItemSectionKey, itemId: string, bulletId: string) => void;
   toggleBulletVisibility: (
-    key: BuiltinSectionKey | `custom:${string}`,
+    key: ItemSectionKey,
     itemId: string,
     bulletId: string
   ) => void;
 
-  // Custom sections
   addCustomSection: (title?: string) => void;
   removeCustomSection: (customId: string) => void;
 }
@@ -130,94 +114,65 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null;
 function arrayMove<T>(arr: T[], from: number, to: number): T[] {
   const next = [...arr];
   const [moved] = next.splice(from, 1);
-  if (moved !== undefined) {
-    next.splice(to, 0, moved);
-  }
+  if (moved !== undefined) next.splice(to, 0, moved);
   return next;
 }
 
-function createEmptyItemForSection(key: BuiltinSectionKey | `custom:${string}`) {
-  const id = generateId("item");
+/** Immutably updates items (and optionally visibility) of a built-in or custom section. */
+function updateSectionItems(
+  doc: ResumeDocument,
+  key: ItemSectionKey,
+  transform: (items: GenericItem[]) => GenericItem[],
+  forceVisible?: boolean
+): ResumeDocument {
   if (key.startsWith("custom:")) {
-    const item: CustomSectionItem = {
-      id,
-      isVisible: true,
-      title: "",
-      subtitle: "",
-      date: "",
-      bullets: [{ id: generateId("b"), isVisible: true, text: "" }],
+    const customId = key.replace("custom:", "");
+    return {
+      ...doc,
+      sections: {
+        ...doc.sections,
+        customSections: doc.sections.customSections.map((cs) =>
+          cs.id === customId
+            ? {
+                ...cs,
+                isVisible: forceVisible ?? cs.isVisible,
+                items: transform(cs.items) as CustomSectionItem[],
+              }
+            : cs
+        ),
+      },
     };
-    return item;
   }
 
-  switch (key) {
-    case "experience":
-    case "volunteering":
-      return {
-        id,
-        isVisible: true,
-        company: "",
-        position: "",
-        location: "",
-        startDate: "",
-        endDate: "",
-        bullets: [{ id: generateId("b"), isVisible: true, text: "" }],
-      };
-    case "education":
-      return {
-        id,
-        isVisible: true,
-        institution: "",
-        degree: "",
-        location: "",
-        startDate: "",
-        endDate: "",
-        gpa: "",
-        bullets: [],
-      };
-    case "projects":
-      return {
-        id,
-        isVisible: true,
-        name: "",
-        techStack: "",
-        date: "",
-        url: "",
-        bullets: [{ id: generateId("b"), isVisible: true, text: "" }],
-      };
-    case "skills":
-      return {
-        id,
-        isVisible: true,
-        category: "",
-        skills: "",
-      };
-    case "certifications":
-      return {
-        id,
-        isVisible: true,
-        name: "",
-        issuer: "",
-        date: "",
-        url: "",
-      };
-    case "awards":
-      return {
-        id,
-        isVisible: true,
-        title: "",
-        issuer: "",
-        date: "",
-        description: "",
-      };
-    case "languages":
-      return {
-        id,
-        isVisible: true,
-        language: "",
-        proficiency: "",
-      };
-  }
+  const builtinKey = key as BuiltinSectionKey;
+  const current = doc.sections[builtinKey];
+  return {
+    ...doc,
+    sections: {
+      ...doc.sections,
+      [builtinKey]: {
+        ...current,
+        isVisible: forceVisible ?? current.isVisible,
+        items: transform(current.items as GenericItem[]),
+      },
+    },
+  };
+}
+
+/** Immutably updates the bullets array of a specific item inside a section. */
+function updateItemBullets(
+  doc: ResumeDocument,
+  key: ItemSectionKey,
+  itemId: string,
+  transformBullets: (bullets: BulletPoint[]) => BulletPoint[]
+): ResumeDocument {
+  return updateSectionItems(doc, key, (items) =>
+    items.map((it) =>
+      it.id === itemId
+        ? { ...it, bullets: transformBullets(it.bullets ?? []) }
+        : it
+    )
+  );
 }
 
 const initialSample = createSampleResume();
@@ -229,9 +184,7 @@ export const useResumeStore = create<ResumeStoreState>()(
         const scheduleSaved = () => {
           set({ saveStatus: "saving" });
           if (saveTimer) clearTimeout(saveTimer);
-          saveTimer = setTimeout(() => {
-            set({ saveStatus: "saved" });
-          }, 300);
+          saveTimer = setTimeout(() => set({ saveStatus: "saved" }), 300);
         };
 
         const mutateActiveDoc = (
@@ -240,12 +193,11 @@ export const useResumeStore = create<ResumeStoreState>()(
           const { documents, activeDocumentId } = get();
           const current = documents[activeDocumentId];
           if (!current) return;
-          const updated = updater(current);
           set({
             documents: {
               ...documents,
               [activeDocumentId]: {
-                ...updated,
+                ...updater(current),
                 updatedAt: new Date().toISOString(),
               },
             },
@@ -306,11 +258,7 @@ export const useResumeStore = create<ResumeStoreState>()(
             set((state) => ({
               documents: {
                 ...state.documents,
-                [id]: {
-                  ...target,
-                  title,
-                  updatedAt: new Date().toISOString(),
-                },
+                [id]: { ...target, title, updatedAt: new Date().toISOString() },
               },
             }));
             scheduleSaved();
@@ -318,8 +266,7 @@ export const useResumeStore = create<ResumeStoreState>()(
 
           deleteDocument: (id) => {
             const { documents, activeDocumentId } = get();
-            const keys = Object.keys(documents);
-            if (keys.length <= 1) return;
+            if (Object.keys(documents).length <= 1) return;
             const nextDocs = { ...documents };
             delete nextDocs[id];
             const nextActive =
@@ -331,9 +278,7 @@ export const useResumeStore = create<ResumeStoreState>()(
           },
 
           setActiveDocument: (id) => {
-            if (get().documents[id]) {
-              set({ activeDocumentId: id });
-            }
+            if (get().documents[id]) set({ activeDocumentId: id });
           },
 
           loadSampleResume: () => {
@@ -345,15 +290,12 @@ export const useResumeStore = create<ResumeStoreState>()(
           },
 
           clearActiveResume: () => {
-            mutateActiveDoc((doc) => ({
-              ...createEmptyResume(doc.id, doc.title),
-            }));
+            mutateActiveDoc((doc) => createEmptyResume(doc.id, doc.title));
           },
 
           importResumeJson: (rawJson) => {
             try {
-              const parsed = JSON.parse(rawJson);
-              const result = ResumeDocumentSchema.safeParse(parsed);
+              const result = ResumeDocumentSchema.safeParse(JSON.parse(rawJson));
               if (!result.success) {
                 return {
                   ok: false,
@@ -361,10 +303,9 @@ export const useResumeStore = create<ResumeStoreState>()(
                     "Struktur JSON tidak sesuai dengan skema CV FormaCV.",
                 };
               }
-              const imported = result.data;
               const newId = generateId("cv");
               const doc: ResumeDocument = {
-                ...imported,
+                ...result.data,
                 id: newId,
                 schemaVersion: 1,
                 updatedAt: new Date().toISOString(),
@@ -382,8 +323,7 @@ export const useResumeStore = create<ResumeStoreState>()(
 
           exportResumeJson: () => {
             const { documents, activeDocumentId } = get();
-            const doc = documents[activeDocumentId];
-            return JSON.stringify(doc, null, 2);
+            return JSON.stringify(documents[activeDocumentId], null, 2);
           },
 
           updateConfig: (patch) => {
@@ -398,7 +338,6 @@ export const useResumeStore = create<ResumeStoreState>()(
               const prevDefaults = DEFAULT_SECTION_TITLES[doc.language];
               const nextDefaults = DEFAULT_SECTION_TITLES[lang];
               const nextSections = { ...doc.sections };
-
               const keys = [
                 "experience",
                 "education",
@@ -418,12 +357,7 @@ export const useResumeStore = create<ResumeStoreState>()(
                   } as never;
                 }
               }
-
-              return {
-                ...doc,
-                language: lang,
-                sections: nextSections,
-              };
+              return { ...doc, language: lang, sections: nextSections };
             });
           },
 
@@ -495,9 +429,8 @@ export const useResumeStore = create<ResumeStoreState>()(
             mutateActiveDoc((doc) => {
               const order = doc.config.sectionOrder;
               const idx = order.indexOf(key);
-              if (idx === -1) return doc;
               const target = direction === "up" ? idx - 1 : idx + 1;
-              if (target < 0 || target >= order.length) return doc;
+              if (idx === -1 || target < 0 || target >= order.length) return doc;
               return {
                 ...doc,
                 config: {
@@ -578,191 +511,43 @@ export const useResumeStore = create<ResumeStoreState>()(
 
           addSectionItem: (key) => {
             const newItem = createEmptyItemForSection(key);
-            mutateActiveDoc((doc) => {
-              if (key.startsWith("custom:")) {
-                const customId = key.replace("custom:", "");
-                return {
-                  ...doc,
-                  sections: {
-                    ...doc.sections,
-                    customSections: doc.sections.customSections.map((cs) =>
-                      cs.id === customId
-                        ? {
-                            ...cs,
-                            isVisible: true,
-                            items: [...cs.items, newItem as CustomSectionItem],
-                          }
-                        : cs
-                    ),
-                  },
-                };
-              }
-              const builtinKey = key as BuiltinSectionKey;
-              const currentSection = doc.sections[builtinKey];
-              return {
-                ...doc,
-                sections: {
-                  ...doc.sections,
-                  [builtinKey]: {
-                    ...currentSection,
-                    isVisible: true,
-                    items: [...currentSection.items, newItem],
-                  },
-                },
-              };
-            });
+            mutateActiveDoc((doc) =>
+              updateSectionItems(doc, key, (items) => [...items, newItem], true)
+            );
           },
 
           updateSectionItem: (key, itemId, patch) => {
-            mutateActiveDoc((doc) => {
-              if (key.startsWith("custom:")) {
-                const customId = key.replace("custom:", "");
-                return {
-                  ...doc,
-                  sections: {
-                    ...doc.sections,
-                    customSections: doc.sections.customSections.map((cs) =>
-                      cs.id === customId
-                        ? {
-                            ...cs,
-                            items: cs.items.map((it) =>
-                              it.id === itemId ? { ...it, ...patch } : it
-                            ),
-                          }
-                        : cs
-                    ),
-                  },
-                };
-              }
-              const builtinKey = key as BuiltinSectionKey;
-              const currentSection = doc.sections[builtinKey];
-              return {
-                ...doc,
-                sections: {
-                  ...doc.sections,
-                  [builtinKey]: {
-                    ...currentSection,
-                    items: currentSection.items.map((it) =>
-                      it.id === itemId ? { ...it, ...patch } : it
-                    ),
-                  },
-                },
-              };
-            });
+            mutateActiveDoc((doc) =>
+              updateSectionItems(doc, key, (items) =>
+                items.map((it) => (it.id === itemId ? { ...it, ...patch } : it))
+              )
+            );
           },
 
           removeSectionItem: (key, itemId) => {
-            mutateActiveDoc((doc) => {
-              if (key.startsWith("custom:")) {
-                const customId = key.replace("custom:", "");
-                return {
-                  ...doc,
-                  sections: {
-                    ...doc.sections,
-                    customSections: doc.sections.customSections.map((cs) =>
-                      cs.id === customId
-                        ? {
-                            ...cs,
-                            items: cs.items.filter((it) => it.id !== itemId),
-                          }
-                        : cs
-                    ),
-                  },
-                };
-              }
-              const builtinKey = key as BuiltinSectionKey;
-              const currentSection = doc.sections[builtinKey];
-              return {
-                ...doc,
-                sections: {
-                  ...doc.sections,
-                  [builtinKey]: {
-                    ...currentSection,
-                    items: currentSection.items.filter((it) => it.id !== itemId),
-                  },
-                },
-              };
-            });
+            mutateActiveDoc((doc) =>
+              updateSectionItems(doc, key, (items) =>
+                items.filter((it) => it.id !== itemId)
+              )
+            );
           },
 
           toggleItemVisibility: (key, itemId) => {
-            mutateActiveDoc((doc) => {
-              if (key.startsWith("custom:")) {
-                const customId = key.replace("custom:", "");
-                return {
-                  ...doc,
-                  sections: {
-                    ...doc.sections,
-                    customSections: doc.sections.customSections.map((cs) =>
-                      cs.id === customId
-                        ? {
-                            ...cs,
-                            items: cs.items.map((it) =>
-                              it.id === itemId
-                                ? { ...it, isVisible: !it.isVisible }
-                                : it
-                            ),
-                          }
-                        : cs
-                    ),
-                  },
-                };
-              }
-              const builtinKey = key as BuiltinSectionKey;
-              const currentSection = doc.sections[builtinKey];
-              return {
-                ...doc,
-                sections: {
-                  ...doc.sections,
-                  [builtinKey]: {
-                    ...currentSection,
-                    items: currentSection.items.map((it) =>
-                      it.id === itemId
-                        ? { ...it, isVisible: !it.isVisible }
-                        : it
-                    ),
-                  },
-                },
-              };
-            });
+            mutateActiveDoc((doc) =>
+              updateSectionItems(doc, key, (items) =>
+                items.map((it) =>
+                  it.id === itemId ? { ...it, isVisible: !it.isVisible } : it
+                )
+              )
+            );
           },
 
           reorderSectionItems: (key, oldIndex, newIndex) => {
-            mutateActiveDoc((doc) => {
-              if (key.startsWith("custom:")) {
-                const customId = key.replace("custom:", "");
-                return {
-                  ...doc,
-                  sections: {
-                    ...doc.sections,
-                    customSections: doc.sections.customSections.map((cs) =>
-                      cs.id === customId
-                        ? {
-                            ...cs,
-                            items: arrayMove(cs.items, oldIndex, newIndex),
-                          }
-                        : cs
-                    ),
-                  },
-                };
-              }
-              const builtinKey = key as BuiltinSectionKey;
-              const currentSection = doc.sections[builtinKey];
-              return {
-                ...doc,
-                sections: {
-                  ...doc.sections,
-                  [builtinKey]: {
-                    ...currentSection,
-                    items: arrayMove(
-                      currentSection.items as unknown[],
-                      oldIndex,
-                      newIndex
-                    ),
-                  },
-                },
-              };
-            });
+            mutateActiveDoc((doc) =>
+              updateSectionItems(doc, key, (items) =>
+                arrayMove(items, oldIndex, newIndex)
+              )
+            );
           },
 
           addBullet: (key, itemId) => {
@@ -771,200 +556,38 @@ export const useResumeStore = create<ResumeStoreState>()(
               text: "",
               isVisible: true,
             };
-            mutateActiveDoc((doc) => {
-              const mapBullets = <T extends { id: string; bullets?: BulletPoint[] }>(
-                items: T[]
-              ) =>
-                items.map((it) =>
-                  it.id === itemId
-                    ? { ...it, bullets: [...(it.bullets ?? []), newBullet] }
-                    : it
-                );
-
-              if (key.startsWith("custom:")) {
-                const customId = key.replace("custom:", "");
-                return {
-                  ...doc,
-                  sections: {
-                    ...doc.sections,
-                    customSections: doc.sections.customSections.map((cs) =>
-                      cs.id === customId
-                        ? { ...cs, items: mapBullets(cs.items) }
-                        : cs
-                    ),
-                  },
-                };
-              }
-              const builtinKey = key as BuiltinSectionKey;
-              const currentSection = doc.sections[builtinKey];
-              return {
-                ...doc,
-                sections: {
-                  ...doc.sections,
-                  [builtinKey]: {
-                    ...currentSection,
-                    items: mapBullets(
-                      currentSection.items as Array<{
-                        id: string;
-                        bullets?: BulletPoint[];
-                      }>
-                    ),
-                  },
-                },
-              };
-            });
+            mutateActiveDoc((doc) =>
+              updateItemBullets(doc, key, itemId, (bullets) => [
+                ...bullets,
+                newBullet,
+              ])
+            );
           },
 
           updateBullet: (key, itemId, bulletId, text) => {
-            mutateActiveDoc((doc) => {
-              const mapBullets = <T extends { id: string; bullets?: BulletPoint[] }>(
-                items: T[]
-              ) =>
-                items.map((it) =>
-                  it.id === itemId
-                    ? {
-                        ...it,
-                        bullets: (it.bullets ?? []).map((b) =>
-                          b.id === bulletId ? { ...b, text } : b
-                        ),
-                      }
-                    : it
-                );
-
-              if (key.startsWith("custom:")) {
-                const customId = key.replace("custom:", "");
-                return {
-                  ...doc,
-                  sections: {
-                    ...doc.sections,
-                    customSections: doc.sections.customSections.map((cs) =>
-                      cs.id === customId
-                        ? { ...cs, items: mapBullets(cs.items) }
-                        : cs
-                    ),
-                  },
-                };
-              }
-              const builtinKey = key as BuiltinSectionKey;
-              const currentSection = doc.sections[builtinKey];
-              return {
-                ...doc,
-                sections: {
-                  ...doc.sections,
-                  [builtinKey]: {
-                    ...currentSection,
-                    items: mapBullets(
-                      currentSection.items as Array<{
-                        id: string;
-                        bullets?: BulletPoint[];
-                      }>
-                    ),
-                  },
-                },
-              };
-            });
+            mutateActiveDoc((doc) =>
+              updateItemBullets(doc, key, itemId, (bullets) =>
+                bullets.map((b) => (b.id === bulletId ? { ...b, text } : b))
+              )
+            );
           },
 
           removeBullet: (key, itemId, bulletId) => {
-            mutateActiveDoc((doc) => {
-              const mapBullets = <T extends { id: string; bullets?: BulletPoint[] }>(
-                items: T[]
-              ) =>
-                items.map((it) =>
-                  it.id === itemId
-                    ? {
-                        ...it,
-                        bullets: (it.bullets ?? []).filter(
-                          (b) => b.id !== bulletId
-                        ),
-                      }
-                    : it
-                );
-
-              if (key.startsWith("custom:")) {
-                const customId = key.replace("custom:", "");
-                return {
-                  ...doc,
-                  sections: {
-                    ...doc.sections,
-                    customSections: doc.sections.customSections.map((cs) =>
-                      cs.id === customId
-                        ? { ...cs, items: mapBullets(cs.items) }
-                        : cs
-                    ),
-                  },
-                };
-              }
-              const builtinKey = key as BuiltinSectionKey;
-              const currentSection = doc.sections[builtinKey];
-              return {
-                ...doc,
-                sections: {
-                  ...doc.sections,
-                  [builtinKey]: {
-                    ...currentSection,
-                    items: mapBullets(
-                      currentSection.items as Array<{
-                        id: string;
-                        bullets?: BulletPoint[];
-                      }>
-                    ),
-                  },
-                },
-              };
-            });
+            mutateActiveDoc((doc) =>
+              updateItemBullets(doc, key, itemId, (bullets) =>
+                bullets.filter((b) => b.id !== bulletId)
+              )
+            );
           },
 
           toggleBulletVisibility: (key, itemId, bulletId) => {
-            mutateActiveDoc((doc) => {
-              const mapBullets = <T extends { id: string; bullets?: BulletPoint[] }>(
-                items: T[]
-              ) =>
-                items.map((it) =>
-                  it.id === itemId
-                    ? {
-                        ...it,
-                        bullets: (it.bullets ?? []).map((b) =>
-                          b.id === bulletId
-                            ? { ...b, isVisible: !b.isVisible }
-                            : b
-                        ),
-                      }
-                    : it
-                );
-
-              if (key.startsWith("custom:")) {
-                const customId = key.replace("custom:", "");
-                return {
-                  ...doc,
-                  sections: {
-                    ...doc.sections,
-                    customSections: doc.sections.customSections.map((cs) =>
-                      cs.id === customId
-                        ? { ...cs, items: mapBullets(cs.items) }
-                        : cs
-                    ),
-                  },
-                };
-              }
-              const builtinKey = key as BuiltinSectionKey;
-              const currentSection = doc.sections[builtinKey];
-              return {
-                ...doc,
-                sections: {
-                  ...doc.sections,
-                  [builtinKey]: {
-                    ...currentSection,
-                    items: mapBullets(
-                      currentSection.items as Array<{
-                        id: string;
-                        bullets?: BulletPoint[];
-                      }>
-                    ),
-                  },
-                },
-              };
-            });
+            mutateActiveDoc((doc) =>
+              updateItemBullets(doc, key, itemId, (bullets) =>
+                bullets.map((b) =>
+                  b.id === bulletId ? { ...b, isVisible: !b.isVisible } : b
+                )
+              )
+            );
           },
 
           addCustomSection: (title = "Section Kustom") => {
