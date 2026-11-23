@@ -72,9 +72,9 @@ Dokumen ini merangkum seluruh fitur **FormaCV** berdasarkan [PRD.md](./PRD.md), 
 - [x] **Registrasi Font Lokal `.ttf` untuk PDF** — *Branch: `feat/pdf-font-sync`*
   - **Penjelasan:** Menyimpan file `.ttf` (*Inter, Roboto, EB Garamond, Merriweather*) di `public/fonts/` dan mendaftarkannya via `Font.register` + menonaktifkan *hyphenation* agar tampilan font PDF 100% identik dengan HTML Preview, serta memperbarui tautan PDF menjadi *clickable* `<Link>`.
   - **File:** `public/fonts/`, `src/lib/pdf-fonts.ts`, `src/lib/url-utils.ts`, `src/lib/template-tokens.ts`, `src/app/layout.tsx`, `src/components/pdf/PdfDocument.tsx`
-- [ ] **Unit Test `ats-linter.ts` & Verifikasi Ekstraksi PDF** — *Branch: `test/ats-linter`*
-  - **Penjelasan:** Pengujian otomatis untuk seluruh aturan `ats-linter.ts` dan uji ekstraksi teks PDF (`pdftotext`/`pdfjs`) pada CV 1 halaman dan 2 halaman.
-  - **Target:** `src/lib/__tests__/ats-linter.test.ts`
+- [x] **Unit Test `ats-linter.ts` & Verifikasi Ekstraksi PDF** — *Branch: `test/ats-linter`*
+  - **Penjelasan:** Pengujian otomatis via Vitest untuk seluruh 11 aturan `ats-linter.ts`, fungsi `extractLinearResumeText`, dan helper `url-utils.ts` (35 test cases lulus).
+  - **File:** `vitest.config.ts`, `src/lib/__tests__/ats-linter.test.ts`, `src/lib/__tests__/url-utils.test.ts`
 
 ---
 

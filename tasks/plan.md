@@ -61,10 +61,10 @@ Detail lengkap setiap task beserta *acceptance criteria*, *verification*, *depen
 ### Phase 1: Penyelesaian & Verifikasi MVP (Prioritas Utama)
 - [x] Task 1: Commit Refactoring Working Tree & Buat Halaman Galeri Template (`/templates`)
 - [x] Task 2: Registrasi Font `.ttf` Lokal & Perbaikan Clickable Links pada Ekspor PDF
-- [ ] Task 3: Setup Vitest & Unit Test Lengkap untuk `ats-linter.ts`
+- [x] Task 3: Setup Vitest & Unit Test Lengkap untuk `ats-linter.ts`
 
 ### Checkpoint 1: MVP Release Readiness
-- [ ] Semua tes lulus (`npm test`), tipe & lint bersih (`npx tsc --noEmit && npm run lint`), build production sukses (`npm run build`)
+- [x] Semua tes lulus (`npm test`), tipe & lint bersih (`npx tsc --noEmit && npm run lint`), build production sukses (`npm run build`)
 - [ ] Hasil unduhan PDF 1–2 halaman memiliki font identik dengan HTML preview, teks 100% *selectable*, dan link *clickable*
 
 ### Phase 2: ATS Intelligence, Tailoring & AI
