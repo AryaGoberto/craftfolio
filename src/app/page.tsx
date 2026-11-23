@@ -15,13 +15,21 @@ export default function HomePage() {
           </span>
         </div>
 
-        <Link
-          href="/editor"
-          className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-md bg-[#18181B] text-white text-[12px] font-medium hover:bg-[#27272A] transition-colors"
-        >
-          Buka Editor
-          <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Link
+            href="/templates"
+            className="inline-flex items-center h-8 px-3 rounded-md text-[#52525B] hover:text-[#09090B] hover:bg-[#F4F4F5] text-[12px] font-medium transition-colors"
+          >
+            Galeri Template
+          </Link>
+          <Link
+            href="/editor"
+            className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-md bg-[#18181B] text-white text-[12px] font-medium hover:bg-[#27272A] transition-colors"
+          >
+            Buka Editor
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
       </header>
 
       {/* Hero */}
@@ -47,6 +55,12 @@ export default function HomePage() {
             >
               Buat CV Sekarang (Gratis, Tanpa Login)
               <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link
+              href="/templates"
+              className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-md bg-white border border-[#E4E4E7] text-[#09090B] text-[13px] font-medium hover:bg-[#F4F4F5] transition-colors"
+            >
+              Lihat Galeri Template
             </Link>
           </div>
         </div>
