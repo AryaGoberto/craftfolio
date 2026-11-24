@@ -29,11 +29,14 @@ import {
   GraduationCap,
   GripVertical,
   Plus,
+  Redo2,
   Sparkles,
   Trash2,
+  Undo2,
   User,
   Wrench,
 } from "lucide-react";
+import { useStore } from "zustand";
 import type { SectionKey } from "@/lib/schemas/resume";
 import { EDITOR_SECTION_LABELS } from "@/lib/i18n";
 import { useResumeStore } from "@/store/use-resume-store";
@@ -211,6 +214,11 @@ export function EditorPanel() {
   const addCustomSection = useResumeStore((s) => s.addCustomSection);
   const removeCustomSection = useResumeStore((s) => s.removeCustomSection);
 
+  const pastStates = useStore(useResumeStore.temporal, (s) => s.pastStates);
+  const futureStates = useStore(useResumeStore.temporal, (s) => s.futureStates);
+  const undo = useStore(useResumeStore.temporal, (s) => s.undo);
+  const redo = useStore(useResumeStore.temporal, (s) => s.redo);
+
   const [basicsExpanded, setBasicsExpanded] = useState(true);
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
@@ -322,7 +330,28 @@ export function EditorPanel() {
             {activeCount} Bagian Aktif
           </span>
         </div>
-        <span className="text-[11px] text-[#A1A1AA]">Seret urutan</span>
+        <div className="inline-flex items-center gap-0.5">
+          <button
+            type="button"
+            disabled={pastStates.length === 0}
+            onClick={() => undo()}
+            title="Undo (Ctrl+Z)"
+            aria-label="Undo"
+            className="w-7 h-7 inline-flex items-center justify-center rounded-md text-[#52525B] hover:text-[#09090B] hover:bg-[#E4E4E7]/60 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+          >
+            <Undo2 className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            disabled={futureStates.length === 0}
+            onClick={() => redo()}
+            title="Redo (Ctrl+Y)"
+            aria-label="Redo"
+            className="w-7 h-7 inline-flex items-center justify-center rounded-md text-[#52525B] hover:text-[#09090B] hover:bg-[#E4E4E7]/60 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+          >
+            <Redo2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Personal Info Card (Fixed at top) */}
