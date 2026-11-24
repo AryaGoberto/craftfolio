@@ -18,7 +18,7 @@ Dokumen ini menjadi panduan utama bagi AI coding agent dan pengembang dalam memb
   - **State Management:** `zustand` (`persist` ke `localStorage`) + `zundo` (Undo/Redo)
   - **Reordering:** `@dnd-kit/core` + `@dnd-kit/sortable`
   - **PDF Engine (MVP):** `@react-pdf/renderer` (client-side, `ssr: false`) + Live Preview HTML/CSS
-  - **Fase Lanjut:** Vercel AI SDK (`ai`), `pdfjs-dist`/`unpdf`, Supabase (PostgreSQL + Auth + RLS)
+  - **Fase Lanjut:** Vercel AI SDK (`ai`), `pdfjs-dist`/`unpdf`, Firebase (Firebase Auth + Cloud Firestore + Security Rules)
 
 ---
 

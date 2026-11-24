@@ -166,8 +166,8 @@ Mendukung bagian standar ATS dengan entri yang dapat diulang (*repeatable entrie
 
 ---
 
-### Fase 3: Cloud Sync, Manajemen Multi-CV & Opsional
-* **FR-3.1 (Autentikasi Opsional & Cloud Sync):** Login dengan Google / GitHub / Email / Magic Link. Data `localStorage` dimigrasikan otomatis ke database saat pengguna mendaftar. Tersedia fitur hapus akun & hapus data permanen.
+### Fase 3: Cloud Sync (Firebase Auth & Firestore), Manajemen Multi-CV & Opsional
+* **FR-3.1 (Autentikasi Opsional Firebase & Cloud Firestore Sync):** Login / Daftar menggunakan **Google** maupun **Email & Password** biasa (dilengkapi fitur *Reset Password*). Data `localStorage` dari *Guest Mode* digabungkan otomatis (*two-way timestamp merge*) ke Cloud Firestore (`users/{uid}/resumes/{docId}`) saat pengguna masuk, tanpa menghapus draf lokal. Tersedia fitur keluar (*Sign Out*) serta hapus akun & data cloud permanen.
 * **FR-3.2 (Dashboard Multi-CV & Version Management):** Halaman `/app` untuk membuat, menduplikasi per perusahaan/posisi, melihat *version history*, membandingkan dua versi, mengarsipkan, dan memulihkan versi lama.
 * **FR-3.3 (Job Application Tracker — Opsional):** Pelacakan lamaran sederhana (Perusahaan, Posisi, Versi CV yang dipakai, Tanggal lamar, Status: *Draft / Applied / Interview / Rejected / Offer*, Catatan & pengingat). Tetap bersifat opsional agar fokus produk tetap sebagai CV builder.
 * **FR-3.4 (Shareable Public Link — Opsional):** Tautan web publik baca-saja untuk dibagikan ke perekrut lengkap dengan tombol unduh PDF.
@@ -356,12 +356,12 @@ export interface CustomSection {
 }
 ```
 
-### 7.2 Skema Tabel Database (Fase 3 — Supabase / PostgreSQL)
-* **`profiles`:** `id` (UUID, ref `auth.users`), `display_name`, `created_at`.
-* **`cv_documents`:** `id`, `user_id`, `title`, `target_role`, `language`, `template_id`, `content` (`JSONB`), `settings` (`JSONB`), `schema_version`, `created_at`, `updated_at`.
-* **`cv_versions`:** `id`, `cv_document_id`, `version_name`, `content_snapshot` (`JSONB`), `created_at`.
-* **`job_applications` (opsional):** `id`, `user_id`, `cv_document_id`, `company`, `role`, `status`, `application_date`, `notes`.
-* *Catatan:* Aktifkan **Row Level Security (RLS)** pada seluruh tabel di atas.
+### 7.2 Skema Koleksi Cloud Database (Fase 3 — Firebase Auth & Cloud Firestore)
+* **Dokumen Workspace Pengguna (`users/{uid}`):** `uid` (Firebase Auth UID), `email`, `displayName`, `activeDocumentId`, `openTabIds` (`string[]`), `fileOrder` (`string[]`), `updatedAt`.
+* **Subkoleksi Dokumen CV (`users/{uid}/resumes/{docId}`):** Menyimpan objek `ResumeDocument` penuh (`id`, `schemaVersion`, `title`, `targetRole`, `language`, `config`, `basics`, `sections`, `createdAt`, `updatedAt`).
+* **Subkoleksi Riwayat Versi (`users/{uid}/resumes/{docId}/versions/{versionId}`):** `id`, `versionName`, `snapshot` (`ResumeDocument`), `createdAt`.
+* **Subkoleksi Lamaran Kerja (`users/{uid}/jobApplications/{appId}` — opsional):** `id`, `cvDocumentId`, `company`, `role`, `status`, `applicationDate`, `notes`.
+* *Catatan Keamanan:* Terapkan **Firestore Security Rules (`firestore.rules`)** ketat (`allow read, write: if request.auth != null && request.auth.uid == userId;`) pada seluruh path di bawah `/users/{userId}`.
 
 ---
 
@@ -381,7 +381,7 @@ export interface CustomSection {
 | **PDF Engine (Upgrade)** | Playwright print-to-PDF / Typst (WASM) | Alternatif jika butuh kesamaan 100% *pixel-perfect* dari HTML/CSS |
 | **PDF Parsing (Fase 2)** | `pdfjs-dist` (client) / `unpdf` (server) | Ekstraksi teks untuk *ATS X-Ray* & Import CV |
 | **AI Integration (Fase 2)** | Vercel AI SDK (`ai`) + Gemini Flash / GPT-4o-mini | `generateObject` untuk parse CV, keyword matcher, & bullet enhancer |
-| **Database & Auth (Fase 3)** | Supabase (PostgreSQL, Auth, Storage, RLS) | Cloud sync, multi-CV, dan penyimpanan file |
+| **Database & Auth (Fase 3)** | Firebase (Firebase Auth + Cloud Firestore + Security Rules) | Autentikasi Google & Email/Password, sinkronisasi multi-CV & workspace |
 | **Hosting & Monitoring** | Vercel + GitHub + Sentry / PostHog (opsional) | Deployment, error tracking, & analytics (dengan consent) |
 
 > **Catatan Strategi Render PDF:**
@@ -460,6 +460,6 @@ src/
 * Integrasi **AI Bullet-Point Enhancer** dan **Import CV (PDF/DOCX)** dengan *factuality guardrails* dan konfirmasi pengguna.
 
 ### Fase 3: Cloud Sync, Multi-CV & Scaling (Pasca-Rilis)
-* Autentikasi opsional & migrasi otomatis `localStorage` ke Supabase (PostgreSQL + RLS).
+* Autentikasi opsional & migrasi otomatis `localStorage` ke Firebase Auth + Cloud Firestore (`firestore.rules`).
 * Dashboard `/app` untuk manajemen multi-CV dan *version history*.
 * Fitur opsional: *Job Application Tracker*, *Shareable Public Link*, dan ekspor **DOCX**.

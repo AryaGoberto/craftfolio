@@ -242,41 +242,163 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
 
 ---
 
-## Phase 3: Cloud Sync, Multi-CV Dashboard & Privasi
+## Phase 3: Firebase Auth, Cloud Firestore Sync & Multi-CV Dashboard
 
-### Task 9: Autentikasi Opsional Supabase, Skema RLS & Migrasi `localStorage`
+### Task 9: Autentikasi Firebase (Google & Email/Password) + Sinkronisasi Cloud Firestore (`feat/firebase-auth-firestore`)
 
-**Description:** Mengintegrasikan Supabase Auth dan PostgreSQL (branch `feat/cloud-sync`) sebagai fitur *opt-in* tanpa menghilangkan *Guest Mode*. Menyediakan skrip migrasi SQL (`profiles`, `cv_documents`, `cv_versions` dengan *Row Level Security*), tombol Login opsional, serta sinkronisasi dua arah yang memigrasikan dokumen dari `localStorage` ke akun cloud saat pengguna masuk.
+**Description:** Mengintegrasikan **Firebase Authentication** (*Sign In / Sign Up with Google* serta *Email & Password* biasa + *Reset Password*) dan **Cloud Firestore** (branch `feat/firebase-auth-firestore`) agar seluruh dokumen CV (`documents`) serta tata letak lembar kerja (`fileOrder`, `openTabIds`, `activeDocumentId`) milik pengguna tersimpan aman di cloud dan tersinkronisasi lintas perangkat. Fitur ini bersifat **opt-in (Local-First Hybrid)**: pengguna *Guest Mode* tetap dapat memakai `/editor` dan mengunduh PDF 100% tanpa login, dan ketika mereka memutuskan untuk daftar/login, draf CV lokal di `localStorage` otomatis digabungkan (*two-way timestamp merge*) ke Cloud Firestore tanpa kehilangan data yang sudah diketik.
+
+#### Hasil Penyempurnaan Ide (*Idea Refine*)
+- **Problem Statement (*How Might We*):** Bagaimana kita memungkinkan pengguna menyimpan dan menyinkronkan seluruh dokumen CV serta workspace mereka ke Cloud menggunakan Firebase Auth (Google & Email/Password) dan Cloud Firestore—tanpa mengorbankan kecepatan ketik instan (`< 100ms`), tanpa menghapus *zero-friction Guest Mode*, dan tanpa menimpa draf lokal saat pengguna baru pertama kali login?
+- **Keputusan Arsitektur Utama (*Local-First + Debounced Firestore Sync*):**
+  1. **Zustand + `localStorage` Tetap Menjadi Buffer UI Instan:** Mengetik di form tetap memperbarui Zustand secara sinkron (`< 100ms`). Sinkronisasi ke Firestore dijalankan di latar belakang dengan **debounce `1500ms`** agar hemat kuota *write* Firestore.
+  2. **Algoritma *Guest-to-Cloud Smart Merge* Saat Login:** Saat pengguna masuk ke akun Firebase, sistem **dilarang** langsung menimpa `localStorage` dengan data cloud secara buta. Sistem membandingkan `doc.id` dan `updatedAt` antara dokumen lokal dan dokumen di koleksi `users/{uid}/resumes`:
+     - Dokumen lokal baru yang belum ada di Firestore (dan bukan sekadar sample bawaan yang belum pernah diedit jika di cloud sudah ada CV) langsung di-upload ke Firestore.
+     - Dokumen yang hanya ada di Firestore ditarik ke store lokal.
+     - Jika `doc.id` sama-sama ada di lokal dan Firestore, dokumen dengan timestamp `updatedAt` paling baru yang dipakai.
+  3. **Graceful Fallback Tanpa `.env.local`:** Jika variabel environment `NEXT_PUBLIC_FIREBASE_*` belum diisi (misal saat testing lokal, CI build, atau mode Guest murni), aplikasi **tidak boleh crash**. Helper `isFirebaseConfigured()` akan menonaktifkan inisialisasi SDK dan menampilkan informasi konfigurasi yang sopan saat modal login dibuka.
+- **Yang TIDAK Dikerjakan (*Not Doing*):**
+  - **TIDAK** memaksa login (*hard auth wall*) untuk mengakses `/editor` atau mengunduh PDF.
+  - **TIDAK** menggunakan Firebase Admin SDK / SSR session cookies yang rumit; seluruh autentikasi dan baca/tulis Firestore menggunakan Firebase Client Modular SDK (`firebase/app`, `firebase/auth`, `firebase/firestore`).
+  - **TIDAK** menulis ke Firestore pada setiap ketikan huruf tanpa debounce (wajib debounce `1500ms`).
+  - **TIDAK** membuat halaman `/login` terpisah yang membuat pengguna keluar dari `/editor`; gunakan modal `AuthModal.tsx` langsung di atas editor.
+
+#### Panduan Implementasi Langkah demi Langkah (Untuk Junior Developer / AI Model Ringan)
+
+1. **Langkah 1 — Install Dependensi & Buat `.env.example`:**
+   - Install Firebase Web SDK:
+     ```bash
+     npm install firebase
+     ```
+   - Buat/perbarui file `.env.example` di root proyek dengan daftar variabel publik Firebase:
+     ```env
+     NEXT_PUBLIC_FIREBASE_API_KEY=
+     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+     NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+     NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+     NEXT_PUBLIC_FIREBASE_APP_ID=
+     ```
+
+2. **Langkah 2 — Buat Inisialisasi Firebase Aman di `src/lib/firebase/config.ts`:**
+   - Buat fungsi `isFirebaseConfigured(): boolean` yang mengembalikan `true` hanya jika `process.env.NEXT_PUBLIC_FIREBASE_API_KEY` dan `process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID` terisi string non-kosong.
+   - Jika `isFirebaseConfigured() === true`, inisialisasi Firebase App menggunakan singleton pattern (`getApps().length ? getApp() : initializeApp(firebaseConfig)`), lalu ekspor instance `auth = getAuth(app)` dan `db = getFirestore(app)`.
+   - Jika `false`, ekspor `app = null`, `auth = null`, dan `db = null` agar `npm test` dan `npm run build` tidak pernah gagal meskipun env kosong.
+
+3. **Langkah 3 — Buat Helper Auth di `src/lib/firebase/auth.ts`:**
+   - Bungkus fungsi modular `firebase/auth`:
+     - `signInWithGoogle()` → menggunakan `new GoogleAuthProvider()` dan `signInWithPopup(auth, provider)`.
+     - `signUpWithEmail(email, password, displayName?)` → `createUserWithEmailAndPassword(auth, email, password)` dilanjutkan `updateProfile(userCredential.user, { displayName })` bila ada nama.
+     - `signInWithEmail(email, password)` → `signInWithEmailAndPassword(auth, email, password)`.
+     - `resetPassword(email)` → `sendPasswordResetEmail(auth, email)`.
+     - `logOut()` → `signOut(auth)`.
+   - Buat fungsi `mapFirebaseAuthError(error: unknown): string` yang menerjemahkan kode error Firebase (`auth/invalid-credential`, `auth/user-not-found`, `auth/wrong-password`, `auth/email-already-in-use`, `auth/weak-password`, `auth/popup-closed-by-user`, `auth/too-many-requests`) ke pesan Bahasa Indonesia yang jelas dan ramah pengguna.
+
+4. **Langkah 4 — Desain Skema Cloud Firestore & Helper Sync di `src/lib/firebase/firestore-sync.ts`:**
+   - **Struktur Dokumen di Firestore:**
+     - Dokumen Metadata Workspace User: `users/{uid}`
+       ```typescript
+       interface UserWorkspaceMeta {
+         uid: string;
+         email: string | null;
+         displayName: string | null;
+         activeDocumentId: string;
+         openTabIds: string[];
+         fileOrder: string[];
+         updatedAt: string; // ISO timestamp
+       }
+       ```
+     - Subkoleksi Dokumen CV: `users/{uid}/resumes/{docId}`
+       - Menyimpan objek `ResumeDocument` penuh (divalidasi dengan `ResumeDocumentSchema.safeParse` saat dibaca dari Firestore).
+   - **Fungsi Murni yang Mudah Di-Unit Test (Ekspor untuk Vitest):**
+     - `mergeLocalAndCloudDocuments(localDocs: Record<string, ResumeDocument>, cloudDocs: Record<string, ResumeDocument>): { mergedDocs: Record<string, ResumeDocument>; toUploadIds: string[] }`
+       - Menggabungkan dokumen lokal & cloud. Jika suatu `id` ada di keduanya, pilih yang memiliki `new Date(doc.updatedAt).getTime()` lebih besar. Jika dokumen lokal lebih baru atau belum ada di `cloudDocs`, masukkan `id`-nya ke `toUploadIds`.
+   - **Fungsi Operasi Firestore:**
+     - `fetchUserCloudWorkspace(uid: string)` → membaca `users/{uid}` dan seluruh dokumen di `users/{uid}/resumes`.
+     - `saveUserWorkspaceToCloud(uid: string, state: PersistedResumeState, docIdsToSave?: string[])` → menggunakan `writeBatch(db)` untuk menyimpan metadata `users/{uid}` dan dokumen CV yang berubah ke `users/{uid}/resumes/{docId}`.
+     - `deleteResumeFromCloud(uid: string, docId: string)` → memanggil `deleteDoc(doc(db, "users", uid, "resumes", docId))` saat pengguna menghapus file CV di File Tree.
+
+5. **Langkah 5 — Tambahkan File Aturan Keamanan `firestore.rules` di Root Proyek:**
+   - Tulis aturan keamanan Firestore agar setiap pengguna hanya bisa membaca/menulis dokumennya sendiri:
+     ```text
+     rules_version = '2';
+     service cloud.firestore {
+       match /databases/{database}/documents {
+         match /users/{userId} {
+           allow read, write: if request.auth != null && request.auth.uid == userId;
+           match /resumes/{resumeId} {
+             allow read, write: if request.auth != null && request.auth.uid == userId;
+           }
+         }
+       }
+     }
+     ```
+
+6. **Langkah 6 — Perbarui State & Buat Hook/Manager Sinkronisasi (`src/store/use-resume-store.ts` & `src/components/auth/CloudSyncManager.tsx`):**
+   - Tambahkan state ephemeral (tidak masuk `zundo` dan tidak disimpan ke `localStorage`) di `useResumeStore`:
+     - `authUser: { uid: string; email: string | null; displayName: string | null; photoURL: string | null } | null`
+     - `cloudSyncStatus: "idle" | "syncing" | "synced" | "error" | "offline"`
+     - `applyCloudWorkspace: (payload: PersistedResumeState) => void` *(memperbarui `documents`, `activeDocumentId`, `openTabIds`, `fileOrder` dari hasil merge cloud tanpa memicu loop upload berulang)*.
+   - Buat komponen `src/components/auth/CloudSyncManager.tsx` yang dipasang di `src/app/editor/page.tsx`:
+     - Mendengarkan `onAuthStateChanged(auth, ...)`.
+     - Saat user baru login: jalankan `fetchUserCloudWorkspace(user.uid)`, gabungkan dengan `mergeLocalAndCloudDocuments`, panggil `applyCloudWorkspace`, dan upload dokumen lokal yang ada di `toUploadIds`.
+     - Saat user sedang login dan ada perubahan pada `documents` / `openTabIds` / `fileOrder`: jadwalkan penyimpanan ke Firestore dengan debounce `1500ms` (dan panggil `deleteResumeFromCloud` jika ada ID dokumen yang dihapus).
+
+7. **Langkah 7 — Buat Modal Login/Register `src/components/auth/AuthModal.tsx` & Integrasikan di `EditorTopBar.tsx`:**
+   - Desain `AuthModal.tsx` dengan palet monokromatis sesuai `agents-md/brand-guideline.md`:
+     - Memiliki tab switch: **"Masuk (Sign In)"** dan **"Daftar Akun (Sign Up)"**.
+     - Tombol utama **"Lanjutkan dengan Google"** (ikon Google SVG bersih + `signInWithGoogle()`).
+     - Form **Email & Password** (ditambah input **Nama Lengkap** saat tab *Daftar Akun*, validasi password minimal 6 karakter, dan tombol **"Lupa Password?"** yang memanggil `resetPassword(email)`).
+     - Menampilkan pesan error dalam kotak merah lembut (`#FEF2F2` / `#EF4444`) atau pesan sukses reset password dalam kotak hijau (`#ECFDF5` / `#10B981`).
+     - Jika pengguna sudah login, klik tombol profil di `EditorTopBar.tsx` membuka popover ringkas berisi Nama/Email pengguna, status sinkronisasi Cloud Firestore (`Tersinkron ke Cloud` / `Menyinkronkan...`), tombol **"Sinkronkan Sekarang"**, dan tombol **"Keluar (Sign Out)"**.
+
+8. **Langkah 8 — Buat Unit Test di `src/lib/__tests__/firestore-sync.test.ts`:**
+   - Uji fungsi `mergeLocalAndCloudDocuments`:
+     - Draf lokal baru + cloud kosong → semua draf lokal dipertahankan dan masuk `toUploadIds`.
+     - Dokumen dengan ID sama di lokal dan cloud → versi dengan `updatedAt` lebih baru yang menang.
+     - Dokumen yang hanya ada di cloud → otomatis masuk ke `mergedDocs` tanpa perlu di-upload ulang.
+   - Uji fungsi `mapFirebaseAuthError` untuk seluruh kode error umum (`auth/invalid-credential`, `auth/email-already-in-use`, `auth/weak-password`, dll.).
+   - Uji `isFirebaseConfigured()` mengembalikan `false` secara aman ketika env kosong.
 
 **Acceptance criteria:**
-- [ ] File migrasi SQL di `supabase/migrations/` mendefinisikan tabel `profiles`, `cv_documents`, dan `cv_versions` dengan kebijakan RLS ketat (`auth.uid() = user_id`).
-- [ ] Pengguna *Guest* tetap dapat memakai `/editor` tanpa login; pengguna yang login dapat menyinkronkan dokumen `localStorage` ke Supabase tanpa kehilangan draf lokal.
-- [ ] Indikator status simpan di `EditorTopBar.tsx` menampilkan status sinkronisasi cloud jika pengguna sedang login.
+- [ ] `src/lib/firebase/config.ts` menginisialisasi Firebase Auth & Firestore secara aman dan tidak crash bila variabel environment `.env.local` belum diisi (`isFirebaseConfigured()`).
+- [ ] `src/components/auth/AuthModal.tsx` mendukung **Sign In / Sign Up with Google** maupun **Email & Password** (beserta *Reset Password* dan *Sign Out*) dengan pesan error Bahasa Indonesia yang jelas dan desain monokromatis sesuai `brand-guideline.md`.
+- [ ] `src/lib/firebase/firestore-sync.ts` dan `CloudSyncManager.tsx` menggabungkan draf `localStorage` (*Guest Mode*) ke koleksi Firestore `users/{uid}/resumes/{docId}` saat login tanpa menghilangkan draf yang baru diketik, serta menyinkronkan perubahan berikutnya secara otomatis (debounced `1500ms`).
+- [ ] `EditorTopBar.tsx` menampilkan tombol **"Masuk / Simpan Cloud"** saat Guest Mode, dan menampilkan avatar/email pengguna beserta indikator status sinkronisasi Firestore saat sudah login.
+- [ ] File `firestore.rules` dan `.env.example` tersedia di root proyek, serta unit test di `src/lib/__tests__/firestore-sync.test.ts` lulus seluruhnya.
 
 **Verification:**
 - [ ] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
 - [ ] Build succeeds: `npm run build`
-- [ ] Manual check: Buat CV di Guest Mode, lakukan login, dan verifikasi dokumen lokal otomatis tersimpan ke tabel `cv_documents` milik pengguna tersebut.
+- [ ] Manual check: Buat CV di *Guest Mode*, klik **"Masuk / Simpan Cloud"**, daftar/masuk dengan Google atau Email & Password, lalu verifikasi di Firebase Console bahwa dokumen otomatis tersimpan di koleksi `users/{uid}/resumes/{docId}` dan tetap muncul saat halaman di-refresh.
 
-**Dependencies:** Task 3
+**Dependencies:** Task 3, Task 6
 
 **Files likely touched:**
-- `supabase/migrations/0001_init_formacv.sql`
-- `src/lib/supabase/client.ts`
-- `src/lib/supabase/sync.ts`
+- `package.json`
+- `.env.example`
+- `firestore.rules`
+- `src/lib/firebase/config.ts`
+- `src/lib/firebase/auth.ts`
+- `src/lib/firebase/firestore-sync.ts`
+- `src/components/auth/AuthModal.tsx`
+- `src/components/auth/CloudSyncManager.tsx`
+- `src/store/use-resume-store.ts`
 - `src/components/editor/EditorTopBar.tsx`
+- `src/app/editor/page.tsx`
+- `src/lib/__tests__/firestore-sync.test.ts`
 
-**Estimated scope:** Medium (4 files)
+**Estimated scope:** Medium (8-10 files)
 
 ---
 
 ### Task 10: Dashboard Multi-CV (`/app`), Version History & Pengaturan Privasi (`/settings`)
 
-**Description:** Membangun halaman Dashboard `/app` dan halaman Pengaturan `/settings` (branch `feat/multi-cv-dashboard`). Pengguna dapat melihat daftar seluruh versi CV (baik dari `localStorage` maupun Cloud), membuat snapshot versi bernama (`cv_versions`), membandingkan perubahan antar versi, mengekspor seluruh data akun, atau menghapus seluruh data/akun secara permanen.
+**Description:** Membangun halaman Dashboard `/app` dan halaman Pengaturan `/settings` (branch `feat/multi-cv-dashboard`). Pengguna dapat melihat daftar seluruh versi CV (baik dari `localStorage` maupun Cloud Firestore), membuat snapshot versi bernama (`users/{uid}/resumes/{docId}/versions/{versionId}`), membandingkan perubahan antar versi, mengekspor seluruh data akun, atau menghapus seluruh data Cloud Firestore & akun Firebase secara permanen.
 
 **Acceptance criteria:**
 - [ ] Halaman `/app` menampilkan kartu daftar CV dengan metadata (`title`, `targetRole`, `templateId`, `updatedAt`), aksi cepat (Edit, Duplikasi, Simpan Snapshot Versi, Hapus), dan riwayat snapshot.
-- [ ] Halaman `/settings` menyediakan fitur **Ekspor Semua Data (`.json`)**, **Bersihkan Penyimpanan Lokal**, dan **Hapus Akun & Data Cloud Permanen**.
+- [ ] Halaman `/settings` menyediakan fitur **Ekspor Semua Data (`.json`)**, **Bersihkan Penyimpanan Lokal**, dan **Hapus Akun & Data Cloud Firestore Permanen**.
 - [ ] Desain kedua halaman mematuhi palet monokromatis netral di `brand-guideline.md`.
 
 **Verification:**
@@ -297,5 +419,5 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
 
 ## Checkpoint 3: After Tasks 9–10 (Phase 3 Complete)
 - [ ] Semua tes lulus (`npm test`), build production bersih (`npm run build`)
-- [ ] Kebijakan RLS dan mekanisme hapus data permanen bekerja sesuai persyaratan privasi PRD Bagian 6.3
+- [ ] Aturan keamanan `firestore.rules` (`request.auth.uid == userId`) dan mekanisme hapus data permanen bekerja sesuai persyaratan privasi PRD Bagian 6.3
 - [ ] Siap untuk peluncuran penuh atau penambahan ekstensi opsional (`.docx` export, public share link, job tracker)

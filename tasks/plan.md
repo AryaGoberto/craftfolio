@@ -15,7 +15,7 @@ Source spec: `agents-md/PRD.md`, `agents-md/DESIGN.md`, `agents-md/FEATURES.md`,
 | **Fase 1.4 & 1.6: PDF Engine & Font Sync** | 4 Template HTML & PDF selesai | `PDF_FONT_FAMILIES` di `src/lib/template-tokens.ts` masih memakai fallback `Helvetica`/`Times-Roman`. File `.ttf` lokal di `public/fonts/` & `src/lib/pdf-fonts.ts` belum terdaftar, dan URL di `PdfDocument.tsx` masih berupa `<Text>` (belum `<Link>` yang *clickable*). |
 | **Fase 1.6: Unit Testing** | `ats-linter.ts` selesai | Belum ada test runner (`vitest`) di `package.json` dan belum ada unit test `src/lib/__tests__/ats-linter.test.ts`. |
 | **Fase 2: ATS X-Ray, JD Matcher & AI** | Belum dibuat (0%) | `AtsXRayView.tsx` saat ini baru mengekstrak dari state JSON (belum mem-parse blob PDF asli via `pdfjs-dist`). Fitur JD Keyword Matcher, AI Bullet Enhancer (`/api/ai/enhance`), dan Import CV (`/api/ai/parse-cv`) belum dibuat. |
-| **Fase 3: Cloud Sync & Multi-CV** | Belum dibuat (0%) | Integrasi Supabase Auth + PostgreSQL RLS, halaman `/app` (Dashboard), `/settings`, dan fitur opsional (`.docx` export, public link, job tracker) belum dibuat. |
+| **Fase 3: Cloud Sync & Multi-CV** | Belum dibuat (0%) | Integrasi Firebase Auth (Google + Email/Password) + Cloud Firestore (`firestore.rules`), halaman `/app` (Dashboard), `/settings`, dan fitur opsional (`.docx` export, public link, job tracker) belum dibuat. |
 
 ## Dependency Graph
 
@@ -38,7 +38,7 @@ Source spec: `agents-md/PRD.md`, `agents-md/DESIGN.md`, `agents-md/FEATURES.md`,
     │                 │
     │                 └──► [Task 8: Import CV Lama PDF/DOCX ke JSON (/api/ai/parse-cv)]
     │
-    └──► [Task 9: Supabase Auth, Skema DB (RLS) & Migrasi LocalStorage]
+    └──► [Task 9: Firebase Auth (Google & Email/Password), Cloud Firestore Sync & Migrasi LocalStorage]
              │
              └──► [Task 10: Dashboard Multi-CV (/app), Version History & Settings (/settings)]
 ```
@@ -79,12 +79,12 @@ Detail lengkap setiap task beserta *acceptance criteria*, *verification*, *depen
 ### Checkpoint 2: Phase 2 Complete
 - [ ] Alur Tailoring CV end-to-end bekerja: Kelola Multi-CV di File Tree & Tab Bar → Import/Buat CV → Match JD → Enhance Bullet (dengan konfirmasi) → Verifikasi PDF X-Ray Asli
 
-### Phase 3: Cloud Sync & Multi-CV Dashboard
-- [ ] Task 9: Autentikasi Opsional Supabase, Tabel RLS & Migrasi Otomatis `localStorage`
-- [ ] Task 10: Dashboard Multi-CV (`/app`), Riwayat Versi (`cv_versions`) & Pengaturan Privasi (`/settings`)
+### Phase 3: Firebase Auth, Cloud Firestore Sync & Multi-CV Dashboard
+- [ ] Task 9: Autentikasi Firebase (Google & Email/Password), Cloud Firestore Sync (`firestore.rules`) & Smart Merge `localStorage` (`feat/firebase-auth-firestore`)
+- [ ] Task 10: Dashboard Multi-CV (`/app`), Riwayat Versi & Pengaturan Privasi (`/settings`)
 
 ### Checkpoint 3: Full Roadmap Complete
-- [ ] Guest Mode tetap berfungsi 100% tanpa login; pengguna yang login dapat menyinkronkan multi-CV dan riwayat versi dengan aman
+- [ ] Guest Mode tetap berfungsi 100% tanpa login; pengguna yang login (Google / Email & Password) dapat menyinkronkan multi-CV ke Cloud Firestore dengan aman
 
 ## Risks and Mitigations
 
@@ -93,7 +93,7 @@ Detail lengkap setiap task beserta *acceptance criteria*, *verification*, *depen
 | File font `.woff2` atau variable font gagal dirender oleh `@react-pdf/renderer` | High | Gunakan file static `.ttf` (*Regular, Bold, Italic*) di `public/fonts/` dan uji render PDF untuk ke-4 preset font. |
 | Worker `pdfjs-dist` gagal dimuat di Next.js App Router (Turbopack) | Medium | Gunakan dynamic import client-only (`ssr: false`) atau ekstraksi buffer PDF via helper ringan yang kompatibel dengan bundler Next.js 16. |
 | Halusinasi AI mengarang angka/metrik pada Bullet Enhancer | High | Batasi prompt agar hanya merestrukturisasi kalimat (pola Action-Context-Result), beri placeholder `[X]%` jika pengguna ingin menambah metrik sendiri, dan wajibkan klik konfirmasi diff. |
-| Konflik state saat migrasi `localStorage` Guest Mode ke akun Supabase | Medium | Bandingkan `id` dan `updatedAt`; unggah dokumen lokal sebagai dokumen baru/terbaru tanpa menghapus `localStorage` sampai sinkronisasi terkonfirmasi sukses. |
+| Konflik state atau draf hilang saat migrasi `localStorage` Guest Mode ke akun Firebase / Cloud Firestore | Medium | Gunakan algoritma *two-way timestamp merge* (`mergeLocalAndCloudDocuments` berdasarkan `id` dan `updatedAt`) serta debounce write `1500ms` ke `users/{uid}/resumes/{docId}`. |
 
 ## Open Questions
 
