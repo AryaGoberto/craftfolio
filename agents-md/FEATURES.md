@@ -103,9 +103,9 @@ Dokumen ini merangkum seluruh fitur **FormaCV** berdasarkan [PRD.md](./PRD.md), 
 - [x] **Autentikasi Firebase (Google & Email/Password) + Cloud Firestore Sync** — *Branch: `feat/firebase-auth-firestore`*
   - **Penjelasan:** Login/Register opsional dengan **Google** (`GoogleAuthProvider`) maupun **Email & Password** biasa (+ *Reset Password*). Dilengkapi *Smart Merge* otomatis data `localStorage` (*Guest Mode*) ke Cloud Firestore (`users/{uid}/resumes/{docId}` dan metadata workspace `openTabIds` & `fileOrder`), auto-sync debounced `1500ms`, aturan keamanan `firestore.rules`, serta fallback aman bila env Firebase belum diisi.
   - **File:** `src/lib/firebase/config.ts`, `src/lib/firebase/auth.ts`, `src/lib/firebase/firestore-sync.ts`, `src/components/auth/AuthModal.tsx`, `src/components/auth/CloudSyncManager.tsx`, `firestore.rules`, `.env.example`, `src/lib/__tests__/firestore-sync.test.ts`
-- [ ] **Dashboard Multi-CV Pengguna (`/dashboard`)** — *Branch: `feat/user-cv-dashboard`*
+- [x] **Dashboard Multi-CV Pengguna (`/dashboard`)** — *Branch: `feat/user-cv-dashboard`*
   - **Penjelasan:** Halaman dashboard untuk pengguna yang sudah login guna mengelola seluruh CV yang sedang dibuat maupun draf dalam bentuk **kartu visual** (pratinjau kertas A4 mini, status otomatis *Siap / Draf*, pencarian & filter), dilengkapi tombol **Download PDF langsung tanpa masuk editor** serta menu aksi **`⋮`** (*Buka di Editor, Rename, Duplikasi, Download PDF, Export `.json`, Hapus*).
-  - **Target:** `src/app/dashboard/page.tsx`, `src/components/dashboard/CvDocumentCard.tsx`, `src/lib/pdf-download.ts`
+  - **File:** `src/app/dashboard/page.tsx`, `src/components/dashboard/CvDocumentCard.tsx`, `src/components/dashboard/DashboardStates.tsx`, `src/lib/pdf-download.tsx`, `src/lib/dashboard-utils.ts`, `src/lib/__tests__/dashboard-utils.test.ts`
 - [ ] **Pengaturan Akun & Privasi (`/settings`)** — *Branch: `feat/settings-page`*
   - **Penjelasan:** Halaman pengaturan bahasa UI, ekspor seluruh data, kebijakan privasi, dan penghapusan data permanen.
 - [ ] **Job Application Tracker (Opsional)** — *Branch: `feat/job-tracker`*

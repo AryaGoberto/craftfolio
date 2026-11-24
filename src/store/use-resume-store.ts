@@ -18,6 +18,7 @@ import {
   generateId,
 } from "@/lib/default-resume";
 import { DEFAULT_SECTION_TITLES, type AppLanguage } from "@/lib/i18n";
+import { isFirebaseConfigured } from "@/lib/firebase/config";
 import type { AuthUserProfile } from "@/lib/firebase/auth";
 
 export type SaveStatus = "saved" | "saving" | "unsaved";
@@ -366,7 +367,7 @@ export const useResumeStore = create<ResumeStoreState>()(
           hasHydrated: false,
 
           authUser: null,
-          authLoading: false,
+          authLoading: isFirebaseConfigured(),
           cloudSyncStatus: "idle",
           cloudSyncError: null,
           lastSyncedAt: null,

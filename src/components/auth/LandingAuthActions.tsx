@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowRight, LogOut } from "lucide-react";
+import { ArrowRight, LayoutDashboard, LogOut } from "lucide-react";
 import { onAuthStateChanged } from "firebase/auth";
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase/config";
 import {
@@ -43,22 +43,18 @@ export function LandingAuthActions() {
 
         {authUser ? (
           <>
-            <div
-              title={authUser.email || authUser.displayName || "Akun Aktif"}
-              className="hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md bg-[#FAFAFA] border border-[#E4E4E7] text-[12px] font-medium text-[#09090B]"
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-white border border-[#E4E4E7] text-[#09090B] hover:bg-[#F4F4F5] text-[12px] font-medium transition-colors"
             >
-              <span className="w-4 h-4 rounded-full bg-[#18181B] text-white text-[9.5px] font-semibold inline-flex items-center justify-center uppercase shrink-0">
-                {(authUser.displayName || authUser.email || "U").slice(0, 1)}
-              </span>
-              <span className="max-w-[120px] truncate">
-                {authUser.displayName || authUser.email?.split("@")[0]}
-              </span>
-            </div>
+              <LayoutDashboard className="w-3.5 h-3.5 text-[#52525B]" />
+              <span>Dashboard</span>
+            </Link>
             <button
               type="button"
               onClick={() => void logOut()}
               title="Keluar (Sign Out)"
-              className="inline-flex items-center gap-1 h-8 px-2.5 rounded-md bg-white border border-[#E4E4E7] text-[#52525B] hover:text-[#EF4444] hover:bg-[#FEF2F2] text-[12px] font-medium transition-colors"
+              className="inline-flex items-center gap-1 h-8 px-2.5 rounded-md text-[#52525B] hover:text-[#EF4444] hover:bg-[#FEF2F2] text-[12px] font-medium transition-colors"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Keluar</span>
@@ -98,7 +94,7 @@ export function LandingAuthActions() {
           open={true}
           initialMode={authModalMode}
           onClose={() => setAuthModalMode(null)}
-          onAuthSuccess={() => router.push("/editor")}
+          onAuthSuccess={() => router.push("/dashboard")}
         />
       )}
     </>

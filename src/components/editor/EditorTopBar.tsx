@@ -9,6 +9,7 @@ import {
   Cloud,
   Eraser,
   FileJson,
+  LayoutDashboard,
   LayoutGrid,
   LogOut,
   MoreHorizontal,
@@ -465,6 +466,14 @@ export function EditorTopBar({
               <div className="my-1 border-t border-[#F4F4F5]" />
 
               <Link
+                href="/dashboard"
+                onClick={() => setOpenMenu(null)}
+                className="w-full text-left px-2.5 py-1.5 rounded hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5 text-[#52525B]" />
+                Dashboard CV Saya
+              </Link>
+              <Link
                 href="/templates"
                 onClick={() => setOpenMenu(null)}
                 className="w-full text-left px-2.5 py-1.5 rounded hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
@@ -566,6 +575,14 @@ export function EditorTopBar({
                 </div>
 
                 <div className="pt-1.5 space-y-0.5">
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setOpenMenu(null)}
+                    className="w-full text-left px-2.5 py-1.5 rounded hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5 text-[#52525B]" />
+                    Dashboard CV Saya
+                  </Link>
                   <button
                     type="button"
                     onClick={() => {
