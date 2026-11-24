@@ -54,23 +54,28 @@ Editor dirancang agar terasa seperti **alat tulis/produktivitas (seperti Notion)
 
 ### 3.2 Tata Letak Workspace & Catatan Interaksi
 ```text
-┌───────────────────────────────────────────────────────────────────────────┐
-│ Logo   My CVs   Template   Density/Font   Undo/Redo   ATS Check  Export   │
-├─────────────────────────────────┬─────────────────────────────────────────┤
-│ EDITOR (Accordion / Tabs)       │ LIVE PREVIEW (A4 / Letter)              │
-│                                 │                                         │
-│ Personal Information            │        ┌───────────────────────┐        │
-│ [Fields...]                     │        │     CV DOCUMENT       │        │
-│                                 │        │     Live Preview      │        │
-│ Education                       │        │     (Paper Ratio)     │        │
-│ [Add education +]               │        │                       │        │
-│                                 │        └───────────────────────┘        │
-│ Experience                      │                                         │
-│ [Add experience +]              │        [Page 1 / 1]  [Zoom]             │
-└─────────────────────────────────┴─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│ [Sidebar] Logo   My CVs   Template   Density/Font   Undo/Redo   JD   ATS Check   Export │
+├──────────────────┬──────────────────────────────────────────────────────────────────────┤
+│ FILE TREE        │ [📄 Master_CV ×]  [📄 CV_Frontend_Tokopedia ×]  [+]                  │
+│ [+  ⇅  ×]        ├──────────────────────────────────┬───────────────────────────────────┤
+│                  │ EDITOR (Form Sections)           │ LIVE PREVIEW (A4 / Letter)        │
+│ 📄 Master_CV   ⋮ │                                  │                                   │
+│ 📄 CV_Front... ⋮ │ Personal Information             │       ┌───────────────────┐       │
+│   ┌────────────┐ │ [Fields...]                      │       │    CV DOCUMENT    │       │
+│   │ Rename     │ │                                  │       │    Live Preview   │       │
+│   │ Duplicate  │ │ Education                        │       │   (Paper Ratio)   │       │
+│   │ Download   │ │ [Add education +]                │       │                   │       │
+│   │ Delete     │ │                                  │       └───────────────────┘       │
+│   │ New file   │ │ Experience                       │                                   │
+│   │ Upload     │ │ [Add experience +]               │       [Page 1 / 1]  [Zoom]        │
+│   └────────────┘ │                                  │                                   │
+└──────────────────┴──────────────────────────────────┴───────────────────────────────────┘
 ```
+* **Collapsible File Tree Sidebar (Di Luar Area Form CV):** Panel di sisi paling kiri (dapat dibuka/tutup) yang menampilkan daftar seluruh file CV pengguna beserta menu aksi cepat (`⋮` → *Rename, Duplicate, Download, Delete, New file, Upload `.json`*), terinspirasi dari pengalaman manajemen file di Overleaf/IDE.
+* **Browser-Style Workspace Tabs:** Barisan tab lembar kerja di atas area *Split-Screen Editor + Preview* untuk berpindah cepat antar CV yang sedang dibuka, dapat diurutkan ulang (*drag-and-drop*), dan dapat ditutup (`×`) tanpa menghapus file dari File Tree.
 * **Desktop:** Editor dan Live Preview tampil berdampingan (*split-screen*).
-* **Mobile / Tablet:** Beralih menjadi tab/segmented switch antara **Edit** dan **Preview**.
+* **Mobile / Tablet:** Beralih menjadi tab/segmented switch antara **Edit** dan **Preview**, sementara File Tree menjadi *slide-over drawer*.
 * **Aksesibilitas Reorder:** Mendukung *drag-and-drop* sekaligus tombol *move-up / move-down* yang ramah keyboard dan *screen reader*.
 * **Pengeditan Inline di Preview:** Dapat ditambahkan pada iterasi lanjutan setelah form editor stabil.
 
@@ -104,7 +109,7 @@ Editor dirancang agar terasa seperti **alat tulis/produktivitas (seperti Notion)
 * **FR-1.1:** Layar desktop terbagi dua: Panel Kiri (Form Input berbasis *accordion/tabs*) dan Panel Kanan (Live Preview dokumen A4/Letter dengan kontrol *zoom* dan *fit-to-screen*).
 * **FR-1.2:** Pada layar *mobile/tablet*, tampilan beralih menjadi tab **Edit** dan **Preview**.
 * **FR-1.3:** *Auto-save* instan ke `localStorage` setiap ada perubahan (debounce 300ms) dengan indikator status (*Saving / Saved / Unsaved changes*).
-* **FR-1.4:** Mendukung **Undo / Redo**, serta manajemen dokumen lokal (buat baru, ubah nama, duplikasi, hapus).
+* **FR-1.4:** Mendukung **Undo / Redo**, serta manajemen multi-dokumen lokal melalui **Collapsible File Tree Sidebar** (buat baru, ubah nama, duplikasi, unduh, unggah `.json`, urutkan, hapus) dan **Workspace Tab Bar** bergaya tab browser (buka beberapa CV sekaligus, urutkan tab via *drag-and-drop*, tutup tab tanpa menghapus file).
 * **FR-1.5:** Pengaturan dasar dokumen: judul dokumen, target role (opsional), bahasa CV (`id` / `en`), dan ukuran kertas (`A4` / `LETTER`).
 
 #### 1.2 Guided Section Builder

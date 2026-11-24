@@ -154,7 +154,36 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
 
 ---
 
-### Task 6: AI Bullet-Point Enhancer dengan Factuality Guardrails (`/api/ai/enhance`)
+### Task 6: Collapsible File Tree Sidebar & Reorderable Workspace Tabs (`feat/workspace-tabs-filetree`)
+
+**Description:** Mengembangkan manajemen multi-CV bergaya IDE/Overleaf di luar area form editor CV (branch `feat/workspace-tabs-filetree`). Menambahkan **Collapsible File Tree Sidebar** di sisi paling kiri layar untuk mengelola seluruh dokumen CV (*New File, Inline Rename, Duplicate, Download `.json`, Upload/Import `.json`, Sort/Reorder, Delete*) serta **Workspace Tab Bar** bergaya tab browser di atas area kerja (*Split-Screen Editor + Preview*) yang memungkinkan pengguna membuka beberapa CV sekaligus sebagai tab, mengurutkan posisi tab dengan *drag-and-drop* (`@dnd-kit/sortable`), dan menutup tab (`×`) tanpa menghapus dokumen dari File Tree.
+
+**Acceptance criteria:**
+- [ ] `useResumeStore` mendukung state `openTabIds: string[]`, `fileOrder: string[]`, dan `isFileTreeOpen: boolean` beserta action `openTab`, `closeTab`, `reorderTabs`, `reorderFiles`, dan `toggleFileTree` (tanpa mencemari riwayat Undo/Redo `zundo` saat hanya berpindah/menutup tab).
+- [ ] `src/components/editor/FileTreeSidebar.tsx` menampilkan panel sidebar kiri yang dapat dibuka/tutup (*collapsible*, lebar `~240px` di desktop dan drawer di mobile) dengan header aksi (`+` CV Baru, Sortir, Tutup Sidebar), daftar seluruh file CV yang dapat diurutkan, serta menu konteks `⋮` per file (*Rename, Duplikasi, Download `.json`, Delete*) dan aksi *Upload/Import `.json`*.
+- [ ] `src/components/editor/WorkspaceTabBar.tsx` menampilkan barisan tab dokumen CV yang sedang dibuka di atas area kerja, mendukung *drag-and-drop* urutan tab via `@dnd-kit/sortable`, klik ganda untuk *inline rename*, tombol `×` untuk menutup tab (dokumen tetap aman di File Tree), dan tombol `+` untuk membuka/membuat tab CV baru.
+- [ ] Desain visual tetap mematuhi palet monokromatis terang di `brand-guideline.md` (`#F4F4F5` / `#FAFAFA` untuk sidebar & tab non-aktif, `#FFFFFF` untuk tab aktif, border `#E4E4E7`) dan tidak mempersempit area *Split-Screen Editor + Live Preview* saat sidebar ditutup.
+
+**Verification:**
+- [ ] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
+- [ ] Build succeeds: `npm run build`
+- [ ] Manual check: Buat 3 file CV di File Tree, buka ketiganya sebagai tab, geser urutan tab dengan *drag-and-drop*, tutup salah satu tab dengan `×` (pastikan file masih ada di File Tree), lalu uji *Rename*, *Download*, dan *Delete* dari menu `⋮` di File Tree.
+
+**Dependencies:** Task 3
+
+**Files likely touched:**
+- `src/store/use-resume-store.ts`
+- `src/components/editor/FileTreeSidebar.tsx`
+- `src/components/editor/WorkspaceTabBar.tsx`
+- `src/components/editor/EditorTopBar.tsx`
+- `src/app/editor/page.tsx`
+- `src/lib/__tests__/workspace-tabs.test.ts`
+
+**Estimated scope:** Medium (5-6 files)
+
+---
+
+### Task 7: AI Bullet-Point Enhancer dengan Factuality Guardrails (`/api/ai/enhance`)
 
 **Description:** Mengimplementasikan fitur *"Perbaiki dengan AI"* pada `BulletListEditor.tsx` menggunakan Vercel AI SDK (branch `feat/ai-bullet-enhancer`). Mengubah kalimat pasif atau catatan kasar menjadi pola **Action → Context → Result (XYZ / STAR)** sesuai bahasa dokumen (`id` / `en`) dengan *factuality guardrails* ketat: dilarang mengarang angka/metrik yang tidak ada di input pengguna, ditandai badge AI, dan wajib dikonfirmasi pengguna sebelum menggantikan teks asli.
 
@@ -179,33 +208,34 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
 
 ---
 
-### Task 7: Import CV Lama (PDF / DOCX → Form JSON) dengan Langkah Review (`/api/ai/parse-cv`)
+### Task 8: Import CV Lama (PDF / DOCX → Form JSON) dengan Langkah Review (`/api/ai/parse-cv`)
 
-**Description:** Membangun fitur impor CV lama dari file PDF atau teks/DOCX ke struktur `ResumeDocument` (branch `feat/cv-import`). Mengekstrak teks mentah dari file yang diunggah, memetakannya ke skema Zod `ResumeDocumentSchema` menggunakan LLM *Structured Output*, dan menampilkan modal pratinjau & konfirmasi kepada pengguna sebelum menyimpannya sebagai dokumen baru di `useResumeStore`.
+**Description:** Membangun fitur impor CV lama dari file PDF atau teks/DOCX ke struktur `ResumeDocument` (branch `feat/cv-import`). Mengekstrak teks mentah dari file yang diunggah, memetakannya ke skema Zod `ResumeDocumentSchema` menggunakan LLM *Structured Output*, dan menampilkan modal pratinjau & konfirmasi kepada pengguna sebelum menyimpannya sebagai dokumen baru di `useResumeStore` (otomatis muncul di File Tree dan dibuka di tab baru).
 
 **Acceptance criteria:**
 - [ ] Endpoint `src/app/api/ai/parse-cv/route.ts` menerima teks hasil ekstraksi CV dan mengembalikan objek JSON yang valid sesuai `ResumeDocumentSchema`.
 - [ ] `src/components/editor/CvImportModal.tsx` memungkinkan unggah file PDF/DOCX, menampilkan ringkasan hasil ekstraksi (Nama, Jumlah Pengalaman, Pendidikan, Keahlian) beserta peringatan field yang perlu ditinjau pengguna.
-- [ ] Pengguna harus mengklik **"Konfirmasi & Buat CV"** sebelum data hasil ekstraksi dimasukkan sebagai dokumen baru di `DocumentSwitcher.tsx`.
+- [ ] Pengguna harus mengklik **"Konfirmasi & Buat CV"** sebelum data hasil ekstraksi dimasukkan sebagai dokumen baru di File Tree & tab kerja.
 
 **Verification:**
 - [ ] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
 - [ ] Build succeeds: `npm run build`
 - [ ] Manual check: Unggah file PDF CV contoh melalui modal Import, tinjau ringkasan hasil ekstraksi, klik konfirmasi, dan pastikan seluruh section terisi di editor tanpa merusak dokumen yang sudah ada.
 
-**Dependencies:** Task 4, Task 6
+**Dependencies:** Task 4, Task 6, Task 7
 
 **Files likely touched:**
 - `src/app/api/ai/parse-cv/route.ts`
 - `src/components/editor/CvImportModal.tsx`
-- `src/components/editor/DocumentSwitcher.tsx`
+- `src/components/editor/FileTreeSidebar.tsx`
 
 **Estimated scope:** Small (3 files)
 
 ---
 
-## Checkpoint 2: After Tasks 4–7 (Phase 2 Complete)
+## Checkpoint 2: After Tasks 4–8 (Phase 2 Complete)
 - [ ] Seluruh unit test lulus (`npm test`), tipe & lint bersih (`npx tsc --noEmit && npm run lint`), dan build sukses (`npm run build`)
+- [ ] Manajemen multi-CV via File Tree Sidebar & Reorderable Tabs berjalan mulus tanpa merusak state Undo/Redo dokumen
 - [ ] Guardrails AI terverifikasi: tidak ada perubahan teks otomatis tanpa konfirmasi pengguna dan tidak ada klaim metrik fiktif
 - [ ] Mode Guest tetap berfungsi penuh meskipun env API AI belum diisi (fitur AI menampilkan pesan konfigurasi yang sopan tanpa membuat aplikasi crash)
 - [ ] Review dengan human sebelum lanjut ke Fase 3
@@ -214,7 +244,7 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
 
 ## Phase 3: Cloud Sync, Multi-CV Dashboard & Privasi
 
-### Task 8: Autentikasi Opsional Supabase, Skema RLS & Migrasi `localStorage`
+### Task 9: Autentikasi Opsional Supabase, Skema RLS & Migrasi `localStorage`
 
 **Description:** Mengintegrasikan Supabase Auth dan PostgreSQL (branch `feat/cloud-sync`) sebagai fitur *opt-in* tanpa menghilangkan *Guest Mode*. Menyediakan skrip migrasi SQL (`profiles`, `cv_documents`, `cv_versions` dengan *Row Level Security*), tombol Login opsional, serta sinkronisasi dua arah yang memigrasikan dokumen dari `localStorage` ke akun cloud saat pengguna masuk.
 
@@ -240,7 +270,7 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
 
 ---
 
-### Task 9: Dashboard Multi-CV (`/app`), Version History & Pengaturan Privasi (`/settings`)
+### Task 10: Dashboard Multi-CV (`/app`), Version History & Pengaturan Privasi (`/settings`)
 
 **Description:** Membangun halaman Dashboard `/app` dan halaman Pengaturan `/settings` (branch `feat/multi-cv-dashboard`). Pengguna dapat melihat daftar seluruh versi CV (baik dari `localStorage` maupun Cloud), membuat snapshot versi bernama (`cv_versions`), membandingkan perubahan antar versi, mengekspor seluruh data akun, atau menghapus seluruh data/akun secara permanen.
 
@@ -254,18 +284,18 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
 - [ ] Build succeeds: `npm run build`
 - [ ] Manual check: Buka `/app`, buat versi baru untuk target role tertentu, simpan snapshot versi, dan uji fitur ekspor/hapus data di `/settings`.
 
-**Dependencies:** Task 8
+**Dependencies:** Task 9
 
 **Files likely touched:**
 - `src/app/app/page.tsx`
 - `src/app/settings/page.tsx`
-- `src/components/editor/DocumentSwitcher.tsx`
+- `src/components/editor/FileTreeSidebar.tsx`
 
 **Estimated scope:** Small (3 files)
 
 ---
 
-## Checkpoint 3: After Tasks 8–9 (Phase 3 Complete)
+## Checkpoint 3: After Tasks 9–10 (Phase 3 Complete)
 - [ ] Semua tes lulus (`npm test`), build production bersih (`npm run build`)
 - [ ] Kebijakan RLS dan mekanisme hapus data permanen bekerja sesuai persyaratan privasi PRD Bagian 6.3
 - [ ] Siap untuk peluncuran penuh atau penambahan ekstensi opsional (`.docx` export, public share link, job tracker)

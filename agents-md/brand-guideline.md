@@ -85,6 +85,8 @@ FormaCV membedakan secara tegas tipografi **UI Editor** (bersih, sans-serif) dan
 
 ### 4.1 Layout Split-Screen Workspace
 - **Top Navigation Bar:** Tinggi fix `48px`, `border-bottom: 1px solid #E4E4E7`, latar `#FFFFFF`.
+- **Collapsible File Tree Sidebar (Sisi Kiri Luar):** Lebar `230px – 250px` saat dibuka, latar `#F4F4F5` / `#FAFAFA`, `border-right: 1px solid #E4E4E7`. Item aktif menggunakan latar `#18181B` (teks putih) atau `#FFFFFF` dengan border `#E4E4E7` dan tombol konteks `⋮`. Dapat disembunyikan penuh agar tidak mempersempit ruang kerja pada layar laptop.
+- **Workspace Tab Bar (Di Atas Area Kerja CV):** Tinggi `36px`, latar strip `#F4F4F5` dengan `border-bottom: 1px solid #E4E4E7`. Tab aktif berlatar `#FFFFFF` menyatu dengan panel di bawahnya, dilengkapi ikon dokumen, judul CV, dukungan *drag-and-drop* urutan tab, serta tombol tutup tab (`×`).
 - **Kiri (Form Editor):** Lebar `460px – 520px` (atau `45%` viewport desktop), scroll vertikal independen, padding `20px`.
 - **Kanan (Document Preview Canvas):** Sisa viewport, background kanvas `#F8F9FA`, centering dokumen dengan *auto-margins* dan *drop-shadow* realistis (`shadow-xl`).
 
