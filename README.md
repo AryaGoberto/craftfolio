@@ -114,6 +114,6 @@ npm run build
 - [DESIGN.md](./agents-md/DESIGN.md) — *Technical Design Document* (arsitektur state, sinkronisasi PDF, aturan linter)
 - [brand-guideline.md](./agents-md/brand-guideline.md) — Sistem desain, palet warna, dan tipografi
 - [SETUP.md](./agents-md/SETUP.md) — Panduan setup Next.js, Tailwind CSS, & Docker
-- [TASKS.md](./agents-md/TASKS.md) — Checklist eksekusi MVP
+- [todo.md](./tasks/todo.md) — Daftar tugas & roadmap eksekusi (*single source of truth*)
 - [GIT_RULES.md](./agents-md/GIT_RULES.md) — Aturan branching, format commit, & checklist push
 - [AGENTS.md](./agents-md/AGENTS.md) — Panduan kerja untuk AI coding agent
