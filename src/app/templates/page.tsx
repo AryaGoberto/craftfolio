@@ -11,6 +11,7 @@ import type {
 } from "@/lib/schemas/resume";
 import { useResumeStore } from "@/store/use-resume-store";
 import { ResumeHtmlRenderer } from "@/components/preview/ResumeHtmlRenderer";
+import { BrandLogo } from "@/components/BrandLogo";
 
 interface TemplateCatalogItem {
   id: TemplateId;
@@ -113,9 +114,7 @@ export default function TemplatesPage() {
       <header className="h-14 px-4 sm:px-6 bg-white border-b border-[#E4E4E7] flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-[#18181B] text-white flex items-center justify-center font-bold text-[13px]">
-              F
-            </div>
+            <BrandLogo className="h-7 w-auto shrink-0" />
             <span className="text-[14px] font-semibold tracking-[-0.01em]">
               FormaCV
             </span>

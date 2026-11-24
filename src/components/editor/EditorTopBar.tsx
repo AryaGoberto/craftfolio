@@ -18,6 +18,7 @@ import {
 import { useStore } from "zustand";
 import { useResumeStore } from "@/store/use-resume-store";
 import { DocumentSwitcher } from "@/components/editor/DocumentSwitcher";
+import { BrandLogo } from "@/components/BrandLogo";
 import type { AtsLintReport } from "@/lib/ats-linter";
 import type {
   DensityPreset,
@@ -157,9 +158,7 @@ export function EditorTopBar({
         </button>
 
         <Link href="/" className="flex items-center gap-2 shrink-0">
-          <div className="w-7 h-7 rounded-lg bg-[#18181B] text-white flex items-center justify-center font-bold text-[13px] select-none">
-            F
-          </div>
+          <BrandLogo className="h-7 w-auto shrink-0" />
           <span className="text-[14px] font-semibold tracking-[-0.01em] text-[#09090B] hidden sm:inline">
             FormaCV
           </span>

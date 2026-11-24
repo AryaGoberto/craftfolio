@@ -30,6 +30,10 @@ export const metadata: Metadata = {
   title: "FormaCV — ATS-Friendly CV Builder",
   description:
     "Kualitas tipografi sekelas LaTeX, semudah mengisi Google Form.",
+  icons: {
+    icon: [{ url: "/logo.svg", type: "image/svg+xml" }],
+    shortcut: "/logo.svg",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

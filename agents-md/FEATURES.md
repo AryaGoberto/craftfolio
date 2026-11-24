@@ -98,10 +98,11 @@ Dokumen ini merangkum seluruh fitur **FormaCV** berdasarkan [PRD.md](./PRD.md), 
 
 ---
 
-## Fase 3 — Cloud Sync, Multi-CV & Scaling
+## Fase 3 — Cloud Sync (Firebase Auth & Firestore), Multi-CV & Scaling
 
-- [ ] **Autentikasi Opsional & Cloud Sync (Supabase)** — *Branch: `feat/cloud-sync`*
-  - **Penjelasan:** Login opsional (Google / GitHub / Magic Link) dengan migrasi otomatis data `localStorage` ke database PostgreSQL (`profiles`, `cv_documents`) yang dilindungi *Row Level Security* (RLS), plus fitur hapus akun/data.
+- [ ] **Autentikasi Firebase (Google & Email/Password) + Cloud Firestore Sync** — *Branch: `feat/firebase-auth-firestore`*
+  - **Penjelasan:** Login/Register opsional dengan **Google** (`GoogleAuthProvider`) maupun **Email & Password** biasa (+ *Reset Password*). Dilengkapi *Smart Merge* otomatis data `localStorage` (*Guest Mode*) ke Cloud Firestore (`users/{uid}/resumes/{docId}` dan metadata workspace `openTabIds` & `fileOrder`), auto-sync debounced `1500ms`, aturan keamanan `firestore.rules`, serta fallback aman bila env Firebase belum diisi.
+  - **Target:** `src/lib/firebase/config.ts`, `src/lib/firebase/auth.ts`, `src/lib/firebase/firestore-sync.ts`, `src/components/auth/AuthModal.tsx`, `src/components/auth/CloudSyncManager.tsx`, `firestore.rules`
 - [ ] **Dashboard Multi-CV (`/app`) & Version History** — *Branch: `feat/multi-cv-dashboard`*
   - **Penjelasan:** Halaman dashboard untuk mengelola banyak versi CV per posisi/perusahaan, riwayat versi (`cv_versions`), membandingkan dua versi, dan arsip/restore.
 - [ ] **Pengaturan Akun & Privasi (`/settings`)** — *Branch: `feat/settings-page`*
