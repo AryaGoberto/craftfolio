@@ -1,17 +1,35 @@
-# ISSUE-004: ATS X-Ray Mode Berbasis Ekstraksi Blob PDF Asli (`pdfjs-dist`)
+# ISSUE-005: Job Description (JD) Keyword Matcher & Deteksi Master Profile Tersembunyi
 
 | Atribut | Detail |
 | :--- | :--- |
-| **Referensi Plan** | `tasks/todo.md` — Phase 2, **Task 4** |
-| **Branch Git** | `feat/pdf-xray-parser` |
+| **Referensi Plan** | `tasks/todo.md` — Phase 2, **Task 5** |
+| **Branch Git** | `feat/jd-keyword-matcher` |
 | **Target Eksekutor** | Junior Developer / AI Coding Model Ringan |
-| **Estimasi Scope** | Small (4 file) |
+| **Estimasi Scope** | Medium (4 file) |
 
 ---
 
-## 1. Tujuan Singkat
+## 1. Ide Inti & Problem Statement (*Idea Refine*)
 
-Meningkatkan tab **ATS X-Ray Mode** (`src/components/preview/AtsXRayView.tsx`) agar mengekstrak teks langsung dari **biner/blob PDF asli** hasil render `@react-pdf/renderer` menggunakan `pdfjs-dist` (bukan sekadar menyusun teks dari state JSON). Jika proses ekstraksi sedang berjalan atau gagal di environment non-worker, UI menampilkan fallback ke `extractLinearResumeText(doc)`.
+> **How Might We:** Bagaimana membantu pelamar kerja menyesuaikan CV mereka terhadap suatu lowongan dalam hitungan detik—dengan memunculkan kembali pengalaman relevan yang sudah ada di *Master Profile* (`isVisible: false`)—tanpa mengarang pengalaman atau memberi skor ATS palsu?
+
+### Arah Solusi yang Dipilih
+Berbeda dengan *keyword checker* biasa yang hanya bilang *"Anda kurang skill X"*, FormaCV memanfaatkan struktur **Master Profile (`isVisible`)**:
+1. **100% Client-Side & Deterministik:** Berjalan instan di browser (tanpa biaya API AI, tetap jalan penuh di *Guest Mode*).
+2. **3 Kategori Jelas (Bukan Sekadar Skor):**
+   - **Sudah Aktif di CV (`matchedActive`)** — Kata kunci sudah terlihat di CV aktif.
+   - **Ada di Master Profile — Tersembunyi (`matchedHiddenInMaster`)** — Kata kunci ditemukan pada section/item/bullet yang `isVisible: false`, disertai tombol **1-klik "Tampilkan"** langsung dari modal.
+   - **Belum Ada di CV (`missing`)** — Kata kunci belum tertulis di CV (*peringatan jujur: tambahkan hanya jika benar-benar dikuasai*).
+3. **Alur Tailoring Aman:** Sediakan tombol **"Duplikasi CV untuk Lowongan Ini"** (`duplicateDocument`) di dalam modal agar pengguna tidak menimpa Master CV mereka secara tidak sengaja.
+
+### Asumsi Utama
+- Gabungan kamus *skill/tools* umum + deteksi token teknis (akronim seperti `SQL`, `AWS`, `NLP`, `CI/CD`, atau istilah seperti `Next.js`, `C++`) + filter *stopwords* (ID & EN) sudah cukup akurat untuk mayoritas JD tanpa LLM.
+
+### Yang TIDAK Dikerjakan (*Not Doing*)
+- **TIDAK** memanggil endpoint AI/LLM di task ini (hemat biaya & nol dependensi baru).
+- **TIDAK** menampilkan klaim *"95% Pasti Lolos ATS"* (cukup tampilkan hitungan faktual, mis. `6/10 kata kunci ditemukan`).
+- **TIDAK** menyisipkan kata kunci otomatis ke teks CV tanpa tindakan user.
+- **TIDAK** menambah skema tabel database atau mengubah `ResumeDocumentSchema`.
 
 ---
 
@@ -19,135 +37,66 @@ Meningkatkan tab **ATS X-Ray Mode** (`src/components/preview/AtsXRayView.tsx`) a
 
 | Aksi | Path File | Ringkasan |
 | :--- | :--- | :--- |
-| **Ubah** | `package.json` | Install `pdfjs-dist` |
-| **Buat** | `src/lib/pdf-text-extractor.ts` | Fungsi `extractTextFromPdfBuffer(data)` berbasis `pdfjs-dist` |
-| **Ubah** | `src/components/preview/AtsXRayView.tsx` | Generate blob PDF di `useEffect`, ekstrak teks per halaman, tampilkan badge status & fallback |
-| **Buat** | `src/lib/__tests__/pdf-text-extractor.test.ts` | Unit test ekstraksi teks dari buffer PDF asli |
-
-> **Batasan (Out of Scope):**
-> - **JANGAN** menghapus atau mengubah fungsi `extractLinearResumeText(doc)` di `AtsXRayView.tsx` karena fungsi tersebut tetap dipakai sebagai fallback dan diuji di `ats-linter.test.ts`.
-> - **JANGAN** melakukan static import `@react-pdf/renderer` atau `PdfDocument` di level atas `AtsXRayView.tsx` (gunakan dynamic `import()` di dalam `useEffect` agar SSR Next.js dan Vitest tidak error).
+| **Buat** | `src/lib/jd-matcher.ts` | Ekstraksi keyword JD & klasifikasi 3 kategori terhadap `ResumeDocument` |
+| **Buat** | `src/lib/__tests__/jd-matcher.test.ts` | Unit test ekstraksi keyword, alias, dan deteksi item tersembunyi |
+| **Buat** | `src/components/editor/JdMatcherModal.tsx` | Modal UI tempel teks JD, 3 daftar hasil, tombol 1-klik Tampilkan & Duplikasi CV |
+| **Ubah** | `src/components/editor/EditorTopBar.tsx` & `src/app/editor/page.tsx` | Tambah tombol **JD Matcher** di top bar dan hubungkan modalnya |
 
 ---
 
-## 3. Langkah Implementasi
+## 3. Panduan Implementasi
 
-### Langkah 1 — Install `pdfjs-dist`
-```bash
-npm install pdfjs-dist
-```
+### Langkah 1 — Buat `src/lib/jd-matcher.ts` (Pure Logic)
+1. **Ekstraksi Keyword (`extractJdKeywords(jdText: string): string[]`):**
+   - Normalisasi teks ke lowercase untuk pencocokan kamus frasa (*multi-word* seperti `tailwind css`, `next.js`, `rest api`, `machine learning`, `data science`, `ci/cd`, `node.js`, `react`, `typescript`, `docker`, `postgresql`, `figma`, `git`, dll.) beserta alias umum (`nextjs` → `Next.js`, `postgres` → `PostgreSQL`, `ts` → `TypeScript`).
+   - Juga tangkap token teknis dari teks asli yang tidak masuk *stopwords* ID/EN (misal akronim kapital `2–6` huruf seperti `SQL`, `AWS`, `LLM`, `RAG`, `SEO`, `KPI`, atau kata bertanda `.`/`+`/`#` seperti `Vue.js`, `C++`, `C#`).
+   - Hapus duplikat (case-insensitive) dan batasi maksimal mis. `30` keyword teratas agar tampilan tetap bersih.
+2. **Pencocokan terhadap CV (`matchJobDescription(doc: ResumeDocument, jdText: string): JdMatchResult`):**
+   - Kumpulkan `activeText` dari seluruh bagian yang aktif (`summary`, `experience`, `education`, `projects`, `skills`, `certifications`, `awards`, `volunteering`, `languages`, `customSections`) di mana section, item, dan bullet semuanya `isVisible === true`.
+   - Kumpulkan daftar `hiddenSources`: entitas yang memiliki `isVisible === false` (baik level `section`, `item`, maupun `bullet`) beserta metadata (`targetType`, `sectionKey`, `itemId?`, `bulletId?`, `label`, `text`).
+   - Untuk tiap keyword JD (cek batas kata yang aman untuk karakter khusus seperti `c++`, `next.js`, `node.js`):
+     - Jika ada di `activeText` → masuk `matchedActive`.
+     - Else jika ada di salah satu `hiddenSources` → masuk `matchedHiddenInMaster` (sertakan `sources` agar UI bisa menyalakannya).
+     - Else → masuk `missing`.
+   - Kembalikan `{ keywords, matchedActive, matchedHiddenInMaster, missing }`.
 
-### Langkah 2 — Buat `src/lib/pdf-text-extractor.ts`
-Gunakan build legacy `pdfjs-dist/legacy/build/pdf.mjs` agar kompatibel di browser maupun Node (Vitest). Kelompokkan item teks berdasarkan koordinat Y (`transform[5]`) agar baris yang berada di tinggi yang sama digabung dengan spasi, dan baris berbeda dipisah dengan `\n`:
+### Langkah 2 — Buat `src/components/editor/JdMatcherModal.tsx`
+- Ikuti gaya monokromatis `agents-md/brand-guideline.md` (mirip `AtsCheckerModal.tsx`):
+  - Textarea untuk menempelkan teks *Job Description* (JD) + tombol **"Kosongkan"** dan contoh ringkas.
+  - Tombol **"Duplikasi CV untuk Lowongan Ini"** yang memanggil `duplicateDocument(doc.id)` dari `useResumeStore` (dengan feedback singkat bahwa salinan baru sedang aktif).
+  - Ringkasan hitungan faktual: `X Aktif · Y Tersembunyi di Master · Z Belum Ada` (dengan catatan bahwa ini pencocokan kata kunci, bukan skor jaminan ATS).
+  - 3 kelompok hasil:
+    1. **Ada di Master Profile (Tersembunyi)** (badge amber `#FFFBEB` / `#F59E0B`): Tampilkan keyword + nama item yang menyimpannya + tombol **"Tampilkan"** (memanggil `toggleSectionVisibility` / `toggleItemVisibility` / `toggleBulletVisibility` sesuai sumbernya).
+    2. **Sudah Aktif di CV** (badge hijau `#ECFDF5` / `#10B981`).
+    3. **Belum Ada di CV** (badge netral `#F4F4F5` / `#52525B` + catatan jangan mengarang skill).
 
-```typescript
-export interface ExtractedPdfContent {
-  pageCount: number;
-  pages: string[];
-  fullText: string;
-}
+### Langkah 3 — Hubungkan ke `EditorTopBar.tsx` & `src/app/editor/page.tsx`
+- Tambah props `onOpenJdModal: () => void` pada `EditorTopBarProps`.
+- Tambah tombol **JD Matcher** (ikon `Target` atau `Briefcase` dari `lucide-react`) di sebelah tombol **ATS Check** di `EditorTopBar.tsx`.
+- Kelola state `jdModalOpen` di `src/app/editor/page.tsx` dan render `<JdMatcherModal />`.
 
-export async function extractTextFromPdfBuffer(
-  data: ArrayBuffer | Uint8Array
-): Promise<ExtractedPdfContent> {
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-
-  // Di browser, arahkan workerSrc ke CDN unpkg yang sesuai versi pdfjs
-  if (typeof window !== "undefined" && "GlobalWorkerOptions" in pdfjs) {
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/legacy/build/pdf.worker.min.mjs`;
-  }
-
-  const uint8 = data instanceof Uint8Array ? data : new Uint8Array(data);
-  const loadingTask = pdfjs.getDocument({
-    data: uint8,
-    useSystemFonts: true,
-    isEvalSupported: false,
-    disableFontFace: true,
-  });
-
-  const pdfDoc = await loadingTask.promise;
-  const pages: string[] = [];
-
-  for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
-    const page = await pdfDoc.getPage(pageNum);
-    const content = await page.getTextContent();
-
-    const rows: Array<{ y: number; items: Array<{ x: number; str: string }> }> = [];
-    const Y_TOLERANCE = 3;
-
-    for (const rawItem of content.items) {
-      if (!("str" in rawItem) || !rawItem.str.trim()) continue;
-      const x = Number(rawItem.transform?.[4] ?? 0);
-      const y = Number(rawItem.transform?.[5] ?? 0);
-
-      let row = rows.find((r) => Math.abs(r.y - y) <= Y_TOLERANCE);
-      if (!row) {
-        row = { y, items: [] };
-        rows.push(row);
-      }
-      row.items.push({ x, str: rawItem.str });
-    }
-
-    // Urutkan baris dari atas ke bawah (Y besar ke kecil), dan kata dari kiri ke kanan (X kecil ke besar)
-    rows.sort((a, b) => b.y - a.y);
-    const pageLines = rows.map((row) =>
-      row.items
-        .sort((a, b) => a.x - b.x)
-        .map((i) => i.str)
-        .join(" ")
-        .replace(/\s+/g, " ")
-        .trim()
-    );
-
-    pages.push(pageLines.join("\n"));
-  }
-
-  return {
-    pageCount: pdfDoc.numPages,
-    pages,
-    fullText: pages
-      .map((p, idx) =>
-        pdfDoc.numPages > 1 ? `--- HALAMAN ${idx + 1} ---\n${p}` : p
-      )
-      .join("\n\n")
-      .trim(),
-  };
-}
-```
-
-### Langkah 3 — Update `src/components/preview/AtsXRayView.tsx`
-1. Pertahankan `export function extractLinearResumeText(doc: ResumeDocument): string` tanpa mengubah perilakunya.
-2. Pada komponen `AtsXRayView({ doc })`:
-   - Gunakan `useState` untuk menyimpan `pdfText: string | null`, `pdfPageCount: number | null`, `isExtracting: boolean`, dan `source: "pdf" | "fallback"`.
-   - Di dalam `useEffect` (dengan debounce ~250ms terhadap perubahan `doc`):
-     - Lakukan dynamic import `@react-pdf/renderer`, `@/components/pdf/PdfDocument`, dan `@/lib/pdf-text-extractor`.
-     - Buat blob PDF: `const blob = await pdf(<ResumePdfDocument doc={doc} />).toBlob()`.
-     - Ekstrak teks: `const extracted = await extractTextFromPdfBuffer(await blob.arrayBuffer())`.
-     - Simpan `extracted.fullText`, `extracted.pageCount`, dan `source = "pdf"`.
-     - Jika terjadi error (mis. worker gagal dimuat), fallback ke `extractLinearResumeText(doc)` dan `source = "fallback"`.
-   - Tampilkan badge status di kanan atas:
-     - Saat loading: `"Mengekstrak PDF..."`
-     - Saat `source === "pdf"`: `"PDF Binary Parsed · X Halaman"` (`bg-[#ECFDF5] text-[#10B981]`)
-     - Saat fallback: `"Linear Simulation"` (`bg-[#F4F4F5] text-[#52525B]`)
-
-### Langkah 4 — Buat Unit Test `src/lib/__tests__/pdf-text-extractor.test.ts`
-Buat PDF sederhana di memori menggunakan `Document`, `Page`, `Text`, dan `renderToBuffer` dari `@react-pdf/renderer`, lalu panggil `extractTextFromPdfBuffer(buffer)` dan pastikan:
-- `pageCount` sesuai jumlah `<Page>` (uji 1 halaman dan 2 halaman).
-- `fullText` memuat teks dari PDF dalam urutan baris dari atas ke bawah.
+### Langkah 4 — Buat Unit Test `src/lib/__tests__/jd-matcher.test.ts`
+- Uji ekstraksi keyword multi-kata (`Tailwind CSS`, `Next.js`, `CI/CD`) dan penghapusan duplikat/stopwords.
+- Uji deteksi 3 kategori:
+  - Keyword pada item aktif → `matchedActive`.
+  - Keyword pada proyek/pengalaman/bullet/section dengan `isVisible: false` (misal `"Docker"`) → `matchedHiddenInMaster` lengkap dengan referensi `sectionKey`/`itemId`.
+  - Keyword yang tidak ada sama sekali (misal `"Kubernetes"`) → `missing`.
+- Uji input JD kosong mengembalikan array kosong tanpa error.
 
 ---
 
 ## 4. Kriteria Penerimaan (*Acceptance Criteria*)
 
-- [x] `src/lib/pdf-text-extractor.ts` mengekstrak teks linear per halaman dari `ArrayBuffer`/`Uint8Array` PDF menggunakan `pdfjs-dist` dengan worker lokal *same-origin* (`public/pdf.worker.min.mjs`) dan cleanup `loadingTask.destroy()` di `try/finally`.
-- [x] `AtsXRayView.tsx` menampilkan teks hasil ekstraksi file PDF asli beserta indikator jumlah halaman, dengan fallback ke `extractLinearResumeText(doc)`.
-- [x] Unit test baru di `src/lib/__tests__/pdf-text-extractor.test.ts` lulus bersama seluruh test yang sudah ada (3 test files, 39 tests passed, termasuk X-sort baris horizontal & error path).
+- [x] `src/lib/jd-matcher.ts` mengekstrak kata kunci dari teks JD dan mengklasifikasikannya ke `matchedActive`, `matchedHiddenInMaster`, dan `missing`.
+- [x] `JdMatcherModal.tsx` menampilkan input JD, 3 kategori hasil (tanpa klaim palsu "100% lolos ATS"), tombol **Tampilkan** untuk item tersembunyi, serta tombol **Duplikasi CV**.
+- [x] Tombol **JD Matcher** tersedia di `EditorTopBar.tsx` dan membuka modal dengan lancar.
+- [x] Unit test di `src/lib/__tests__/jd-matcher.test.ts` lulus seluruhnya (4 test files, 46 tests passed).
 
 ---
 
 ## 5. Verifikasi & GitHub Flow
 
-- [x] `npm test` — 3 test files, 39 tests passed.
+- [x] `npm test` — 4 test files, 46 tests passed.
 - [x] `npx tsc --noEmit && npm run lint` — 0 error, 0 warning.
 - [x] `npm run build` — exit code 0.
 
@@ -157,4 +106,4 @@ npx tsc --noEmit && npm run lint
 npm run build
 ```
 
-Setelah ketiganya lulus (`exit code 0`), update checkbox Task 4 di `tasks/issue.md`, `tasks/todo.md`, `tasks/plan.md`, dan `agents-md/FEATURES.md`, lalu commit & push ke `feat/pdf-xray-parser`.
+Setelah seluruh verifikasi lulus, centang Task 5 di `tasks/issue.md`, `tasks/todo.md`, `tasks/plan.md`, dan `agents-md/FEATURES.md`, lalu commit & push ke `feat/jd-keyword-matcher`.

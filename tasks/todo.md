@@ -132,13 +132,13 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
 **Description:** Membangun fitur pencocokan kata kunci lowongan kerja (branch `feat/jd-keyword-matcher`). Pengguna dapat menempelkan teks *Job Description* (JD); sistem mengekstrak *hard skills* & kata kunci teknis, lalu membandingkannya dengan isi CV aktif dan membedakan secara jelas antara: (1) **"Sudah tertulis di CV aktif"**, (2) **"Ada di Master Profile tapi masih disembunyikan (`isVisible: false`)"**, dan (3) **"Belum ada di CV"**.
 
 **Acceptance criteria:**
-- [ ] `src/lib/jd-matcher.ts` mengekstrak kata kunci penting dari teks JD dan mengklasifikasikannya ke dalam 3 kategori (`matchedActive`, `matchedHiddenInMaster`, `missing`) beserta unit test-nya.
-- [ ] `src/components/editor/JdMatcherModal.tsx` menyediakan input teks JD, menampilkan daftar keyword per kategori (tanpa klaim palsu "100% lolos ATS"), serta tombol cepat untuk mengaktifkan item tersembunyi atau menduplikasi CV untuk lowongan tersebut.
-- [ ] Tombol akses **JD Matcher** terintegrasi rapi di `EditorTopBar.tsx`.
+- [x] `src/lib/jd-matcher.ts` mengekstrak kata kunci penting dari teks JD dan mengklasifikasikannya ke dalam 3 kategori (`matchedActive`, `matchedHiddenInMaster`, `missing`) beserta unit test-nya.
+- [x] `src/components/editor/JdMatcherModal.tsx` menyediakan input teks JD, menampilkan daftar keyword per kategori (tanpa klaim palsu "100% lolos ATS"), serta tombol cepat untuk mengaktifkan item tersembunyi atau menduplikasi CV untuk lowongan tersebut.
+- [x] Tombol akses **JD Matcher** terintegrasi rapi di `EditorTopBar.tsx`.
 
 **Verification:**
-- [ ] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
-- [ ] Build succeeds: `npm run build`
+- [x] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
+- [x] Build succeeds: `npm run build`
 - [ ] Manual check: Sembunyikan salah satu proyek/pengalaman yang memuat kata `"Docker"`, tempelkan JD yang membutuhkan `"Docker"`, dan pastikan sistem mendeteksinya sebagai *"Ada di Master Profile (Tersembunyi)"*.
 
 **Dependencies:** Task 3
@@ -148,6 +148,7 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
 - `src/lib/__tests__/jd-matcher.test.ts`
 - `src/components/editor/JdMatcherModal.tsx`
 - `src/components/editor/EditorTopBar.tsx`
+- `src/app/editor/page.tsx`
 
 **Estimated scope:** Medium (4 files)
 
