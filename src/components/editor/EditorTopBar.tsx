@@ -8,6 +8,7 @@ import {
   ChevronDown,
   FileJson,
   LayoutGrid,
+  PanelLeft,
   Redo2,
   SlidersHorizontal,
   Target,
@@ -73,6 +74,8 @@ export function EditorTopBar({
   const documents = useResumeStore((s) => s.documents);
   const activeDocumentId = useResumeStore((s) => s.activeDocumentId);
   const saveStatus = useResumeStore((s) => s.saveStatus);
+  const isFileTreeOpen = useResumeStore((s) => s.isFileTreeOpen);
+  const toggleFileTree = useResumeStore((s) => s.toggleFileTree);
   const updateConfig = useResumeStore((s) => s.updateConfig);
   const setLanguage = useResumeStore((s) => s.setLanguage);
   const exportResumeJson = useResumeStore((s) => s.exportResumeJson);
@@ -132,8 +135,27 @@ export function EditorTopBar({
 
   return (
     <header className="h-12 px-3 sm:px-4 bg-white border-b border-[#E4E4E7] flex items-center justify-between gap-2 shrink-0 z-30">
-      {/* Left: Brand + Document Title + Save status */}
-      <div className="flex items-center gap-2.5 min-w-0">
+      {/* Left: File Tree Toggle + Brand + Document Title + Save status */}
+      <div className="flex items-center gap-2 min-w-0">
+        <button
+          type="button"
+          onClick={() => toggleFileTree()}
+          aria-label="Toggle File Tree Sidebar"
+          aria-pressed={isFileTreeOpen}
+          title={
+            isFileTreeOpen
+              ? "Sembunyikan File Tree (Ctrl+B)"
+              : "Tampilkan File Tree (Ctrl+B)"
+          }
+          className={`inline-flex items-center justify-center w-8 h-8 rounded-md border shrink-0 transition-colors ${
+            isFileTreeOpen
+              ? "bg-[#18181B] text-white border-[#18181B]"
+              : "bg-white text-[#52525B] border-[#E4E4E7] hover:text-[#09090B] hover:bg-[#F4F4F5]"
+          }`}
+        >
+          <PanelLeft className="w-4 h-4" />
+        </button>
+
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <div className="w-7 h-7 rounded-lg bg-[#18181B] text-white flex items-center justify-center font-bold text-[13px] select-none">
             F

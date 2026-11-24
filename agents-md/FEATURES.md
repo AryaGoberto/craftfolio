@@ -86,6 +86,9 @@ Dokumen ini merangkum seluruh fitur **FormaCV** berdasarkan [PRD.md](./PRD.md), 
 - [x] **Job Description (JD) Keyword Matcher** — *Branch: `feat/jd-keyword-matcher`*
   - **Penjelasan:** Panel modal untuk menempelkan teks lowongan kerja, mengekstrak *hard skills* & kata kunci secara deterministik di browser, memisahkan 3 kategori (`matchedActive`, `matchedHiddenInMaster` dengan tombol 1-klik **Tampilkan**, dan `missing`), serta tombol **Duplikasi CV untuk Lowongan Ini**.
   - **File:** `src/lib/jd-matcher.ts`, `src/lib/__tests__/jd-matcher.test.ts`, `src/components/editor/JdMatcherModal.tsx`, `src/components/editor/EditorTopBar.tsx`, `src/app/editor/page.tsx`
+- [x] **Collapsible File Tree Sidebar & Reorderable Workspace Tabs** — *Branch: `feat/workspace-tabs-filetree`*
+  - **Penjelasan:** Sidebar *File Tree* di sisi luar editor (terinspirasi Overleaf/VS Code) untuk mengelola seluruh dokumen CV (*New File, Rename, Duplicate, Download `.json`, Upload/Import `.json`, Reorder, Delete*), dipadukan dengan *Workspace Tab Bar* bergaya tab browser di atas area kerja yang dapat diurutkan dengan *drag-and-drop* (`@dnd-kit/sortable`) dan ditutup (`×`) tanpa menghapus file CV.
+  - **File:** `src/components/editor/FileTreeSidebar.tsx`, `src/components/editor/WorkspaceTabBar.tsx`, `src/store/use-resume-store.ts`, `src/components/editor/EditorTopBar.tsx`, `src/app/editor/page.tsx`, `src/lib/__tests__/workspace-tabs.test.ts`
 - [ ] **AI Bullet-Point Enhancer (dengan Factuality Guardrails)** — *Branch: `feat/ai-bullet-enhancer`*
   - **Penjelasan:** Tombol *"Perbaiki dengan AI"* di tiap bullet untuk mengubah kalimat pasif menjadi format **Action → Context → Result (XYZ / STAR)** dalam ID/EN via Vercel AI SDK. Wajib disertai *guardrails* (dilarang mengarang angka/pengalaman, label teks AI, dan wajib konfirmasi user).
   - **Target:** `src/app/api/ai/enhance/route.ts`

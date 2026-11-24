@@ -32,13 +32,15 @@ Source spec: `agents-md/PRD.md`, `agents-md/DESIGN.md`, `agents-md/FEATURES.md`,
     │        │
     │        └──► [Task 5: Job Description (JD) Keyword Matcher & Tailoring Flow]
     │                 │
-    │                 ├──► [Task 6: AI Bullet-Point Enhancer (/api/ai/enhance)]
+    │                 ├──► [Task 6: Collapsible File Tree Sidebar & Reorderable Workspace Tabs]
     │                 │
-    │                 └──► [Task 7: Import CV Lama PDF/DOCX ke JSON (/api/ai/parse-cv)]
+    │                 ├──► [Task 7: AI Bullet-Point Enhancer (/api/ai/enhance)]
+    │                 │
+    │                 └──► [Task 8: Import CV Lama PDF/DOCX ke JSON (/api/ai/parse-cv)]
     │
-    └──► [Task 8: Supabase Auth, Skema DB (RLS) & Migrasi LocalStorage]
+    └──► [Task 9: Supabase Auth, Skema DB (RLS) & Migrasi LocalStorage]
              │
-             └──► [Task 9: Dashboard Multi-CV (/app), Version History & Settings (/settings)]
+             └──► [Task 10: Dashboard Multi-CV (/app), Version History & Settings (/settings)]
 ```
 
 ## Architecture Decisions
@@ -70,15 +72,16 @@ Detail lengkap setiap task beserta *acceptance criteria*, *verification*, *depen
 ### Phase 2: ATS Intelligence, Tailoring & AI
 - [x] Task 4: ATS X-Ray Mode Berbasis Ekstraksi Blob PDF Asli (`pdfjs-dist`)
 - [x] Task 5: Job Description (JD) Keyword Matcher & Deteksi Master Profile Tersembunyi
-- [ ] Task 6: AI Bullet-Point Enhancer dengan Factuality Guardrails (`/api/ai/enhance`)
-- [ ] Task 7: Import CV Lama (PDF/DOCX) ke Form JSON dengan Langkah Review (`/api/ai/parse-cv`)
+- [x] Task 6: Collapsible File Tree Sidebar & Reorderable Workspace Tabs (`feat/workspace-tabs-filetree`)
+- [ ] Task 7: AI Bullet-Point Enhancer dengan Factuality Guardrails (`/api/ai/enhance`)
+- [ ] Task 8: Import CV Lama (PDF/DOCX) ke Form JSON dengan Langkah Review (`/api/ai/parse-cv`)
 
 ### Checkpoint 2: Phase 2 Complete
-- [ ] Alur Tailoring CV end-to-end bekerja: Import/Buat CV → Match JD → Enhance Bullet (dengan konfirmasi) → Verifikasi PDF X-Ray Asli
+- [ ] Alur Tailoring CV end-to-end bekerja: Kelola Multi-CV di File Tree & Tab Bar → Import/Buat CV → Match JD → Enhance Bullet (dengan konfirmasi) → Verifikasi PDF X-Ray Asli
 
 ### Phase 3: Cloud Sync & Multi-CV Dashboard
-- [ ] Task 8: Autentikasi Opsional Supabase, Tabel RLS & Migrasi Otomatis `localStorage`
-- [ ] Task 9: Dashboard Multi-CV (`/app`), Riwayat Versi (`cv_versions`) & Pengaturan Privasi (`/settings`)
+- [ ] Task 9: Autentikasi Opsional Supabase, Tabel RLS & Migrasi Otomatis `localStorage`
+- [ ] Task 10: Dashboard Multi-CV (`/app`), Riwayat Versi (`cv_versions`) & Pengaturan Privasi (`/settings`)
 
 ### Checkpoint 3: Full Roadmap Complete
 - [ ] Guest Mode tetap berfungsi 100% tanpa login; pengguna yang login dapat menyinkronkan multi-CV dan riwayat versi dengan aman

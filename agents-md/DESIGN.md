@@ -14,12 +14,15 @@ interface ResumeStoreState {
   // Persisted Data
   documents: Record<string, ResumeDocument>;
   activeDocumentId: string;
+  openTabIds: string[]; // Daftar ID dokumen CV yang sedang dibuka di Workspace Tab Bar (dapat diurutkan)
+  fileOrder: string[];  // Urutan ID dokumen CV di File Tree Sidebar
 
   // Ephemeral UI State (TIDAK disimpan ke localStorage & TIDAK masuk history zundo)
   saveStatus: 'saved' | 'saving' | 'unsaved';
   activeSection: SectionKey | 'basics';
   mobileTab: 'edit' | 'preview';
   previewZoom: number; // default: 0.85 atau 'fit'
+  isFileTreeOpen: boolean; // Toggle buka/tutup File Tree Sidebar di luar area editor CV
   hasHydrated: boolean;
 }
 ```
@@ -40,15 +43,19 @@ interface ResumeStoreState {
    - Setiap mutasi konten langsung memperbarui store (agar Live Preview instan `< 100ms`), men-set `saveStatus: 'saving'`, lalu setelah `300ms` idle men-set `saveStatus: 'saved'`.
 
 ### 1.3 Daftar Actions
-- **Document Lifecycle:**
-  - `createDocument(templateId?, language?)`
+- **Document, File Tree & Workspace Tab Lifecycle:**
+  - `createDocument(templateId?, language?)` *(menambahkan dokumen ke `documents`, `fileOrder`, `openTabIds`, dan menjadikannya `activeDocumentId`)*
   - `duplicateDocument(id)`
   - `renameDocument(id, title)`
-  - `deleteDocument(id)` *(menjaga minimal 1 dokumen tetap ada atau fallback ke default)*
-  - `setActiveDocument(id)`
+  - `deleteDocument(id)` *(menjaga minimal 1 dokumen tetap ada; menghapus dari `documents`, `fileOrder`, dan `openTabIds`)*
+  - `setActiveDocument(id)` *(mengaktifkan dokumen dan memastikannya masuk ke `openTabIds`)*
+  - `openTab(id)` / `closeTab(id)` *(menutup tab dari `openTabIds` tanpa menghapus dokumen dari `documents` / File Tree; menjaga minimal 1 tab tetap terbuka)*
+  - `reorderTabs(oldIndex, newIndex)` *(mengubah urutan tab di `WorkspaceTabBar` via drag-and-drop)*
+  - `reorderFiles(oldIndex, newIndex)` *(mengubah urutan file di `FileTreeSidebar`)*
+  - `toggleFileTree(open?: boolean)`
   - `loadSampleResume()` / `clearActiveResume()`
   - `importResumeJson(rawJson: string): { ok: boolean; error?: string }` *(divalidasi dengan `ResumeDocumentSchema.safeParse`)*
-  - `exportResumeJson(): string`
+  - `exportResumeJson(id?: string): string`
 - **Config & Basics:**
   - `updateConfig(patch: Partial<ResumeDocument['config']>)`
   - `setLanguage(lang: 'id' | 'en')` *(opsional menyinkronkan heading default yang belum dikustomisasi)*
@@ -164,26 +171,36 @@ export interface AtsLintReport {
 ```text
 EditorPage
 ├── EditorTopBar
-│   ├── BrandLogo + DocumentTitleInput
-│   ├── SaveStatusBadge (Saved / Saving / Unsaved)
+│   ├── FileTreeToggleButton (buka/tutup sidebar File Tree) + BrandLogo
+│   ├── DocumentSwitcher + SaveStatusBadge (Saved / Saving / Unsaved)
 │   ├── UndoRedoButtons (terhubung ke useResumeStore.temporal)
 │   ├── TemplateAndLayoutPopover (Template, PaperSize, Density, Font, TargetPages, Language)
-│   ├── JsonBackupMenu (Export .json, Import .json, Sample / Kosongkan)
+│   ├── JdMatcherButton + AtsCheckerPill
+│   ├── JsonBackupMenu (Export .json, Import .json)
 │   └── PdfExportButton (dynamic ssr: false)
-├── MobileViewSwitcher (Edit | Preview — tampil < lg)
-└── SplitWorkspace
-    ├── EditorPanel (kiri)
-    │   ├── SectionNavigator (drag-and-drop & move up/down urutan section)
-    │   ├── BasicsForm (Personal Info, Links, Summary + word counter)
-    │   ├── RepeatableSectionForm (Experience, Education, Projects, Certifications, Awards, Volunteering, Languages, Custom)
-    │   │   └── ItemCard (visibility toggle, reorder, edit fields, BulletListEditor)
-    │   ├── SkillsSectionForm
-    │   └── AtsCheckerDrawer / Panel (menampilkan hasil runAtsLint)
-    └── PreviewPanel (kanan)
-        ├── OverflowWarningBanner (kondisional)
-        ├── PaperCanvas (skala zoom, garis batas halaman)
-        │   └── ResumeHtmlRenderer (ClassicTemplate | ModernTemplate | CompactTemplate | ExecutiveTemplate)
-        └── PreviewFooterBar (Page 1/1, Zoom - / + / Fit)
+└── OuterWorkspace (flex-row)
+    ├── FileTreeSidebar (collapsible di luar area buat CV, ~240px)
+    │   ├── FileTreeHeader ("File tree", + New File, Sort/Reorder, × Close)
+    │   ├── FileTreeList (daftar seluruh dokumen CV, inline rename, drag-and-drop)
+    │   │   └── FileTreeItemContextMenu (⋮ -> Rename, Duplikasi, Download .json, Delete, New file, Upload .json)
+    │   └── FileTreeFooter (Quick Upload / Backup info)
+    └── MainEditorColumn (flex-1 flex-col)
+        ├── WorkspaceTabBar (tab lembar kerja CV bergaya browser, sortable via @dnd-kit)
+        │   ├── SortableDocumentTab (ikon file, judul CV, double-click rename, tombol × close tab)
+        │   └── NewTabButton (+)
+        ├── MobileViewSwitcher (Edit | Preview — tampil < lg)
+        └── SplitWorkspace
+            ├── EditorPanel (kiri)
+            │   ├── SectionNavigator (drag-and-drop & move up/down urutan section)
+            │   ├── BasicsForm (Personal Info, Links, Summary + word counter)
+            │   ├── RepeatableSectionForm (Experience, Education, Projects, Certifications, Awards, Volunteering, Languages, Custom)
+            │   │   └── ItemCard (visibility toggle, reorder, edit fields, BulletListEditor)
+            │   └── SkillsSectionForm
+            └── PreviewPanel (kanan)
+                ├── OverflowWarningBanner (kondisional)
+                ├── PaperCanvas (skala zoom, garis batas halaman)
+                │   └── ResumeHtmlRenderer (ClassicTemplate | ModernTemplate | CompactTemplate | ExecutiveTemplate)
+                └── PreviewFooterBar (Page 1/1, Zoom - / + / Fit)
 ```
 
 ### 4.2 Spesifikasi UI States

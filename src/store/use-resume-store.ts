@@ -21,9 +21,16 @@ import { DEFAULT_SECTION_TITLES, type AppLanguage } from "@/lib/i18n";
 
 export type SaveStatus = "saved" | "saving" | "unsaved";
 
-interface PersistedResumeState {
+export type FileSortBy = "title" | "updatedAt";
+
+interface TemporalResumeState {
   documents: Record<string, ResumeDocument>;
   activeDocumentId: string;
+}
+
+export interface PersistedResumeState extends TemporalResumeState {
+  openTabIds: string[];
+  fileOrder: string[];
 }
 
 type ItemSectionKey = BuiltinSectionKey | `custom:${string}`;
@@ -35,6 +42,7 @@ export interface ResumeStoreState extends PersistedResumeState {
   mobileTab: "edit" | "preview";
   previewZoom: number;
   previewMode: "visual" | "xray";
+  isFileTreeOpen: boolean;
   hasHydrated: boolean;
 
   setHasHydrated: (hydrated: boolean) => void;
@@ -42,16 +50,22 @@ export interface ResumeStoreState extends PersistedResumeState {
   setMobileTab: (tab: "edit" | "preview") => void;
   setPreviewZoom: (zoom: number) => void;
   setPreviewMode: (mode: "visual" | "xray") => void;
+  toggleFileTree: (open?: boolean) => void;
 
   createDocument: (title?: string) => void;
   duplicateDocument: (id: string) => void;
   renameDocument: (id: string, title: string) => void;
   deleteDocument: (id: string) => void;
   setActiveDocument: (id: string) => void;
+  openTab: (id: string) => void;
+  closeTab: (id: string) => void;
+  reorderTabs: (oldIndex: number, newIndex: number) => void;
+  reorderFiles: (oldIndex: number, newIndex: number) => void;
+  sortFiles: (by: FileSortBy) => void;
   loadSampleResume: () => void;
   clearActiveResume: () => void;
   importResumeJson: (rawJson: string) => { ok: boolean; error?: string };
-  exportResumeJson: () => string;
+  exportResumeJson: (id?: string) => string;
 
   updateConfig: (patch: Partial<ResumeDocument["config"]>) => void;
   setLanguage: (lang: AppLanguage) => void;
@@ -112,10 +126,127 @@ export interface ResumeStoreState extends PersistedResumeState {
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 function arrayMove<T>(arr: T[], from: number, to: number): T[] {
+  if (
+    from === to ||
+    from < 0 ||
+    to < 0 ||
+    from >= arr.length ||
+    to >= arr.length
+  ) {
+    return arr;
+  }
   const next = [...arr];
   const [moved] = next.splice(from, 1);
   if (moved !== undefined) next.splice(to, 0, moved);
   return next;
+}
+
+/** Ensures every existing document ID appears exactly once in File Tree order. */
+export function syncFileOrder(
+  fileOrder: string[] | undefined,
+  documents: Record<string, ResumeDocument>
+): string[] {
+  const validIds = new Set(Object.keys(documents));
+  const seen = new Set<string>();
+  const next: string[] = [];
+
+  for (const id of fileOrder ?? []) {
+    if (validIds.has(id) && !seen.has(id)) {
+      seen.add(id);
+      next.push(id);
+    }
+  }
+
+  for (const id of Object.keys(documents)) {
+    if (!seen.has(id)) {
+      seen.add(id);
+      next.push(id);
+    }
+  }
+
+  return next;
+}
+
+/** Keeps open tabs valid, deduplicated, and ensures the active document has an open tab. */
+export function syncOpenTabs(
+  openTabIds: string[] | undefined,
+  documents: Record<string, ResumeDocument>,
+  activeDocumentId: string
+): string[] {
+  const validIds = new Set(Object.keys(documents));
+  const seen = new Set<string>();
+  const next: string[] = [];
+
+  for (const id of openTabIds ?? []) {
+    if (validIds.has(id) && !seen.has(id)) {
+      seen.add(id);
+      next.push(id);
+    }
+  }
+
+  if (validIds.has(activeDocumentId) && !seen.has(activeDocumentId)) {
+    next.push(activeDocumentId);
+  }
+
+  if (next.length === 0) {
+    const firstId = Object.keys(documents)[0];
+    if (firstId) next.push(firstId);
+  }
+
+  return next;
+}
+
+/** Pure migration helper for persisted Zustand state (v1/v2 -> v3). */
+export function migratePersistedResumeState(
+  persistedState: unknown,
+  version: number
+): PersistedResumeState {
+  const state = persistedState as Partial<PersistedResumeState> | undefined;
+  if (
+    !state ||
+    !state.documents ||
+    Object.keys(state.documents).length === 0
+  ) {
+    const sample = createSampleResume();
+    return {
+      documents: { [sample.id]: sample },
+      activeDocumentId: sample.id,
+      openTabIds: [sample.id],
+      fileOrder: [sample.id],
+    };
+  }
+
+  let documents = state.documents;
+  if (version < 2) {
+    const updatedDocs: Record<string, ResumeDocument> = {};
+    for (const [id, doc] of Object.entries(documents)) {
+      updatedDocs[id] =
+        doc.config.templateId === "classic-latex" &&
+        doc.config.fontFamily === "inter"
+          ? { ...doc, config: { ...doc.config, fontFamily: "serif" } }
+          : doc;
+    }
+    documents = updatedDocs;
+  }
+
+  const activeDocumentId =
+    state.activeDocumentId && documents[state.activeDocumentId]
+      ? state.activeDocumentId
+      : Object.keys(documents)[0];
+
+  const fileOrder = syncFileOrder(state.fileOrder, documents);
+  const openTabIds = syncOpenTabs(
+    version < 3 ? [activeDocumentId] : state.openTabIds,
+    documents,
+    activeDocumentId
+  );
+
+  return {
+    documents,
+    activeDocumentId,
+    openTabIds,
+    fileOrder,
+  };
 }
 
 /** Immutably updates items (and optionally visibility) of a built-in or custom section. */
@@ -208,11 +339,14 @@ export const useResumeStore = create<ResumeStoreState>()(
         return {
           documents: { [initialSample.id]: initialSample },
           activeDocumentId: initialSample.id,
+          openTabIds: [initialSample.id],
+          fileOrder: [initialSample.id],
           saveStatus: "saved",
           activeSection: "basics",
           mobileTab: "edit",
           previewZoom: 0.9,
           previewMode: "visual",
+          isFileTreeOpen: true,
           hasHydrated: false,
 
           setHasHydrated: (hydrated) => set({ hasHydrated: hydrated }),
@@ -221,15 +355,36 @@ export const useResumeStore = create<ResumeStoreState>()(
           setPreviewZoom: (zoom) =>
             set({ previewZoom: Math.min(1.5, Math.max(0.45, zoom)) }),
           setPreviewMode: (mode) => set({ previewMode: mode }),
+          toggleFileTree: (open) =>
+            set((state) => ({
+              isFileTreeOpen: open ?? !state.isFileTreeOpen,
+            })),
 
           createDocument: (title) => {
             const id = generateId("cv");
             const doc = createEmptyResume(id, title || "CV Baru");
-            set((state) => ({
-              documents: { ...state.documents, [id]: doc },
-              activeDocumentId: id,
-              activeSection: "basics",
-            }));
+            set((state) => {
+              const nextDocs = { ...state.documents, [id]: doc };
+              const nextOrder = [
+                ...syncFileOrder(state.fileOrder, state.documents),
+                id,
+              ];
+              const nextTabs = [
+                ...syncOpenTabs(
+                  state.openTabIds,
+                  state.documents,
+                  state.activeDocumentId
+                ),
+                id,
+              ];
+              return {
+                documents: nextDocs,
+                activeDocumentId: id,
+                fileOrder: nextOrder,
+                openTabIds: nextTabs,
+                activeSection: "basics",
+              };
+            });
             scheduleSaved();
           },
 
@@ -245,10 +400,31 @@ export const useResumeStore = create<ResumeStoreState>()(
               createdAt: now,
               updatedAt: now,
             };
-            set((state) => ({
-              documents: { ...state.documents, [newId]: copy },
-              activeDocumentId: newId,
-            }));
+            set((state) => {
+              const nextDocs = { ...state.documents, [newId]: copy };
+              const syncedOrder = syncFileOrder(state.fileOrder, state.documents);
+              const sourceIdx = syncedOrder.indexOf(id);
+              const nextOrder = [...syncedOrder];
+              if (sourceIdx >= 0) {
+                nextOrder.splice(sourceIdx + 1, 0, newId);
+              } else {
+                nextOrder.push(newId);
+              }
+              const nextTabs = [
+                ...syncOpenTabs(
+                  state.openTabIds,
+                  state.documents,
+                  state.activeDocumentId
+                ),
+                newId,
+              ];
+              return {
+                documents: nextDocs,
+                activeDocumentId: newId,
+                fileOrder: nextOrder,
+                openTabIds: nextTabs,
+              };
+            });
             scheduleSaved();
           },
 
@@ -265,20 +441,140 @@ export const useResumeStore = create<ResumeStoreState>()(
           },
 
           deleteDocument: (id) => {
-            const { documents, activeDocumentId } = get();
-            if (Object.keys(documents).length <= 1) return;
+            const { documents, activeDocumentId, openTabIds, fileOrder } = get();
+            if (Object.keys(documents).length <= 1 || !documents[id]) return;
+
             const nextDocs = { ...documents };
             delete nextDocs[id];
-            const nextActive =
-              activeDocumentId === id
-                ? Object.keys(nextDocs)[0]
-                : activeDocumentId;
-            set({ documents: nextDocs, activeDocumentId: nextActive });
+
+            const nextOrder = syncFileOrder(
+              fileOrder.filter((fid) => fid !== id),
+              nextDocs
+            );
+
+            const currentSyncedTabs = syncOpenTabs(
+              openTabIds,
+              documents,
+              activeDocumentId
+            );
+            const closedIdx = currentSyncedTabs.indexOf(id);
+            const remainingTabs = currentSyncedTabs.filter(
+              (tid) => tid !== id && Boolean(nextDocs[tid])
+            );
+
+            let nextActive = activeDocumentId;
+            let nextTabs = remainingTabs;
+
+            if (remainingTabs.length === 0) {
+              const fallbackId = nextOrder[0] ?? Object.keys(nextDocs)[0];
+              nextActive = fallbackId;
+              nextTabs = [fallbackId];
+            } else if (activeDocumentId === id) {
+              const safeIdx =
+                closedIdx >= 0
+                  ? Math.min(closedIdx, remainingTabs.length - 1)
+                  : 0;
+              nextActive = remainingTabs[safeIdx];
+            }
+
+            set({
+              documents: nextDocs,
+              activeDocumentId: nextActive,
+              openTabIds: nextTabs,
+              fileOrder: nextOrder,
+            });
             scheduleSaved();
           },
 
           setActiveDocument: (id) => {
-            if (get().documents[id]) set({ activeDocumentId: id });
+            const { documents, openTabIds, activeDocumentId } = get();
+            if (!documents[id]) return;
+            const currentTabs = syncOpenTabs(
+              openTabIds,
+              documents,
+              activeDocumentId
+            );
+            const nextTabs = currentTabs.includes(id)
+              ? currentTabs
+              : [...currentTabs, id];
+            set({ activeDocumentId: id, openTabIds: nextTabs });
+          },
+
+          openTab: (id) => {
+            const { documents, openTabIds, activeDocumentId } = get();
+            if (!documents[id]) return;
+            const currentTabs = syncOpenTabs(
+              openTabIds,
+              documents,
+              activeDocumentId
+            );
+            const nextTabs = currentTabs.includes(id)
+              ? currentTabs
+              : [...currentTabs, id];
+            set({ activeDocumentId: id, openTabIds: nextTabs });
+          },
+
+          closeTab: (id) => {
+            const { documents, openTabIds, activeDocumentId } = get();
+            const currentTabs = syncOpenTabs(
+              openTabIds,
+              documents,
+              activeDocumentId
+            );
+            if (currentTabs.length <= 1 || !currentTabs.includes(id)) return;
+
+            const closedIdx = currentTabs.indexOf(id);
+            const nextTabs = currentTabs.filter((tid) => tid !== id);
+            const nextActive =
+              activeDocumentId === id
+                ? nextTabs[Math.min(closedIdx, nextTabs.length - 1)]
+                : activeDocumentId;
+
+            set({
+              openTabIds: nextTabs,
+              activeDocumentId: nextActive,
+            });
+          },
+
+          reorderTabs: (oldIndex, newIndex) => {
+            const { documents, openTabIds, activeDocumentId } = get();
+            const currentTabs = syncOpenTabs(
+              openTabIds,
+              documents,
+              activeDocumentId
+            );
+            const nextTabs = arrayMove(currentTabs, oldIndex, newIndex);
+            if (nextTabs === currentTabs) return;
+            set({ openTabIds: nextTabs });
+          },
+
+          reorderFiles: (oldIndex, newIndex) => {
+            const { documents, fileOrder } = get();
+            const currentOrder = syncFileOrder(fileOrder, documents);
+            const nextOrder = arrayMove(currentOrder, oldIndex, newIndex);
+            if (nextOrder === currentOrder) return;
+            set({ fileOrder: nextOrder });
+          },
+
+          sortFiles: (by) => {
+            const { documents, fileOrder } = get();
+            const currentOrder = syncFileOrder(fileOrder, documents);
+            const nextOrder = [...currentOrder].sort((a, b) => {
+              const docA = documents[a];
+              const docB = documents[b];
+              if (by === "title") {
+                return (docA.title || "").localeCompare(
+                  docB.title || "",
+                  undefined,
+                  { sensitivity: "base" }
+                );
+              }
+              return (
+                new Date(docB.updatedAt).getTime() -
+                new Date(docA.updatedAt).getTime()
+              );
+            });
+            set({ fileOrder: nextOrder });
           },
 
           loadSampleResume: () => {
@@ -313,6 +609,18 @@ export const useResumeStore = create<ResumeStoreState>()(
               set((state) => ({
                 documents: { ...state.documents, [newId]: doc },
                 activeDocumentId: newId,
+                fileOrder: [
+                  ...syncFileOrder(state.fileOrder, state.documents),
+                  newId,
+                ],
+                openTabIds: [
+                  ...syncOpenTabs(
+                    state.openTabIds,
+                    state.documents,
+                    state.activeDocumentId
+                  ),
+                  newId,
+                ],
               }));
               scheduleSaved();
               return { ok: true };
@@ -321,9 +629,11 @@ export const useResumeStore = create<ResumeStoreState>()(
             }
           },
 
-          exportResumeJson: () => {
+          exportResumeJson: (id) => {
             const { documents, activeDocumentId } = get();
-            return JSON.stringify(documents[activeDocumentId], null, 2);
+            const targetId = id ?? activeDocumentId;
+            const target = documents[targetId];
+            return target ? JSON.stringify(target, null, 2) : "{}";
           },
 
           updateConfig: (patch) => {
@@ -645,47 +955,27 @@ export const useResumeStore = create<ResumeStoreState>()(
       },
       {
         limit: 50,
-        partialize: (state): PersistedResumeState => ({
+        partialize: (state): TemporalResumeState => ({
           documents: state.documents,
           activeDocumentId: state.activeDocumentId,
         }),
+        equality: (pastState, currentState) =>
+          pastState.documents === currentState.documents,
       }
     ),
     {
       name: "formacv-storage",
-      version: 2,
+      version: 3,
       partialize: (state): PersistedResumeState => ({
         documents: state.documents,
         activeDocumentId: state.activeDocumentId,
+        openTabIds: state.openTabIds,
+        fileOrder: state.fileOrder,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },
-      migrate: (persistedState: unknown, version: number) => {
-        const state = persistedState as Partial<PersistedResumeState> | undefined;
-        if (!state || !state.documents || !state.activeDocumentId) {
-          const sample = createSampleResume();
-          return {
-            documents: { [sample.id]: sample },
-            activeDocumentId: sample.id,
-          };
-        }
-        if (version < 2) {
-          const updatedDocs: Record<string, ResumeDocument> = {};
-          for (const [id, doc] of Object.entries(state.documents)) {
-            updatedDocs[id] =
-              doc.config.templateId === "classic-latex" &&
-              doc.config.fontFamily === "inter"
-                ? { ...doc, config: { ...doc.config, fontFamily: "serif" } }
-                : doc;
-          }
-          return {
-            documents: updatedDocs,
-            activeDocumentId: state.activeDocumentId,
-          };
-        }
-        return state as PersistedResumeState;
-      },
+      migrate: migratePersistedResumeState,
     }
   )
 );
