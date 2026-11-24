@@ -1,6 +1,6 @@
 # Task Breakdown & Todo List — FormaCV
 
-Dokumen ini adalah target daftar tugas (*task list target*) yang disusun menggunakan skill `planning-and-task-breakdown` berdasarkan spesifikasi di `agents-md/` (`PRD.md`, `DESIGN.md`, `FEATURES.md`, `TASKS.md`, `GIT_RULES.md`, dan `brand-guideline.md`).
+Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list) yang disusun menggunakan skill `planning-and-task-breakdown` berdasarkan spesifikasi di `agents-md/` (`PRD.md`, `DESIGN.md`, `FEATURES.md`, `GIT_RULES.md`, dan `brand-guideline.md`).
 
 ---
 
@@ -32,7 +32,7 @@ Dokumen ini adalah target daftar tugas (*task list target*) yang disusun menggun
 
 ---
 
-### Task 2: Registrasi Font `.ttf` Lokal & Perbaikan Clickable Links pada Ekspor PDF
+### Task 2: Registrasi Font `.ttf` Lokal & Perbaikan Clickable Links pada Ekspor PDF ✅
 
 **Description:** Menyelesaikan kesamaan tipografi antara Live HTML Preview dan hasil cetak `@react-pdf/renderer` (branch `feat/pdf-font-sync`). Menyimpan file font `.ttf` (*Inter, Roboto, EB Garamond, Merriweather*) di `public/fonts/`, mendaftarkannya via `Font.register` beserta penonaktifan *hyphenation* di `src/lib/pdf-fonts.ts`, memperbarui `PDF_FONT_FAMILIES` di `src/lib/template-tokens.ts`, serta mengganti elemen URL/email di `src/components/pdf/PdfDocument.tsx` menjadi komponen `<Link>` yang *clickable*.
 
@@ -44,7 +44,7 @@ Dokumen ini adalah target daftar tugas (*task list target*) yang disusun menggun
 **Verification:**
 - [x] Tests pass: `npx tsc --noEmit && npm run lint`
 - [x] Build succeeds: `npm run build`
-- [ ] Manual check: Ekspor PDF dengan keempat pilihan font (`inter`, `roboto`, `serif`, `georgia`) dan pastikan teks 100% *selectable*, tanpa pemenggalan kata otomatis, dan tautan dapat diklik.
+- [x] Manual check: Ekspor PDF dengan keempat pilihan font (`inter`, `roboto`, `serif`, `georgia`) dan pastikan teks 100% *selectable*, tanpa pemenggalan kata otomatis, dan tautan dapat diklik.
 
 **Dependencies:** None
 
@@ -91,8 +91,10 @@ Dokumen ini adalah target daftar tugas (*task list target*) yang disusun menggun
 - [x] Seluruh unit test lulus (`npm test`)
 - [x] Pengecekan tipe dan linter bersih (`npx tsc --noEmit && npm run lint`)
 - [x] Aplikasi berhasil di-build untuk production (`npm run build`)
-- [ ] Alur inti MVP (*Landing Page → Galeri Template → Split-Screen Editor → ATS Checker → Export PDF Vector & JSON Backup*) berjalan end-to-end tanpa error
-- [ ] Review dengan human sebelum lanjut ke Fase 2
+- [x] Alur inti MVP (*Landing Page → Galeri Template → Split-Screen Editor → ATS Checker → Export PDF Vector & JSON Backup*) berjalan end-to-end tanpa error
+- [ ] Cek responsivitas mobile (`Edit` / `Preview`) dan navigasi keyboard secara langsung
+- [ ] Deploy MVP ke Vercel / container Docker production
+- [x] Review dengan human sebelum lanjut ke Fase 2
 
 ---
 
@@ -103,21 +105,23 @@ Dokumen ini adalah target daftar tugas (*task list target*) yang disusun menggun
 **Description:** Meningkatkan `AtsXRayView.tsx` (branch `feat/pdf-xray-parser`) agar tidak hanya menyusun string dari state JSON, melainkan meng-generate blob PDF asli di memori menggunakan `pdf(<ResumePdfDocument doc={doc} />).toBlob()` dari `@react-pdf/renderer`, lalu mengekstrak urutan teks baris-demi-baris langsung dari biner PDF menggunakan `pdfjs-dist`.
 
 **Acceptance criteria:**
-- [ ] `src/lib/pdf-text-extractor.ts` mampu menerima blob/buffer PDF hasil render `@react-pdf/renderer` dan mengembalikan teks linear per halaman menggunakan `pdfjs-dist`.
-- [ ] `AtsXRayView.tsx` menampilkan hasil ekstraksi teks langsung dari file PDF yang di-generate lengkap dengan indikator jumlah halaman & status pembacaan linear.
-- [ ] Jika ekstraksi PDF sedang dimuat atau berada di environment non-worker, UI menampilkan indikator loading yang tenang dan fallback ke `extractLinearResumeText(doc)`.
+- [x] `src/lib/pdf-text-extractor.ts` mampu menerima blob/buffer PDF hasil render `@react-pdf/renderer` dan mengembalikan teks linear per halaman menggunakan `pdfjs-dist`.
+- [x] `AtsXRayView.tsx` menampilkan hasil ekstraksi teks langsung dari file PDF yang di-generate lengkap dengan indikator jumlah halaman & status pembacaan linear.
+- [x] Jika ekstraksi PDF sedang dimuat atau berada di environment non-worker, UI menampilkan indikator loading yang tenang dan fallback ke `extractLinearResumeText(doc)`.
 
 **Verification:**
-- [ ] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
-- [ ] Build succeeds: `npm run build`
+- [x] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
+- [x] Build succeeds: `npm run build`
 - [ ] Manual check: Buka tab **ATS X-Ray** di panel preview pada CV 1 halaman dan 2 halaman, lalu verifikasi teks yang tampil berasal dari hasil parsing PDF asli.
 
 **Dependencies:** Task 2
 
 **Files likely touched:**
 - `package.json`
+- `package-lock.json`
 - `src/lib/pdf-text-extractor.ts`
 - `src/components/preview/AtsXRayView.tsx`
+- `src/lib/__tests__/pdf-text-extractor.test.ts`
 
 **Estimated scope:** Small (3 files)
 

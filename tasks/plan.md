@@ -1,6 +1,6 @@
 # Implementation Plan: FormaCV — Remaining MVP, Phase 2 (AI/ATS Intelligence) & Phase 3 (Cloud Sync)
 
-Source spec: `agents-md/PRD.md`, `agents-md/DESIGN.md`, `agents-md/FEATURES.md`, `agents-md/TASKS.md`, `agents-md/AGENTS.md`
+Source spec: `agents-md/PRD.md`, `agents-md/DESIGN.md`, `agents-md/FEATURES.md`, `agents-md/AGENTS.md`, `tasks/todo.md`
 
 ## Overview
 
@@ -63,12 +63,12 @@ Detail lengkap setiap task beserta *acceptance criteria*, *verification*, *depen
 - [x] Task 2: Registrasi Font `.ttf` Lokal & Perbaikan Clickable Links pada Ekspor PDF
 - [x] Task 3: Setup Vitest & Unit Test Lengkap untuk `ats-linter.ts`
 
-### Checkpoint 1: MVP Release Readiness
+### Checkpoint 1: MVP Release Readiness ✅
 - [x] Semua tes lulus (`npm test`), tipe & lint bersih (`npx tsc --noEmit && npm run lint`), build production sukses (`npm run build`)
-- [ ] Hasil unduhan PDF 1–2 halaman memiliki font identik dengan HTML preview, teks 100% *selectable*, dan link *clickable*
+- [x] Hasil unduhan PDF 1–2 halaman memiliki font identik dengan HTML preview, teks 100% *selectable*, dan link *clickable*
 
 ### Phase 2: ATS Intelligence, Tailoring & AI
-- [ ] Task 4: ATS X-Ray Mode Berbasis Ekstraksi Blob PDF Asli (`pdfjs-dist`)
+- [x] Task 4: ATS X-Ray Mode Berbasis Ekstraksi Blob PDF Asli (`pdfjs-dist`)
 - [ ] Task 5: Job Description (JD) Keyword Matcher & Deteksi Master Profile Tersembunyi
 - [ ] Task 6: AI Bullet-Point Enhancer dengan Factuality Guardrails (`/api/ai/enhance`)
 - [ ] Task 7: Import CV Lama (PDF/DOCX) ke Form JSON dengan Langkah Review (`/api/ai/parse-cv`)

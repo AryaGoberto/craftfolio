@@ -1,6 +1,6 @@
 # FEATURES.md — Daftar Lengkap Fitur & Tracker Progres (FormaCV)
 
-Dokumen ini merangkum seluruh fitur **FormaCV** berdasarkan [PRD.md](./PRD.md), [DESIGN.md](./DESIGN.md), [brand-guideline.md](./brand-guideline.md), dan [TASKS.md](./TASKS.md). Gunakan checkbox di bawah untuk memantau fitur yang sudah selesai dibuat dan yang belum.
+Dokumen ini merangkum seluruh fitur **FormaCV** berdasarkan [PRD.md](./PRD.md), [DESIGN.md](./DESIGN.md), [brand-guideline.md](./brand-guideline.md), dan [todo.md](../tasks/todo.md). Gunakan checkbox di bawah untuk memantau fitur yang sudah selesai dibuat dan yang belum.
 
 **Legenda Status:**
 - `[x]` Sudah dibuat & terverifikasi di kode (`src/`)
@@ -80,8 +80,9 @@ Dokumen ini merangkum seluruh fitur **FormaCV** berdasarkan [PRD.md](./PRD.md), 
 
 ## Fase 2 — ATS Intelligence, Tailoring & AI
 
-- [ ] **ATS X-Ray Berbasis Ekstraksi File PDF Asli** — *Branch: `feat/pdf-xray-parser`*
-  - **Penjelasan:** Meningkatkan *ATS X-Ray Mode* agar membaca teks langsung dari hasil generate PDF (menggunakan `pdfjs-dist`), bukan hanya dari JSON state, untuk membuktikan akurasi pembacaan file PDF final.
+- [x] **ATS X-Ray Berbasis Ekstraksi File PDF Asli** — *Branch: `feat/pdf-xray-parser`*
+  - **Penjelasan:** Meningkatkan *ATS X-Ray Mode* agar membaca teks langsung dari hasil generate PDF (menggunakan `pdfjs-dist`), bukan hanya dari JSON state, lengkap dengan fallback simulasi linear dan unit test.
+  - **File:** `src/lib/pdf-text-extractor.ts`, `src/components/preview/AtsXRayView.tsx`, `src/lib/__tests__/pdf-text-extractor.test.ts`
 - [ ] **Job Description (JD) Keyword Matcher** — *Branch: `feat/jd-keyword-matcher`*
   - **Penjelasan:** Panel untuk menempelkan teks lowongan kerja, mengekstrak *hard skills* & kata kunci utama, menampilkan persentase kecocokan, dan membedakan secara jelas antara *"belum tertulis di CV"* vs *"tidak dimiliki pengguna"*.
 - [ ] **AI Bullet-Point Enhancer (dengan Factuality Guardrails)** — *Branch: `feat/ai-bullet-enhancer`*
