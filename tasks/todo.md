@@ -154,19 +154,19 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
 
 ---
 
-### Task 6: Collapsible File Tree Sidebar & Reorderable Workspace Tabs (`feat/workspace-tabs-filetree`)
+### Task 6: Collapsible File Tree Sidebar & Reorderable Workspace Tabs (`feat/workspace-tabs-filetree`) ✅
 
 **Description:** Mengembangkan manajemen multi-CV bergaya IDE/Overleaf di luar area form editor CV (branch `feat/workspace-tabs-filetree`). Menambahkan **Collapsible File Tree Sidebar** di sisi paling kiri layar untuk mengelola seluruh dokumen CV (*New File, Inline Rename, Duplicate, Download `.json`, Upload/Import `.json`, Sort/Reorder, Delete*) serta **Workspace Tab Bar** bergaya tab browser di atas area kerja (*Split-Screen Editor + Preview*) yang memungkinkan pengguna membuka beberapa CV sekaligus sebagai tab, mengurutkan posisi tab dengan *drag-and-drop* (`@dnd-kit/sortable`), dan menutup tab (`×`) tanpa menghapus dokumen dari File Tree.
 
 **Acceptance criteria:**
-- [ ] `useResumeStore` mendukung state `openTabIds: string[]`, `fileOrder: string[]`, dan `isFileTreeOpen: boolean` beserta action `openTab`, `closeTab`, `reorderTabs`, `reorderFiles`, dan `toggleFileTree` (tanpa mencemari riwayat Undo/Redo `zundo` saat hanya berpindah/menutup tab).
-- [ ] `src/components/editor/FileTreeSidebar.tsx` menampilkan panel sidebar kiri yang dapat dibuka/tutup (*collapsible*, lebar `~240px` di desktop dan drawer di mobile) dengan header aksi (`+` CV Baru, Sortir, Tutup Sidebar), daftar seluruh file CV yang dapat diurutkan, serta menu konteks `⋮` per file (*Rename, Duplikasi, Download `.json`, Delete*) dan aksi *Upload/Import `.json`*.
-- [ ] `src/components/editor/WorkspaceTabBar.tsx` menampilkan barisan tab dokumen CV yang sedang dibuka di atas area kerja, mendukung *drag-and-drop* urutan tab via `@dnd-kit/sortable`, klik ganda untuk *inline rename*, tombol `×` untuk menutup tab (dokumen tetap aman di File Tree), dan tombol `+` untuk membuka/membuat tab CV baru.
-- [ ] Desain visual tetap mematuhi palet monokromatis terang di `brand-guideline.md` (`#F4F4F5` / `#FAFAFA` untuk sidebar & tab non-aktif, `#FFFFFF` untuk tab aktif, border `#E4E4E7`) dan tidak mempersempit area *Split-Screen Editor + Live Preview* saat sidebar ditutup.
+- [x] `useResumeStore` mendukung state `openTabIds: string[]`, `fileOrder: string[]`, dan `isFileTreeOpen: boolean` beserta action `openTab`, `closeTab`, `reorderTabs`, `reorderFiles`, dan `toggleFileTree` (tanpa mencemari riwayat Undo/Redo `zundo` saat hanya berpindah/menutup tab).
+- [x] `src/components/editor/FileTreeSidebar.tsx` menampilkan panel sidebar kiri yang dapat dibuka/tutup (*collapsible*, lebar `~240px` di desktop dan drawer di mobile) dengan header aksi (`+` CV Baru, Sortir, Tutup Sidebar), daftar seluruh file CV yang dapat diurutkan, serta menu konteks `⋮` per file (*Rename, Duplikasi, Download `.json`, Delete*) dan aksi *Upload/Import `.json`*.
+- [x] `src/components/editor/WorkspaceTabBar.tsx` menampilkan barisan tab dokumen CV yang sedang dibuka di atas area kerja, mendukung *drag-and-drop* urutan tab via `@dnd-kit/sortable`, klik ganda untuk *inline rename*, tombol `×` untuk menutup tab (dokumen tetap aman di File Tree), dan tombol `+` untuk membuka/membuat tab CV baru.
+- [x] Desain visual tetap mematuhi palet monokromatis terang di `brand-guideline.md` (`#F4F4F5` / `#FAFAFA` untuk sidebar & tab non-aktif, `#FFFFFF` untuk tab aktif, border `#E4E4E7`) dan tidak mempersempit area *Split-Screen Editor + Live Preview* saat sidebar ditutup.
 
 **Verification:**
-- [ ] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
-- [ ] Build succeeds: `npm run build`
+- [x] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
+- [x] Build succeeds: `npm run build`
 - [ ] Manual check: Buat 3 file CV di File Tree, buka ketiganya sebagai tab, geser urutan tab dengan *drag-and-drop*, tutup salah satu tab dengan `×` (pastikan file masih ada di File Tree), lalu uji *Rename*, *Download*, dan *Delete* dari menu `⋮` di File Tree.
 
 **Dependencies:** Task 3
