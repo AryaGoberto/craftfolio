@@ -10,6 +10,8 @@ import { WorkspaceTabBar } from "@/components/editor/WorkspaceTabBar";
 import { PreviewPanel } from "@/components/preview/PreviewPanel";
 import { AtsCheckerModal } from "@/components/editor/AtsCheckerModal";
 import { JdMatcherModal } from "@/components/editor/JdMatcherModal";
+import { AuthModal } from "@/components/auth/AuthModal";
+import { CloudSyncManager } from "@/components/auth/CloudSyncManager";
 
 export default function EditorPage() {
   const hasHydrated = useResumeStore((s) => s.hasHydrated);
@@ -24,6 +26,7 @@ export default function EditorPage() {
   const [lastPageFillRatio, setLastPageFillRatio] = useState(1);
   const [atsModalOpen, setAtsModalOpen] = useState(false);
   const [jdModalOpen, setJdModalOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   useEffect(() => {
     if (window.innerWidth < 1024) {
@@ -79,10 +82,13 @@ export default function EditorPage() {
 
   return (
     <div className="h-screen flex flex-col bg-[#F8F9FA] overflow-hidden">
+      <CloudSyncManager />
+
       <EditorTopBar
         lintReport={lintReport}
         onOpenAtsModal={() => setAtsModalOpen(true)}
         onOpenJdModal={() => setJdModalOpen(true)}
+        onOpenAuthModal={() => setAuthModalOpen(true)}
       />
 
       {/* Outer Workspace: File Tree Sidebar + Tabbed Split-Screen Editor */}
@@ -160,6 +166,11 @@ export default function EditorPage() {
         open={jdModalOpen}
         onClose={() => setJdModalOpen(false)}
         doc={doc}
+      />
+
+      <AuthModal
+        open={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
       />
     </div>
   );

@@ -18,8 +18,11 @@ import {
   generateId,
 } from "@/lib/default-resume";
 import { DEFAULT_SECTION_TITLES, type AppLanguage } from "@/lib/i18n";
+import type { AuthUserProfile } from "@/lib/firebase/auth";
 
 export type SaveStatus = "saved" | "saving" | "unsaved";
+
+export type CloudSyncStatus = "idle" | "syncing" | "synced" | "error" | "offline";
 
 export type FileSortBy = "title" | "updatedAt";
 
@@ -45,12 +48,25 @@ export interface ResumeStoreState extends PersistedResumeState {
   isFileTreeOpen: boolean;
   hasHydrated: boolean;
 
+  authUser: AuthUserProfile | null;
+  authLoading: boolean;
+  cloudSyncStatus: CloudSyncStatus;
+  cloudSyncError: string | null;
+  lastSyncedAt: string | null;
+  manualSyncNonce: number;
+
   setHasHydrated: (hydrated: boolean) => void;
   setActiveSection: (section: SectionKey | "basics") => void;
   setMobileTab: (tab: "edit" | "preview") => void;
   setPreviewZoom: (zoom: number) => void;
   setPreviewMode: (mode: "visual" | "xray") => void;
   toggleFileTree: (open?: boolean) => void;
+
+  setAuthUser: (user: AuthUserProfile | null) => void;
+  setAuthLoading: (loading: boolean) => void;
+  setCloudSyncStatus: (status: CloudSyncStatus, error?: string | null) => void;
+  triggerManualSync: () => void;
+  applyCloudWorkspace: (payload: PersistedResumeState) => void;
 
   createDocument: (title?: string) => void;
   duplicateDocument: (id: string) => void;
@@ -349,6 +365,13 @@ export const useResumeStore = create<ResumeStoreState>()(
           isFileTreeOpen: true,
           hasHydrated: false,
 
+          authUser: null,
+          authLoading: false,
+          cloudSyncStatus: "idle",
+          cloudSyncError: null,
+          lastSyncedAt: null,
+          manualSyncNonce: 0,
+
           setHasHydrated: (hydrated) => set({ hasHydrated: hydrated }),
           setActiveSection: (section) => set({ activeSection: section }),
           setMobileTab: (tab) => set({ mobileTab: tab }),
@@ -359,6 +382,44 @@ export const useResumeStore = create<ResumeStoreState>()(
             set((state) => ({
               isFileTreeOpen: open ?? !state.isFileTreeOpen,
             })),
+
+          setAuthUser: (user) =>
+            set({
+              authUser: user,
+              cloudSyncStatus: user ? "syncing" : "idle",
+              cloudSyncError: null,
+              lastSyncedAt: user ? get().lastSyncedAt : null,
+            }),
+          setAuthLoading: (loading) => set({ authLoading: loading }),
+          setCloudSyncStatus: (status, error = null) =>
+            set((state) => ({
+              cloudSyncStatus: status,
+              cloudSyncError: error,
+              lastSyncedAt:
+                status === "synced"
+                  ? new Date().toISOString()
+                  : state.lastSyncedAt,
+            })),
+          triggerManualSync: () =>
+            set((state) => ({ manualSyncNonce: state.manualSyncNonce + 1 })),
+          applyCloudWorkspace: (payload) => {
+            if (Object.keys(payload.documents).length === 0) return;
+            const nextOrder = syncFileOrder(payload.fileOrder, payload.documents);
+            const nextActive = payload.documents[payload.activeDocumentId]
+              ? payload.activeDocumentId
+              : nextOrder[0];
+            const nextTabs = syncOpenTabs(
+              payload.openTabIds,
+              payload.documents,
+              nextActive
+            );
+            set({
+              documents: payload.documents,
+              activeDocumentId: nextActive,
+              openTabIds: nextTabs,
+              fileOrder: nextOrder,
+            });
+          },
 
           createDocument: (title) => {
             const id = generateId("cv");

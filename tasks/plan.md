@@ -40,7 +40,7 @@ Source spec: `agents-md/PRD.md`, `agents-md/DESIGN.md`, `agents-md/FEATURES.md`,
     │
     └──► [Task 9: Firebase Auth (Google & Email/Password), Cloud Firestore Sync & Migrasi LocalStorage]
              │
-             └──► [Task 10: Dashboard Multi-CV (/app), Version History & Settings (/settings)]
+             └──► [Task 10: Dashboard Multi-CV Pengguna (/dashboard) dengan Kartu Visual, Menu ⋮ & Direct PDF Download]
 ```
 
 ## Architecture Decisions
@@ -80,8 +80,8 @@ Detail lengkap setiap task beserta *acceptance criteria*, *verification*, *depen
 - [ ] Alur Tailoring CV end-to-end bekerja: Kelola Multi-CV di File Tree & Tab Bar → Import/Buat CV → Match JD → Enhance Bullet (dengan konfirmasi) → Verifikasi PDF X-Ray Asli
 
 ### Phase 3: Firebase Auth, Cloud Firestore Sync & Multi-CV Dashboard
-- [ ] Task 9: Autentikasi Firebase (Google & Email/Password), Cloud Firestore Sync (`firestore.rules`) & Smart Merge `localStorage` (`feat/firebase-auth-firestore`)
-- [ ] Task 10: Dashboard Multi-CV (`/app`), Riwayat Versi & Pengaturan Privasi (`/settings`)
+- [x] Task 9: Autentikasi Firebase (Google & Email/Password), Cloud Firestore Sync (`firestore.rules`) & Smart Merge `localStorage` (`feat/firebase-auth-firestore`)
+- [ ] Task 10: Dashboard Multi-CV Pengguna (`/dashboard`) dengan Kartu Visual, Menu `⋮` & Direct PDF Download (`feat/user-cv-dashboard`)
 
 ### Checkpoint 3: Full Roadmap Complete
 - [ ] Guest Mode tetap berfungsi 100% tanpa login; pengguna yang login (Google / Email & Password) dapat menyinkronkan multi-CV ke Cloud Firestore dengan aman

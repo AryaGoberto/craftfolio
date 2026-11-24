@@ -1,106 +1,115 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, FileText, ShieldCheck, Sliders } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
+import { LandingAuthActions } from "@/components/auth/LandingAuthActions";
+import { HeroWorkspacePreview } from "@/components/landing/HeroWorkspacePreview";
+import { WorkflowShowcase } from "@/components/landing/WorkflowShowcase";
+import { TemplateStripSection } from "@/components/landing/TemplateStripSection";
+import { ComparisonAndCtaSection } from "@/components/landing/ComparisonAndCtaSection";
 
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#F8F9FA] text-[#09090B]">
-      {/* Header */}
-      <header className="h-14 px-6 bg-white border-b border-[#E4E4E7] flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5">
-          <BrandLogo className="h-7 w-auto shrink-0" />
-          <span className="text-[14px] font-semibold tracking-[-0.01em]">
-            FormaCV
-          </span>
-        </Link>
+      {/* Accessible Skip Link */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-3 focus:py-2 focus:rounded-md focus:bg-[#18181B] focus:text-white focus:text-[12px] focus:font-medium"
+      >
+        Langsung ke konten utama
+      </a>
 
-        <div className="flex items-center gap-2 sm:gap-3">
-          <Link
-            href="/templates"
-            className="inline-flex items-center h-8 px-3 rounded-md text-[#52525B] hover:text-[#09090B] hover:bg-[#F4F4F5] text-[12px] font-medium transition-colors"
-          >
-            Galeri Template
+      {/* Sticky Editorial Header */}
+      <header className="sticky top-0 z-30 h-14 bg-white/95 backdrop-blur-xs border-b border-[#E4E4E7]">
+        <div className="max-w-6xl mx-auto h-full px-4 sm:px-6 flex items-center justify-between gap-3">
+          <Link href="/" className="flex items-center gap-2.5 shrink-0">
+            <BrandLogo className="h-7 w-auto shrink-0" />
+            <span className="text-[14px] font-semibold tracking-[-0.01em] text-[#09090B]">
+              FormaCV
+            </span>
           </Link>
-          <Link
-            href="/editor"
-            className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-md bg-[#18181B] text-white text-[12px] font-medium hover:bg-[#27272A] transition-colors"
-          >
-            Buka Editor
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+
+          <nav aria-label="Navigasi utama">
+            <LandingAuthActions />
+          </nav>
         </div>
       </header>
 
-      {/* Hero */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-16 text-center">
-        <div className="max-w-2xl space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#E4E4E7] text-[11px] font-medium text-[#52525B]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-            Guest Mode — Data tersimpan aman di browser Anda
-          </div>
+      <main id="main-content" className="flex-1">
+        {/* Hero Section */}
+        <section
+          aria-labelledby="hero-heading"
+          className="px-4 sm:px-6 pt-14 sm:pt-20 pb-16 sm:pb-24"
+        >
+          <div className="max-w-3xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white border border-[#E4E4E7] text-[11.5px] font-medium text-[#52525B]">
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-[#10B981]"
+                aria-hidden="true"
+              />
+              Guest Mode Aktif · Sinkronisasi Cloud Opsional
+            </div>
 
-          <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-[#09090B] leading-[1.15]">
-            Kualitas tipografi sekelas LaTeX, semudah mengisi formulir.
-          </h1>
-
-          <p className="text-[15px] sm:text-[16px] text-[#52525B] max-w-xl mx-auto leading-relaxed">
-            Buat CV yang bersih, terstruktur satu kolom, dan ramah mesin parser ATS tanpa perlu menulis kode atau merapikan garis secara manual.
-          </p>
-
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              href="/editor"
-              className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-md bg-[#18181B] text-white text-[13px] font-medium hover:bg-[#27272A] transition-colors"
+            <h1
+              id="hero-heading"
+              className="mt-5 text-3xl sm:text-5xl font-bold tracking-[-0.025em] text-[#09090B] leading-[1.12]"
             >
-              Buat CV Sekarang (Gratis, Tanpa Login)
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link
-              href="/templates"
-              className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-md bg-white border border-[#E4E4E7] text-[#09090B] text-[13px] font-medium hover:bg-[#F4F4F5] transition-colors"
-            >
-              Lihat Galeri Template
-            </Link>
-          </div>
-        </div>
+              Kualitas tipografi sekelas LaTeX, semudah mengisi formulir.
+            </h1>
 
-        {/* Value Props */}
-        <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl w-full text-left">
-          <div className="bg-white border border-[#E4E4E7] rounded-lg p-5">
-            <FileText className="w-4 h-4 text-[#18181B] mb-3" />
-            <h2 className="text-[13px] font-semibold text-[#09090B]">
-              Split-Screen Live Preview
-            </h2>
-            <p className="text-[12px] text-[#52525B] mt-1 leading-relaxed">
-              Isi formulir di kiri dan lihat hasil halaman A4/Letter diperbarui seketika di kanan.
+            <p className="mt-5 text-[15px] sm:text-[17px] text-[#52525B] max-w-2xl mx-auto leading-relaxed">
+              Susun CV satu kolom yang bersih, presisi, dan mudah dibaca perekrut maupun parser ATS—tanpa menulis kode markup dan tanpa menggeser garis secara manual.
             </p>
+
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                href="/editor"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-11 px-6 rounded-md bg-[#18181B] text-white text-[13.5px] font-medium hover:bg-[#27272A] transition-colors"
+              >
+                Buat CV Sekarang — Gratis
+                <ArrowRight className="w-4 h-4" aria-hidden="true" />
+              </Link>
+              <Link
+                href="/templates"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-11 px-5 rounded-md bg-white border border-[#E4E4E7] text-[#09090B] text-[13.5px] font-medium hover:bg-[#F4F4F5] transition-colors"
+              >
+                Lihat 4 Template ATS
+              </Link>
+            </div>
+
+            <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[12px] text-[#52525B]">
+              <li className="inline-flex items-center gap-1.5">
+                <CheckCircle2
+                  className="w-3.5 h-3.5 text-[#10B981] shrink-0"
+                  aria-hidden="true"
+                />
+                <span>PDF Vector 100% selectable text</span>
+              </li>
+              <li className="inline-flex items-center gap-1.5">
+                <CheckCircle2
+                  className="w-3.5 h-3.5 text-[#10B981] shrink-0"
+                  aria-hidden="true"
+                />
+                <span>Tanpa wajib daftar akun</span>
+              </li>
+              <li className="inline-flex items-center gap-1.5">
+                <CheckCircle2
+                  className="w-3.5 h-3.5 text-[#10B981] shrink-0"
+                  aria-hidden="true"
+                />
+                <span>Backup JSON &amp; Cloud Sync</span>
+              </li>
+            </ul>
           </div>
 
-          <div className="bg-white border border-[#E4E4E7] rounded-lg p-5">
-            <Sliders className="w-4 h-4 text-[#18181B] mb-3" />
-            <h2 className="text-[13px] font-semibold text-[#09090B]">
-              Master Profile Controls
-            </h2>
-            <p className="text-[12px] text-[#52525B] mt-1 leading-relaxed">
-              Seret urutan bagian dan sembunyikan poin tertentu per lowongan tanpa menghapus data asli.
-            </p>
+          {/* Authentic Interactive-Style Split-Screen Product Preview */}
+          <div className="mt-12 sm:mt-14">
+            <HeroWorkspacePreview />
           </div>
+        </section>
 
-          <div className="bg-white border border-[#E4E4E7] rounded-lg p-5">
-            <ShieldCheck className="w-4 h-4 text-[#18181B] mb-3" />
-            <h2 className="text-[13px] font-semibold text-[#09090B]">
-              ATS Readability & X-Ray
-            </h2>
-            <p className="text-[12px] text-[#52525B] mt-1 leading-relaxed">
-              Periksa kelengkapan kontak, format tanggal, serta simulasi urutan teks linear sebelum ekspor PDF.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-10 flex items-center gap-2 text-[11px] text-[#52525B]">
-          <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
-          <span>Ekspor PDF Vector dengan teks 100% dapat diseleksi & backup JSON.</span>
-        </div>
+        <WorkflowShowcase />
+        <TemplateStripSection />
+        <ComparisonAndCtaSection />
       </main>
     </div>
   );

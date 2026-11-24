@@ -244,7 +244,7 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
 
 ## Phase 3: Firebase Auth, Cloud Firestore Sync & Multi-CV Dashboard
 
-### Task 9: Autentikasi Firebase (Google & Email/Password) + Sinkronisasi Cloud Firestore (`feat/firebase-auth-firestore`)
+### Task 9: Autentikasi Firebase (Google & Email/Password) + Sinkronisasi Cloud Firestore (`feat/firebase-auth-firestore`) ✅
 
 **Description:** Mengintegrasikan **Firebase Authentication** (*Sign In / Sign Up with Google* serta *Email & Password* biasa + *Reset Password*) dan **Cloud Firestore** (branch `feat/firebase-auth-firestore`) agar seluruh dokumen CV (`documents`) serta tata letak lembar kerja (`fileOrder`, `openTabIds`, `activeDocumentId`) milik pengguna tersimpan aman di cloud dan tersinkronisasi lintas perangkat. Fitur ini bersifat **opt-in (Local-First Hybrid)**: pengguna *Guest Mode* tetap dapat memakai `/editor` dan mengunduh PDF 100% tanpa login, dan ketika mereka memutuskan untuk daftar/login, draf CV lokal di `localStorage` otomatis digabungkan (*two-way timestamp merge*) ke Cloud Firestore tanpa kehilangan data yang sudah diketik.
 
@@ -361,15 +361,15 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
    - Uji `isFirebaseConfigured()` mengembalikan `false` secara aman ketika env kosong.
 
 **Acceptance criteria:**
-- [ ] `src/lib/firebase/config.ts` menginisialisasi Firebase Auth & Firestore secara aman dan tidak crash bila variabel environment `.env.local` belum diisi (`isFirebaseConfigured()`).
-- [ ] `src/components/auth/AuthModal.tsx` mendukung **Sign In / Sign Up with Google** maupun **Email & Password** (beserta *Reset Password* dan *Sign Out*) dengan pesan error Bahasa Indonesia yang jelas dan desain monokromatis sesuai `brand-guideline.md`.
-- [ ] `src/lib/firebase/firestore-sync.ts` dan `CloudSyncManager.tsx` menggabungkan draf `localStorage` (*Guest Mode*) ke koleksi Firestore `users/{uid}/resumes/{docId}` saat login tanpa menghilangkan draf yang baru diketik, serta menyinkronkan perubahan berikutnya secara otomatis (debounced `1500ms`).
-- [ ] `EditorTopBar.tsx` menampilkan tombol **"Masuk / Simpan Cloud"** saat Guest Mode, dan menampilkan avatar/email pengguna beserta indikator status sinkronisasi Firestore saat sudah login.
-- [ ] File `firestore.rules` dan `.env.example` tersedia di root proyek, serta unit test di `src/lib/__tests__/firestore-sync.test.ts` lulus seluruhnya.
+- [x] `src/lib/firebase/config.ts` menginisialisasi Firebase Auth & Firestore secara aman dan tidak crash bila variabel environment `.env.local` belum diisi (`isFirebaseConfigured()`).
+- [x] `src/components/auth/AuthModal.tsx` mendukung **Sign In / Sign Up with Google** maupun **Email & Password** (beserta *Reset Password* dan *Sign Out*) dengan pesan error Bahasa Indonesia yang jelas dan desain monokromatis sesuai `brand-guideline.md`.
+- [x] `src/lib/firebase/firestore-sync.ts` dan `CloudSyncManager.tsx` menggabungkan draf `localStorage` (*Guest Mode*) ke koleksi Firestore `users/{uid}/resumes/{docId}` saat login tanpa menghilangkan draf yang baru diketik, serta menyinkronkan perubahan berikutnya secara otomatis (debounced `1500ms`).
+- [x] `EditorTopBar.tsx` menampilkan tombol **"Masuk / Simpan Cloud"** saat Guest Mode, dan menampilkan avatar/email pengguna beserta indikator status sinkronisasi Firestore saat sudah login.
+- [x] File `firestore.rules` dan `.env.example` tersedia di root proyek, serta unit test di `src/lib/__tests__/firestore-sync.test.ts` lulus seluruhnya.
 
 **Verification:**
-- [ ] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
-- [ ] Build succeeds: `npm run build`
+- [x] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
+- [x] Build succeeds: `npm run build`
 - [ ] Manual check: Buat CV di *Guest Mode*, klik **"Masuk / Simpan Cloud"**, daftar/masuk dengan Google atau Email & Password, lalu verifikasi di Firebase Console bahwa dokumen otomatis tersimpan di koleksi `users/{uid}/resumes/{docId}` dan tetap muncul saat halaman di-refresh.
 
 **Dependencies:** Task 3, Task 6
@@ -392,32 +392,99 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
 
 ---
 
-### Task 10: Dashboard Multi-CV (`/app`), Version History & Pengaturan Privasi (`/settings`)
+### Task 10: Dashboard Multi-CV Pengguna (`/dashboard`) dengan Kartu Visual, Menu `⋮` & Direct PDF Download (`feat/user-cv-dashboard`)
 
-**Description:** Membangun halaman Dashboard `/app` dan halaman Pengaturan `/settings` (branch `feat/multi-cv-dashboard`). Pengguna dapat melihat daftar seluruh versi CV (baik dari `localStorage` maupun Cloud Firestore), membuat snapshot versi bernama (`users/{uid}/resumes/{docId}/versions/{versionId}`), membandingkan perubahan antar versi, mengekspor seluruh data akun, atau menghapus seluruh data Cloud Firestore & akun Firebase secara permanen.
+**Description:** Membangun halaman **Dashboard Pengguna (`/dashboard`)** (branch `feat/user-cv-dashboard`) khusus untuk mengelola seluruh CV yang sedang dibuat maupun yang masih berupa draf. Setiap dokumen CV ditampilkan sebagai **kartu visual (*CV Card*)** berisi miniatur pratinjau kertas A4 nyata, indikator status otomatis (**Siap** vs **Draf**), informasi waktu ubah terakhir, tombol **Download PDF langsung dari kartu** tanpa harus masuk ke `/editor`, serta tombol **menu titik tiga (`⋮`)** untuk aksi cepat (*Buka di Editor, Rename, Duplikasi, Download PDF, Export `.json`, dan Hapus*).
+
+#### Hasil Penyempurnaan Ide (*Idea Refine*)
+- **Problem Statement (*How Might We*):** Bagaimana kita menyediakan ruang kendali terpusat (`/dashboard`) bagi pengguna yang sudah login agar mereka dapat memantau seluruh CV & draf mereka secara visual, mengunduh file PDF siap kirim dalam 1 klik tanpa membuka editor, serta merapikan banyak versi lamaran lewat kartu bermenu `⋮` yang tersinkronisasi langsung dengan Cloud Firestore?
+- **Keputusan Desain & Arsitektur Utama:**
+  1. **Kartu CV dengan Pratinjau Miniatur Kertas Nyata + Menu `⋮` (Gaya Google Docs / Notion):**
+     - Bagian atas kartu menampilkan pratinjau proporsional `ResumeHtmlRenderer` (skala kecil `pointer-events-none`) sesuai template & font masing-masing CV sehingga pengguna langsung mengenali dokumennya secara visual.
+     - Bagian bawah kartu menampilkan judul CV, `targetRole` / nama lengkap, badge status, waktu terakhir diubah (*mis. "Diubah 2 jam lalu"*), tombol cepat **Download PDF**, serta tombol **`⋮` (`MoreVertical`)**.
+  2. **Deteksi Status Otomatis (`Draf` vs `Siap`) Tanpa Input Manual:**
+     - Memanfaatkan `runAtsLint(doc)` yang sudah ada: jika masih terdapat temuan berstatus `fix` (mis. kontak wajib kosong atau masih memakai teks placeholder contoh bawaan), kartu otomatis ditandai badge **`Draf`**; jika lolos pemeriksaan dasar (`fix === 0`), ditandai **`Siap`**.
+  3. **On-Demand PDF Generation (Anti-Freeze Performa):**
+     - **Dilarang** me-render biner `@react-pdf/renderer` untuk semua kartu sekaligus saat halaman `/dashboard` dibuka. PDF hanya di-generate *on-demand* (`await pdf(<ResumePdfDocument doc={item} />).toBlob()` lewat dynamic import) tepat saat pengguna mengklik **Download PDF** pada kartu tertentu, dengan indikator spinner hanya pada kartu tersebut.
+  4. **Sinkronisasi Penuh dengan Cloud Firestore & Navigasi Pasca-Login:**
+     - Memasang `<CloudSyncManager />` di `/dashboard` agar daftar CV selalu menarik data terbaru dari `users/{uid}/resumes` dan setiap aksi *Buat Baru / Rename / Duplikasi / Hapus* di Dashboard otomatis tersinkron ke Firestore.
+     - Saat pengguna berhasil login dari Landing Page (`/`), arahkan ke `/dashboard`, serta tambahkan tautan **"Dashboard"** pada navbar Landing Page dan menu akun di `EditorTopBar.tsx`.
+- **Yang TIDAK Dikerjakan di Task Ini (*Not Doing*):**
+  - **TIDAK** merender instance `<PDFDownloadLink>` aktif di setiap kartu secara bersamaan saat mount (wajib *on-demand click* agar buka halaman `< 100ms`).
+  - **TIDAK** menggabungkan fitur kompleks *version diff viewer* baris-demi-baris di dalam task ini agar implementasi tetap fokus dan bersih (variasi CV per lowongan dikelola lewat fitur **Duplikasi CV**).
+  - **TIDAK** melempar (*redirect* paksa) pengguna saat Firebase Auth masih dalam proses pengecekan sesi awal (`authLoading`); tampilkan *skeleton cards* terlebih dahulu, lalu tampilkan kartu ajakan login (`AuthModal`) yang sopan jika memang belum login.
+
+#### Panduan Implementasi Langkah demi Langkah (Untuk Junior Developer / AI Model Ringan)
+
+1. **Langkah 1 — Buat Helper Download PDF On-Demand di `src/lib/pdf-download.ts`:**
+   - Ekstrak logika unduh PDF dari `PdfExportButton.tsx` menjadi fungsi async reusable `downloadResumePdf(doc: ResumeDocument): Promise<void>` yang melakukan dynamic import `@react-pdf/renderer` (`pdf`) dan `@/components/pdf/PdfDocument` (`ResumePdfDocument`), membuat `Blob`, lalu men-trigger unduhan `${safeName}_CV.pdf`.
+   - Gunakan helper ini baik di `PdfExportButton.tsx` maupun di kartu Dashboard agar tidak ada duplikasi logika.
+
+2. **Langkah 2 — Buat Komponen Kartu CV `src/components/dashboard/CvDocumentCard.tsx`:**
+   - Props: `doc: ResumeDocument`, `isActiveInEditor: boolean`, `onOpenEditor: () => void`, `onRename: (newTitle: string) => void`, `onDuplicate: () => void`, `onDelete: () => void`, `canDelete: boolean`.
+   - **Bagian Atas (Thumbnail Kertas):** Container rasio kertas dengan `overflow-hidden bg-[#FAFAFA] border-b border-[#E4E4E7]` yang me-render `<ResumeHtmlRenderer doc={doc} />` menggunakan `transform: scale(0.28)` (`transformOrigin: "top left"`, `width: "794px"`). Klik pada area pratinjau langsung membuka CV tersebut di `/editor` (`openTab(doc.id)` → `router.push("/editor")`).
+   - **Badge Status Otomatis:** Hitung `const lint = useMemo(() => runAtsLint(doc), [doc])`. Tampilkan badge **`Draf`** (`bg-[#FFFBEB] text-[#92400E] border-[#FDE68A]`) jika `lint.summary.fix > 0`, atau **`Siap`** (`bg-[#ECFDF5] text-[#065F46] border-[#A7F3D0]`) jika `lint.summary.fix === 0`.
+   - **Bagian Bawah (Metadata & Aksi):**
+     - Judul CV (mendukung *inline rename* saat dipilih dari menu `⋮` atau klik ganda), subteks `doc.targetRole || doc.basics.fullName || "Belum ada nama"`, nama template, serta waktu relatif/tanggal `updatedAt`.
+     - Tombol cepat **Download PDF** (ikon `Download`, berubah jadi spinner `Menyiapkan...` selama proses `downloadResumePdf(doc)`).
+     - Tombol **Menu Titik Tiga (`⋮` / `MoreVertical`)** dengan penutupan *click-outside* & `Escape`:
+       1. **Buka di Editor** (`openTab(doc.id)` + navigasi ke `/editor`)
+       2. **Ubah Nama (Rename)** (mengaktifkan input *inline rename* pada judul kartu)
+       3. **Duplikasi CV** (`duplicateDocument(doc.id)`)
+       4. **Download PDF** (`downloadResumePdf(doc)`)
+       5. **Export Backup `.json`** (`exportResumeJson(doc.id)`)
+       6. **Hapus CV** (`deleteDocument(doc.id)` dengan konfirmasi klik kedua *"Yakin hapus?"* agar aman; nonaktif bila hanya tersisa 1 dokumen).
+
+3. **Langkah 3 — Buat Halaman Dashboard `src/app/dashboard/page.tsx`:**
+   - Pasang `<CloudSyncManager />` agar sesi Firebase Auth dan koleksi Firestore `users/{uid}/resumes` langsung tersinkron saat halaman dibuka.
+   - **Header Dashboard:** Logo `FormaCV`, indikator status Cloud (`Tersinkron ke Cloud` / `Menyinkronkan...`), tombol navigasi ke **Galeri Template** & **Buka Editor**, serta menu akun (**Keluar**).
+   - **State Loading & Belum Login:**
+     - Saat `!hasHydrated || authLoading`: tampilkan skeleton 3 kartu CV yang rapi.
+     - Saat `!authUser`: tampilkan panel informasi bersih bahwa Dashboard Cloud diperuntukkan bagi pengguna yang masuk akun, lengkap dengan tombol **"Masuk / Daftar Akun"** (membuka `AuthModal`) serta opsi **"Lanjut ke Editor (Guest Mode)"**.
+   - **Toolbar Pencarian, Filter & Aksi Utama (Saat Login):**
+     - Input pencarian berdasarkan `title`, `targetRole`, atau `basics.fullName`.
+     - Filter tab: **`Semua`**, **`Siap`**, **`Draf`**, serta pengurutan (*Terbaru Diubah* / *Nama A–Z*).
+     - Tombol utama **`+ Buat CV Baru`** (membuat dokumen baru dan membukanya di `/editor` atau langsung menambahkannya ke daftar) serta tombol **`Import .json`**.
+   - **Grid Kartu CV:**
+     - Kartu aksi cepat `+ Buat CV Baru` + daftar `<CvDocumentCard />` responsif (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5`).
+
+4. **Langkah 4 — Hubungkan Navigasi ke `/dashboard`:**
+   - Di `src/components/auth/LandingAuthActions.tsx`:
+     - Saat pengguna sudah login, tampilkan tombol **"Dashboard"** di navbar Landing Page, dan ubah redirect `onAuthSuccess` setelah Sign In / Sign Up menjadi `router.push("/dashboard")`.
+   - Di `src/components/editor/EditorTopBar.tsx`:
+     - Tambahkan item menu **"Dashboard CV Saya"** (mengarah ke `/dashboard`) di bagian atas dropdown profil pengguna saat sedang login, dan pada menu `⋯`.
+
+5. **Langkah 5 — Tambahkan Unit Test Helper Dashboard:**
+   - Buat unit test `src/lib/__tests__/dashboard-utils.test.ts` untuk memverifikasi helper penentu status kartu (`getCvCompletionStatus`: `draft` vs `ready`), pemfilteran pencarian (`title` / `targetRole`), serta pengurutan daftar CV di Dashboard.
 
 **Acceptance criteria:**
-- [ ] Halaman `/app` menampilkan kartu daftar CV dengan metadata (`title`, `targetRole`, `templateId`, `updatedAt`), aksi cepat (Edit, Duplikasi, Simpan Snapshot Versi, Hapus), dan riwayat snapshot.
-- [ ] Halaman `/settings` menyediakan fitur **Ekspor Semua Data (`.json`)**, **Bersihkan Penyimpanan Lokal**, dan **Hapus Akun & Data Cloud Firestore Permanen**.
-- [ ] Desain kedua halaman mematuhi palet monokromatis netral di `brand-guideline.md`.
+- [ ] Halaman `/dashboard` memuat dan menyinkronkan seluruh CV pengguna yang login dari Cloud Firestore (`<CloudSyncManager />`), lengkap dengan penanganan state loading skeleton dan tampilan ajakan login bila belum autentikasi.
+- [ ] Setiap CV dirender sebagai kartu visual (`CvDocumentCard.tsx`) dengan pratinjau miniatur kertas A4, badge otomatis **Draf** / **Siap**, tombol **Download PDF langsung** (*on-demand* tanpa perlu masuk ke `/editor`), serta menu **`⋮`** (*Buka di Editor, Rename, Duplikasi, Download PDF, Export `.json`, Hapus dengan konfirmasi*).
+- [ ] Tersedia fitur pencarian CV, filter status (*Semua / Siap / Draf*), sortir, serta tombol **Buat CV Baru** & **Import `.json`**.
+- [ ] Navigasi menuju `/dashboard` terhubung rapi dari navbar Landing Page (`LandingAuthActions.tsx`) dan dropdown akun di `EditorTopBar.tsx`.
+- [ ] Desain mematuhi palet monokromatis netral di `brand-guideline.md` dan seluruh unit test lulus.
 
 **Verification:**
 - [ ] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
 - [ ] Build succeeds: `npm run build`
-- [ ] Manual check: Buka `/app`, buat versi baru untuk target role tertentu, simpan snapshot versi, dan uji fitur ekspor/hapus data di `/settings`.
+- [ ] Manual check: Login, buka `/dashboard`, coba unduh PDF salah satu CV langsung dari kartu tanpa masuk `/editor`, uji *Rename / Duplikasi / Hapus* lewat menu `⋮`, lalu pastikan perubahannya tersimpan di Cloud Firestore.
 
 **Dependencies:** Task 9
 
 **Files likely touched:**
-- `src/app/app/page.tsx`
-- `src/app/settings/page.tsx`
-- `src/components/editor/FileTreeSidebar.tsx`
+- `src/lib/pdf-download.ts`
+- `src/components/pdf/PdfExportButton.tsx`
+- `src/components/dashboard/CvDocumentCard.tsx`
+- `src/app/dashboard/page.tsx`
+- `src/components/auth/LandingAuthActions.tsx`
+- `src/components/editor/EditorTopBar.tsx`
+- `src/lib/__tests__/dashboard-utils.test.ts`
 
-**Estimated scope:** Small (3 files)
+**Estimated scope:** Medium (6-7 files)
 
 ---
 
 ## Checkpoint 3: After Tasks 9–10 (Phase 3 Complete)
 - [ ] Semua tes lulus (`npm test`), build production bersih (`npm run build`)
-- [ ] Aturan keamanan `firestore.rules` (`request.auth.uid == userId`) dan mekanisme hapus data permanen bekerja sesuai persyaratan privasi PRD Bagian 6.3
-- [ ] Siap untuk peluncuran penuh atau penambahan ekstensi opsional (`.docx` export, public share link, job tracker)
+- [ ] Aturan keamanan `firestore.rules` (`request.auth.uid == userId`) dan alur kelola CV dari `/dashboard` maupun `/editor` tersinkron mulus dengan Cloud Firestore
+- [ ] Siap untuk peluncuran penuh atau penambahan ekstensi opsional (`.docx` export, halaman `/settings` hapus akun permanen, public share link, job tracker)
