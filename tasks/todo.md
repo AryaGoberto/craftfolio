@@ -392,7 +392,7 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
 
 ---
 
-### Task 10: Dashboard Multi-CV Pengguna (`/dashboard`) dengan Kartu Visual, Menu `⋮` & Direct PDF Download (`feat/user-cv-dashboard`)
+### Task 10: Dashboard Multi-CV Pengguna (`/dashboard`) dengan Kartu Visual, Menu `⋮` & Direct PDF Download (`feat/user-cv-dashboard`) ✅
 
 **Description:** Membangun halaman **Dashboard Pengguna (`/dashboard`)** (branch `feat/user-cv-dashboard`) khusus untuk mengelola seluruh CV yang sedang dibuat maupun yang masih berupa draf. Setiap dokumen CV ditampilkan sebagai **kartu visual (*CV Card*)** berisi miniatur pratinjau kertas A4 nyata, indikator status otomatis (**Siap** vs **Draf**), informasi waktu ubah terakhir, tombol **Download PDF langsung dari kartu** tanpa harus masuk ke `/editor`, serta tombol **menu titik tiga (`⋮`)** untuk aksi cepat (*Buka di Editor, Rename, Duplikasi, Download PDF, Export `.json`, dan Hapus*).
 
@@ -458,15 +458,15 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
    - Buat unit test `src/lib/__tests__/dashboard-utils.test.ts` untuk memverifikasi helper penentu status kartu (`getCvCompletionStatus`: `draft` vs `ready`), pemfilteran pencarian (`title` / `targetRole`), serta pengurutan daftar CV di Dashboard.
 
 **Acceptance criteria:**
-- [ ] Halaman `/dashboard` memuat dan menyinkronkan seluruh CV pengguna yang login dari Cloud Firestore (`<CloudSyncManager />`), lengkap dengan penanganan state loading skeleton dan tampilan ajakan login bila belum autentikasi.
-- [ ] Setiap CV dirender sebagai kartu visual (`CvDocumentCard.tsx`) dengan pratinjau miniatur kertas A4, badge otomatis **Draf** / **Siap**, tombol **Download PDF langsung** (*on-demand* tanpa perlu masuk ke `/editor`), serta menu **`⋮`** (*Buka di Editor, Rename, Duplikasi, Download PDF, Export `.json`, Hapus dengan konfirmasi*).
-- [ ] Tersedia fitur pencarian CV, filter status (*Semua / Siap / Draf*), sortir, serta tombol **Buat CV Baru** & **Import `.json`**.
-- [ ] Navigasi menuju `/dashboard` terhubung rapi dari navbar Landing Page (`LandingAuthActions.tsx`) dan dropdown akun di `EditorTopBar.tsx`.
-- [ ] Desain mematuhi palet monokromatis netral di `brand-guideline.md` dan seluruh unit test lulus.
+- [x] Halaman `/dashboard` memuat dan menyinkronkan seluruh CV pengguna yang login dari Cloud Firestore (`<CloudSyncManager />`), lengkap dengan penanganan state loading skeleton dan tampilan ajakan login bila belum autentikasi.
+- [x] Setiap CV dirender sebagai kartu visual (`CvDocumentCard.tsx`) dengan pratinjau miniatur kertas A4, badge otomatis **Draf** / **Siap**, tombol **Download PDF langsung** (*on-demand* tanpa perlu masuk ke `/editor`), serta menu **`⋮`** (*Buka di Editor, Rename, Duplikasi, Download PDF, Export `.json`, Hapus dengan konfirmasi*).
+- [x] Tersedia fitur pencarian CV, filter status (*Semua / Siap / Draf*), sortir, serta tombol **Buat CV Baru** & **Import `.json`**.
+- [x] Navigasi menuju `/dashboard` terhubung rapi dari navbar Landing Page (`LandingAuthActions.tsx`) dan dropdown akun di `EditorTopBar.tsx`.
+- [x] Desain mematuhi palet monokromatis netral di `brand-guideline.md` dan seluruh unit test lulus.
 
 **Verification:**
-- [ ] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
-- [ ] Build succeeds: `npm run build`
+- [x] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
+- [x] Build succeeds: `npm run build`
 - [ ] Manual check: Login, buka `/dashboard`, coba unduh PDF salah satu CV langsung dari kartu tanpa masuk `/editor`, uji *Rename / Duplikasi / Hapus* lewat menu `⋮`, lalu pastikan perubahannya tersimpan di Cloud Firestore.
 
 **Dependencies:** Task 9

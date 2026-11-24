@@ -81,7 +81,7 @@ Detail lengkap setiap task beserta *acceptance criteria*, *verification*, *depen
 
 ### Phase 3: Firebase Auth, Cloud Firestore Sync & Multi-CV Dashboard
 - [x] Task 9: Autentikasi Firebase (Google & Email/Password), Cloud Firestore Sync (`firestore.rules`) & Smart Merge `localStorage` (`feat/firebase-auth-firestore`)
-- [ ] Task 10: Dashboard Multi-CV Pengguna (`/dashboard`) dengan Kartu Visual, Menu `⋮` & Direct PDF Download (`feat/user-cv-dashboard`)
+- [x] Task 10: Dashboard Multi-CV Pengguna (`/dashboard`) dengan Kartu Visual, Menu `⋮` & Direct PDF Download (`feat/user-cv-dashboard`)
 
 ### Checkpoint 3: Full Roadmap Complete
 - [ ] Guest Mode tetap berfungsi 100% tanpa login; pengguna yang login (Google / Email & Password) dapat menyinkronkan multi-CV ke Cloud Firestore dengan aman

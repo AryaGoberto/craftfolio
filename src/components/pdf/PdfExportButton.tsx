@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { pdf } from "@react-pdf/renderer";
 import { Download, Loader2 } from "lucide-react";
 import type { ResumeDocument } from "@/lib/schemas/resume";
-import { ResumePdfDocument } from "@/components/pdf/PdfDocument";
+import { downloadResumePdf } from "@/lib/pdf-download";
 
 export function PdfExportButton({ doc }: { doc: ResumeDocument }) {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -12,18 +11,7 @@ export function PdfExportButton({ doc }: { doc: ResumeDocument }) {
   const handleDownload = async () => {
     setIsGenerating(true);
     try {
-      const blob = await pdf(<ResumePdfDocument doc={doc} />).toBlob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const safeName = (doc.basics.fullName.trim() || doc.title || "CV")
-        .replace(/[^a-zA-Z0-9_-]+/g, "_")
-        .replace(/^_+|_+$/g, "");
-      a.href = url;
-      a.download = `${safeName}_CV.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      await downloadResumePdf(doc);
     } catch (err) {
       console.error("Failed to generate PDF:", err);
       alert("Gagal membuat file PDF. Silakan coba lagi.");
