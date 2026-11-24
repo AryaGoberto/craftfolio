@@ -168,7 +168,7 @@ Mendukung bagian standar ATS dengan entri yang dapat diulang (*repeatable entrie
 
 ### Fase 3: Cloud Sync (Firebase Auth & Firestore), Manajemen Multi-CV & Opsional
 * **FR-3.1 (Autentikasi Opsional Firebase & Cloud Firestore Sync):** Login / Daftar menggunakan **Google** maupun **Email & Password** biasa (dilengkapi fitur *Reset Password*). Data `localStorage` dari *Guest Mode* digabungkan otomatis (*two-way timestamp merge*) ke Cloud Firestore (`users/{uid}/resumes/{docId}`) saat pengguna masuk, tanpa menghapus draf lokal. Tersedia fitur keluar (*Sign Out*) serta hapus akun & data cloud permanen.
-* **FR-3.2 (Dashboard Multi-CV & Version Management):** Halaman `/app` untuk membuat, menduplikasi per perusahaan/posisi, melihat *version history*, membandingkan dua versi, mengarsipkan, dan memulihkan versi lama.
+* **FR-3.2 (Dashboard Multi-CV Pengguna `/dashboard`):** Halaman dashboard berbentuk grid kartu visual (*CV Cards*) untuk pengguna yang login guna memantau CV siap pakai maupun draf, mengunduh PDF langsung dari kartu tanpa harus membuka `/editor`, serta melakukan aksi cepat lewat menu titik tiga `⋮` (*Edit, Rename, Duplikasi per perusahaan/posisi, Export `.json`, dan Hapus*).
 * **FR-3.3 (Job Application Tracker — Opsional):** Pelacakan lamaran sederhana (Perusahaan, Posisi, Versi CV yang dipakai, Tanggal lamar, Status: *Draft / Applied / Interview / Rejected / Offer*, Catatan & pengingat). Tetap bersifat opsional agar fokus produk tetap sebagai CV builder.
 * **FR-3.4 (Shareable Public Link — Opsional):** Tautan web publik baca-saja untuk dibagikan ke perekrut lengkap dengan tombol unduh PDF.
 
