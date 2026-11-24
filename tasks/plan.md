@@ -69,7 +69,7 @@ Detail lengkap setiap task beserta *acceptance criteria*, *verification*, *depen
 
 ### Phase 2: ATS Intelligence, Tailoring & AI
 - [x] Task 4: ATS X-Ray Mode Berbasis Ekstraksi Blob PDF Asli (`pdfjs-dist`)
-- [ ] Task 5: Job Description (JD) Keyword Matcher & Deteksi Master Profile Tersembunyi
+- [x] Task 5: Job Description (JD) Keyword Matcher & Deteksi Master Profile Tersembunyi
 - [ ] Task 6: AI Bullet-Point Enhancer dengan Factuality Guardrails (`/api/ai/enhance`)
 - [ ] Task 7: Import CV Lama (PDF/DOCX) ke Form JSON dengan Langkah Review (`/api/ai/parse-cv`)
 

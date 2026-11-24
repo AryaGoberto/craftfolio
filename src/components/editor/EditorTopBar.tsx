@@ -10,6 +10,7 @@ import {
   LayoutGrid,
   Redo2,
   SlidersHorizontal,
+  Target,
   Undo2,
   Upload,
 } from "lucide-react";
@@ -61,11 +62,13 @@ const DENSITY_LABELS: Record<DensityPreset, string> = {
 interface EditorTopBarProps {
   lintReport: AtsLintReport;
   onOpenAtsModal: () => void;
+  onOpenJdModal: () => void;
 }
 
 export function EditorTopBar({
   lintReport,
   onOpenAtsModal,
+  onOpenJdModal,
 }: EditorTopBarProps) {
   const documents = useResumeStore((s) => s.documents);
   const activeDocumentId = useResumeStore((s) => s.activeDocumentId);
@@ -346,6 +349,18 @@ export function EditorTopBar({
             <Redo2 className="w-3.5 h-3.5" />
           </button>
         </div>
+
+        {/* JD Keyword Matcher Button */}
+        <button
+          type="button"
+          onClick={onOpenJdModal}
+          title="Cocokkan CV dengan Job Description"
+          className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md bg-white border border-[#E4E4E7] text-[12px] font-medium text-[#09090B] hover:bg-[#F4F4F5]"
+        >
+          <Target className="w-3.5 h-3.5 text-[#52525B]" />
+          <span className="hidden xl:inline">JD Matcher</span>
+          <span className="xl:hidden">JD</span>
+        </button>
 
         {/* ATS Checker Pill */}
         <button

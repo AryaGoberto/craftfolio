@@ -83,8 +83,9 @@ Dokumen ini merangkum seluruh fitur **FormaCV** berdasarkan [PRD.md](./PRD.md), 
 - [x] **ATS X-Ray Berbasis Ekstraksi File PDF Asli** — *Branch: `feat/pdf-xray-parser`*
   - **Penjelasan:** Meningkatkan *ATS X-Ray Mode* agar membaca teks langsung dari hasil generate PDF (menggunakan `pdfjs-dist`), bukan hanya dari JSON state, lengkap dengan fallback simulasi linear dan unit test.
   - **File:** `src/lib/pdf-text-extractor.ts`, `src/components/preview/AtsXRayView.tsx`, `src/lib/__tests__/pdf-text-extractor.test.ts`
-- [ ] **Job Description (JD) Keyword Matcher** — *Branch: `feat/jd-keyword-matcher`*
-  - **Penjelasan:** Panel untuk menempelkan teks lowongan kerja, mengekstrak *hard skills* & kata kunci utama, menampilkan persentase kecocokan, dan membedakan secara jelas antara *"belum tertulis di CV"* vs *"tidak dimiliki pengguna"*.
+- [x] **Job Description (JD) Keyword Matcher** — *Branch: `feat/jd-keyword-matcher`*
+  - **Penjelasan:** Panel modal untuk menempelkan teks lowongan kerja, mengekstrak *hard skills* & kata kunci secara deterministik di browser, memisahkan 3 kategori (`matchedActive`, `matchedHiddenInMaster` dengan tombol 1-klik **Tampilkan**, dan `missing`), serta tombol **Duplikasi CV untuk Lowongan Ini**.
+  - **File:** `src/lib/jd-matcher.ts`, `src/lib/__tests__/jd-matcher.test.ts`, `src/components/editor/JdMatcherModal.tsx`, `src/components/editor/EditorTopBar.tsx`, `src/app/editor/page.tsx`
 - [ ] **AI Bullet-Point Enhancer (dengan Factuality Guardrails)** — *Branch: `feat/ai-bullet-enhancer`*
   - **Penjelasan:** Tombol *"Perbaiki dengan AI"* di tiap bullet untuk mengubah kalimat pasif menjadi format **Action → Context → Result (XYZ / STAR)** dalam ID/EN via Vercel AI SDK. Wajib disertai *guardrails* (dilarang mengarang angka/pengalaman, label teks AI, dan wajib konfirmasi user).
   - **Target:** `src/app/api/ai/enhance/route.ts`

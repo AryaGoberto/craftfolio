@@ -7,6 +7,7 @@ import { EditorTopBar } from "@/components/editor/EditorTopBar";
 import { EditorPanel } from "@/components/editor/EditorPanel";
 import { PreviewPanel } from "@/components/preview/PreviewPanel";
 import { AtsCheckerModal } from "@/components/editor/AtsCheckerModal";
+import { JdMatcherModal } from "@/components/editor/JdMatcherModal";
 
 export default function EditorPage() {
   const hasHydrated = useResumeStore((s) => s.hasHydrated);
@@ -19,6 +20,7 @@ export default function EditorPage() {
   const [pageCount, setPageCount] = useState(1);
   const [lastPageFillRatio, setLastPageFillRatio] = useState(1);
   const [atsModalOpen, setAtsModalOpen] = useState(false);
+  const [jdModalOpen, setJdModalOpen] = useState(false);
 
   const doc = documents[activeDocumentId];
 
@@ -55,6 +57,7 @@ export default function EditorPage() {
       <EditorTopBar
         lintReport={lintReport}
         onOpenAtsModal={() => setAtsModalOpen(true)}
+        onOpenJdModal={() => setJdModalOpen(true)}
       />
 
       {/* Mobile Tab Switcher */}
@@ -117,6 +120,12 @@ export default function EditorPage() {
           setActiveSection(section);
           setMobileTab("edit");
         }}
+      />
+
+      <JdMatcherModal
+        open={jdModalOpen}
+        onClose={() => setJdModalOpen(false)}
+        doc={doc}
       />
     </div>
   );
