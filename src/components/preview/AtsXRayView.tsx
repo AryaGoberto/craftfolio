@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 import type { ResumeDocument, SectionKey } from "@/lib/schemas/resume";
 
 export function extractLinearResumeText(doc: ResumeDocument): string {
@@ -159,25 +161,87 @@ export function extractLinearResumeText(doc: ResumeDocument): string {
 }
 
 export function AtsXRayView({ doc }: { doc: ResumeDocument }) {
-  const rawText = extractLinearResumeText(doc);
+  const fallbackText = useMemo(() => extractLinearResumeText(doc), [doc]);
+  const [pdfText, setPdfText] = useState<string | null>(null);
+  const [pdfPageCount, setPdfPageCount] = useState<number | null>(null);
+  const [isExtracting, setIsExtracting] = useState(true);
+  const [source, setSource] = useState<"pdf" | "fallback">("fallback");
+
+  useEffect(() => {
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setIsExtracting(true);
+      try {
+        const [{ pdf }, { ResumePdfDocument }, { extractTextFromPdfBuffer }] =
+          await Promise.all([
+            import("@react-pdf/renderer"),
+            import("@/components/pdf/PdfDocument"),
+            import("@/lib/pdf-text-extractor"),
+          ]);
+
+        if (cancelled) return;
+        const blob = await pdf(<ResumePdfDocument doc={doc} />).toBlob();
+        if (cancelled) return;
+
+        const buffer = await blob.arrayBuffer();
+        const extracted = await extractTextFromPdfBuffer(buffer);
+        if (cancelled) return;
+
+        setPdfText(extracted.fullText);
+        setPdfPageCount(extracted.pageCount);
+        setSource("pdf");
+      } catch (err) {
+        console.warn("PDF X-Ray extraction failed, falling back to linear simulation:", err);
+        if (!cancelled) {
+          setPdfText(null);
+          setPdfPageCount(null);
+          setSource("fallback");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsExtracting(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [doc]);
+
+  const displayedText = source === "pdf" && pdfText ? pdfText : fallbackText;
 
   return (
     <div className="w-full max-w-[794px] bg-white border border-[#E4E4E7] rounded-lg shadow-sm p-6">
-      <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#F4F4F5]">
+      <div className="flex items-center justify-between gap-3 pb-3 mb-4 border-b border-[#F4F4F5]">
         <div>
           <h3 className="text-[13px] font-semibold text-[#09090B]">
-            ATS X-Ray — Simulasi Urutan Pembacaan Teks
+            ATS X-Ray — Ekstraksi Teks Linear PDF
           </h3>
           <p className="text-[11px] text-[#52525B] mt-0.5">
-            Menampilkan urutan teks linear dari atas ke bawah sebagaimana dibaca oleh parser ATS.
+            {source === "pdf"
+              ? "Teks berikut diekstrak langsung dari file biner PDF hasil render sebagaimana dibaca parser ATS."
+              : "Menampilkan simulasi urutan teks linear dari atas ke bawah sebagaimana dibaca parser ATS."}
           </p>
         </div>
-        <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-[#ECFDF5] text-[#10B981]">
-          Linear Order
-        </span>
+        {isExtracting ? (
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded bg-[#F4F4F5] text-[#52525B] shrink-0">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Mengekstrak PDF...
+          </span>
+        ) : source === "pdf" && pdfPageCount !== null ? (
+          <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-[#ECFDF5] text-[#10B981] shrink-0">
+            PDF Binary Parsed · {pdfPageCount} Halaman
+          </span>
+        ) : (
+          <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-[#F4F4F5] text-[#52525B] shrink-0">
+            Linear Simulation
+          </span>
+        )}
       </div>
       <pre className="text-[12px] leading-relaxed font-mono text-[#18181B] whitespace-pre-wrap break-words bg-[#FAFAFA] border border-[#E4E4E7] rounded-md p-4">
-        {rawText}
+        {displayedText}
       </pre>
     </div>
   );
