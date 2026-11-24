@@ -1,0 +1,345 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model (FormaCV)
+// ===============================================================
+//
+// Collection: users
+// Document ID: {userId} (must equal request.auth.uid)
+// Fields:
+//   - uid: string (required, immutable, == userId) - Firebase Auth UID
+//   - email: string | null (optional, <= 254 chars, valid email if non-null) - Account email (PII)
+//   - displayName: string | null (optional, <= 120 chars) - Account display name
+//   - activeDocumentId: string (required, <= 128 chars) - Currently active resume ID
+//   - openTabIds: list (required, max 100 entries) - Ordered open editor tab IDs
+//   - fileOrder: list (required, max 200 entries) - Sidebar file tree ordering
+//   - updatedAt: string (required, ISO 8601 date string, <= 64 chars) - Last metadata sync time
+//
+// Collection: users/{userId}/resumes
+// Document ID: {resumeId}
+// Fields:
+//   - id: string (required, immutable, == resumeId, 1..128 chars) - Resume document ID
+//   - schemaVersion: int (required, 1..100) - Resume schema version
+//   - userId: string (required, immutable, == userId) - Owner UID
+//   - title: string (required, <= 200 chars) - Document title
+//   - targetRole: string (optional, <= 200 chars) - Target job role
+//   - language: string (required, 'id' | 'en') - Resume content language
+//   - createdAt: string (required, ISO 8601 date string, <= 64 chars) - Creation timestamp
+//   - updatedAt: string (required, ISO 8601 date string, <= 64 chars) - Last modification timestamp
+//   - config: map (required, exact keys: templateId, paperSize, density, fontFamily, targetPages, sectionOrder)
+//   - basics: map (required, keys: fullName, headline?, email, phone?, location?, links, summary)
+//   - sections: map (required, exact keys: experience, education, projects, skills, certifications, awards, volunteering, languages, customSections)
+//
+// Collection: users/{userId}/resumes/{resumeId}/versions
+// Document ID: {versionId}
+// Fields:
+//   - id: string (required, immutable, == versionId, 1..128 chars) - Snapshot ID
+//   - resumeId: string (required, immutable, == resumeId, 1..128 chars) - Parent resume ID
+//   - userId: string (required, immutable, == userId) - Owner UID
+//   - createdAt: timestamp | string (required, immutable, valid timestamp or ISO 8601 string <= 64 chars)
+//   - label: string (optional, <= 200 chars) - Optional version note/label
+//   - snapshot: map (required, immutable, valid ResumeDocument matching userId and resumeId)
+//
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) ||
+        request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) ||
+        request.resource.data.uid == resource.data.uid;
+    }
+
+    function hasRequiredFields(data, fields) {
+      return data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(data, fields) {
+      return data.keys().hasOnly(fields);
+    }
+
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string &&
+        email.size() <= 254 &&
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // Validates ISO 8601 date string format (YYYY-MM-DDTHH:MM:SS...) with bounded length
+    function isValidDateString(dateStr) {
+      return dateStr is string &&
+        dateStr.size() <= 64 &&
+        dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    function isValidList(listVal, maxSize) {
+      return listVal is list && listVal.size() <= maxSize;
+    }
+
+    function isValidOptionalString(data, field, maxLen) {
+      return !(field in data) ||
+        (data[field] is string && data[field].size() <= maxLen);
+    }
+
+    // ===============================================================
+    // Domain Validators (Called in BOTH create and update rules)
+    // ===============================================================
+
+    function isValidUserWorkspace(data, userId) {
+      return hasRequiredFields(data, [
+          'uid',
+          'activeDocumentId',
+          'openTabIds',
+          'fileOrder',
+          'updatedAt'
+        ]) &&
+        hasOnlyAllowedFields(data, [
+          'uid',
+          'email',
+          'displayName',
+          'activeDocumentId',
+          'openTabIds',
+          'fileOrder',
+          'updatedAt'
+        ]) &&
+        data.uid is string && data.uid == userId &&
+        (!('email' in data) || data.email == null || isValidEmail(data.email)) &&
+        (!('displayName' in data) || data.displayName == null ||
+          (data.displayName is string && data.displayName.size() <= 120)) &&
+        data.activeDocumentId is string && data.activeDocumentId.size() <= 128 &&
+        isValidList(data.openTabIds, 100) &&
+        isValidList(data.fileOrder, 200) &&
+        isValidDateString(data.updatedAt);
+    }
+
+    function isValidResumeConfig(config) {
+      return config is map &&
+        hasRequiredFields(config, [
+          'templateId',
+          'paperSize',
+          'density',
+          'fontFamily',
+          'targetPages',
+          'sectionOrder'
+        ]) &&
+        hasOnlyAllowedFields(config, [
+          'templateId',
+          'paperSize',
+          'density',
+          'fontFamily',
+          'targetPages',
+          'sectionOrder'
+        ]) &&
+        config.templateId in ['classic-latex', 'modern-minimal', 'compact', 'executive'] &&
+        config.paperSize in ['A4', 'LETTER'] &&
+        config.density in ['compact', 'normal', 'relaxed'] &&
+        config.fontFamily in ['inter', 'roboto', 'serif', 'georgia'] &&
+        config.targetPages is int && config.targetPages in [1, 2] &&
+        isValidList(config.sectionOrder, 50);
+    }
+
+    function isValidResumeBasics(basics) {
+      return basics is map &&
+        hasRequiredFields(basics, [
+          'fullName',
+          'email',
+          'links',
+          'summary'
+        ]) &&
+        hasOnlyAllowedFields(basics, [
+          'fullName',
+          'headline',
+          'email',
+          'phone',
+          'location',
+          'links',
+          'summary'
+        ]) &&
+        basics.fullName is string && basics.fullName.size() <= 200 &&
+        isValidOptionalString(basics, 'headline', 250) &&
+        basics.email is string && basics.email.size() <= 254 &&
+        isValidOptionalString(basics, 'phone', 64) &&
+        isValidOptionalString(basics, 'location', 200) &&
+        isValidList(basics.links, 20) &&
+        basics.summary is map &&
+        hasRequiredFields(basics.summary, ['text', 'isVisible']) &&
+        hasOnlyAllowedFields(basics.summary, ['text', 'isVisible']) &&
+        basics.summary.text is string && basics.summary.text.size() <= 5000 &&
+        basics.summary.isVisible is bool;
+    }
+
+    function isValidSectionGroup(group, maxItems) {
+      return group is map &&
+        hasRequiredFields(group, ['title', 'isVisible', 'items']) &&
+        hasOnlyAllowedFields(group, ['title', 'isVisible', 'items']) &&
+        group.title is string && group.title.size() <= 150 &&
+        group.isVisible is bool &&
+        isValidList(group.items, maxItems);
+    }
+
+    function isValidResumeSections(sections) {
+      return sections is map &&
+        hasRequiredFields(sections, [
+          'experience',
+          'education',
+          'projects',
+          'skills',
+          'certifications',
+          'awards',
+          'volunteering',
+          'languages',
+          'customSections'
+        ]) &&
+        hasOnlyAllowedFields(sections, [
+          'experience',
+          'education',
+          'projects',
+          'skills',
+          'certifications',
+          'awards',
+          'volunteering',
+          'languages',
+          'customSections'
+        ]) &&
+        isValidSectionGroup(sections.experience, 50) &&
+        isValidSectionGroup(sections.education, 30) &&
+        isValidSectionGroup(sections.projects, 50) &&
+        isValidSectionGroup(sections.skills, 50) &&
+        isValidSectionGroup(sections.certifications, 50) &&
+        isValidSectionGroup(sections.awards, 50) &&
+        isValidSectionGroup(sections.volunteering, 50) &&
+        isValidSectionGroup(sections.languages, 30) &&
+        isValidList(sections.customSections, 20);
+    }
+
+    function isValidResume(data, userId, resumeId) {
+      return data is map &&
+        hasRequiredFields(data, [
+          'id',
+          'schemaVersion',
+          'userId',
+          'title',
+          'language',
+          'createdAt',
+          'updatedAt',
+          'config',
+          'basics',
+          'sections'
+        ]) &&
+        hasOnlyAllowedFields(data, [
+          'id',
+          'schemaVersion',
+          'userId',
+          'title',
+          'targetRole',
+          'language',
+          'createdAt',
+          'updatedAt',
+          'config',
+          'basics',
+          'sections'
+        ]) &&
+        data.id is string && data.id == resumeId && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.schemaVersion is int && data.schemaVersion >= 1 && data.schemaVersion <= 100 &&
+        data.userId is string && data.userId == userId &&
+        data.title is string && data.title.size() <= 200 &&
+        isValidOptionalString(data, 'targetRole', 200) &&
+        data.language in ['id', 'en'] &&
+        isValidDateString(data.createdAt) &&
+        isValidDateString(data.updatedAt) &&
+        isValidResumeConfig(data.config) &&
+        isValidResumeBasics(data.basics) &&
+        isValidResumeSections(data.sections);
+    }
+
+    function isValidResumeVersion(data, userId, resumeId, versionId) {
+      return data is map &&
+        hasRequiredFields(data, [
+          'id',
+          'resumeId',
+          'userId',
+          'createdAt',
+          'snapshot'
+        ]) &&
+        hasOnlyAllowedFields(data, [
+          'id',
+          'resumeId',
+          'userId',
+          'createdAt',
+          'label',
+          'snapshot'
+        ]) &&
+        data.id is string && data.id == versionId && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.resumeId is string && data.resumeId == resumeId &&
+        data.userId is string && data.userId == userId &&
+        (data.createdAt is timestamp || isValidDateString(data.createdAt)) &&
+        isValidOptionalString(data, 'label', 200) &&
+        isValidResume(data.snapshot, userId, resumeId);
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    // User workspace metadata (contains PII: strictly owner-only)
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) &&
+        uidUnchanged() &&
+        isValidUserWorkspace(request.resource.data, userId);
+      allow update: if isOwner(userId) &&
+        uidNotModified() &&
+        areImmutableFieldsUnchanged(['uid']) &&
+        isValidUserWorkspace(request.resource.data, userId);
+      allow delete: if isOwner(userId);
+
+      // User resume documents (strictly owner-only)
+      match /resumes/{resumeId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+          isValidResume(request.resource.data, userId, resumeId);
+        allow update: if isOwner(userId) &&
+          areImmutableFieldsUnchanged(['id', 'userId']) &&
+          isValidResume(request.resource.data, userId, resumeId);
+        allow delete: if isOwner(userId);
+
+        // Point-in-time resume version snapshots (strictly owner-only)
+        match /versions/{versionId} {
+          allow read: if isOwner(userId);
+          allow create: if isOwner(userId) &&
+            existsAfter(/databases/$(database)/documents/users/$(userId)/resumes/$(resumeId)) &&
+            isValidResumeVersion(request.resource.data, userId, resumeId, versionId);
+          allow update: if isOwner(userId) &&
+            areImmutableFieldsUnchanged(['id', 'resumeId', 'userId', 'createdAt', 'snapshot']) &&
+            isValidResumeVersion(request.resource.data, userId, resumeId, versionId);
+          allow delete: if isOwner(userId);
+        }
+      }
+    }
+
+    // Explicit default deny for all unmatched paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
