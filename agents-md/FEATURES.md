@@ -61,9 +61,9 @@ Dokumen ini merangkum seluruh fitur **FormaCV** berdasarkan [PRD.md](./PRD.md), 
 - [x] **ATS X-Ray Mode (Simulasi Urutan Teks Preview)**
   - **Penjelasan:** Tab di panel preview untuk melihat ekstraksi teks linear dari atas ke bawah sesuai urutan pembacaan parser ATS.
   - **File:** `src/components/preview/AtsXRayView.tsx`
-- [x] **Ekspor PDF Vector (`@react-pdf/renderer`)**
-  - **Penjelasan:** Mengunduh file PDF *vector* dengan teks *selectable* langsung di browser (`ssr: false`), penamaan file otomatis `Nama_Lengkap_CV.pdf`, dan metadata PDF.
-  - **File:** `src/components/pdf/PdfDocument.tsx`, `src/components/pdf/PdfExportButton.tsx`
+- [x] **Ekspor PDF Vector (`pdflatex` Overleaf Engine + `@react-pdf/renderer` Fallback) & Export `.tex`** — *Branch: `feat/overleaf-latex-pdf`*
+  - **Penjelasan:** Men-generate kode sumber `.tex` bergaya Overleaf (*Jake's Resume*: Computer Modern Roman, *True Small Caps* `\scshape`, `\titlerule`, dan makro `\resumeSubheading` dengan escaping keamanan penuh), mengompilasinya via endpoint `POST /api/pdf/latex` (`pdflatex -no-shell-escape` di dalam container TeX Live), dilengkapi *graceful fallback* otomatis ke `@react-pdf/renderer` bila dijalankan di mesin lokal tanpa `pdflatex`, serta tombol **Export LaTeX (`.tex`)** langsung di Editor & Dashboard.
+  - **File:** `src/lib/latex-generator.ts`, `src/lib/latex-compiler.ts`, `src/app/api/pdf/latex/route.ts`, `src/lib/pdf-download.tsx`, `src/components/pdf/PdfDocument.tsx`, `src/components/pdf/PdfExportButton.tsx`, `Dockerfile`
 - [x] **Export & Import Backup `.json`**
   - **Penjelasan:** Mengunduh seluruh data CV ke file `.json` dan mengimpornya kembali dengan validasi ketat Zod agar aman antar perangkat.
   - **File:** `src/components/editor/EditorTopBar.tsx`, `src/store/use-resume-store.ts`

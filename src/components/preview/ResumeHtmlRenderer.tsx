@@ -2,6 +2,17 @@
 
 import type { ResumeDocument, SectionKey } from "@/lib/schemas/resume";
 import {
+  getVisibleNonEmptyBullets,
+  isNonEmptyAwardItem,
+  isNonEmptyCertificationItem,
+  isNonEmptyCustomItem,
+  isNonEmptyEducationItem,
+  isNonEmptyExperienceItem,
+  isNonEmptyLanguageItem,
+  isNonEmptyProjectItem,
+  isNonEmptySkillItem,
+} from "@/lib/resume-item-utils";
+import {
   DENSITY_TOKENS,
   HTML_FONT_FAMILIES,
   PAPER_DIMENSIONS,
@@ -76,51 +87,57 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
     if (key.startsWith("custom:")) {
       const customId = key.replace("custom:", "");
       const custom = sections.customSections.find((cs) => cs.id === customId);
-      if (!custom || !custom.isVisible) return null;
-      const visibleItems = custom.items.filter((it) => it.isVisible);
+      if (!custom || !custom.isVisible || !custom.title.trim()) return null;
+      const visibleItems = custom.items.filter(
+        (it) => it.isVisible && isNonEmptyCustomItem(it)
+      );
       if (visibleItems.length === 0) return null;
 
       return (
         <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
           {renderSectionHeading(custom.title)}
-          <div className="flex flex-col" style={{ gap: `${density.itemGapPt}pt` }}>
-            {visibleItems.map((item) => (
-              <div key={item.id}>
-                <div className="flex items-baseline justify-between gap-4">
-                  <div className="font-bold text-[#09090B]">{item.title}</div>
-                  {item.date ? (
-                    <span
-                      className="shrink-0 text-[#18181B]"
+          <div
+            className={`flex flex-col ${listIndentClass}`}
+            style={{ gap: `${density.itemGapPt}pt` }}
+          >
+            {visibleItems.map((item) => {
+              const bullets = getVisibleNonEmptyBullets(item.bullets);
+              return (
+                <div key={item.id}>
+                  <div className="flex items-baseline justify-between gap-4">
+                    <div className="font-bold text-[#09090B]">{item.title}</div>
+                    {item.date ? (
+                      <span
+                        className="shrink-0 text-[#18181B]"
+                        style={{ fontSize: `${effectiveBodyPt - 0.5}pt` }}
+                      >
+                        {item.date}
+                      </span>
+                    ) : null}
+                  </div>
+                  {item.subtitle ? (
+                    <div
+                      className="italic text-[#18181B]"
                       style={{ fontSize: `${effectiveBodyPt - 0.5}pt` }}
                     >
-                      {item.date}
-                    </span>
+                      {item.subtitle}
+                    </div>
                   ) : null}
-                </div>
-                {item.subtitle ? (
-                  <div
-                    className="italic text-[#18181B]"
-                    style={{ fontSize: `${effectiveBodyPt - 0.5}pt` }}
-                  >
-                    {item.subtitle}
-                  </div>
-                ) : null}
-                {item.bullets.filter((b) => b.isVisible && b.text.trim()).length > 0 && (
-                  <ul
-                    className="list-disc pl-5 mt-1 flex flex-col"
-                    style={{ gap: `${density.bulletGapPt}pt` }}
-                  >
-                    {item.bullets
-                      .filter((b) => b.isVisible && b.text.trim())
-                      .map((b) => (
+                  {bullets.length > 0 && (
+                    <ul
+                      className="list-disc pl-5 mt-1 flex flex-col"
+                      style={{ gap: `${density.bulletGapPt}pt` }}
+                    >
+                      {bullets.map((b) => (
                         <li key={b.id} className="text-[#18181B]">
                           {b.text}
                         </li>
                       ))}
-                  </ul>
-                )}
-              </div>
-            ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </section>
       );
@@ -130,7 +147,9 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
       case "experience":
       case "volunteering": {
         const group = sections[key];
-        const visibleItems = group.items.filter((it) => it.isVisible);
+        const visibleItems = group.items.filter(
+          (it) => it.isVisible && isNonEmptyExperienceItem(it)
+        );
         if (!group.isVisible || visibleItems.length === 0) return null;
         return (
           <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
@@ -191,7 +210,9 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
 
       case "education": {
         const group = sections.education;
-        const visibleItems = group.items.filter((it) => it.isVisible);
+        const visibleItems = group.items.filter(
+          (it) => it.isVisible && isNonEmptyEducationItem(it)
+        );
         if (!group.isVisible || visibleItems.length === 0) return null;
         return (
           <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
@@ -241,7 +262,9 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
 
       case "projects": {
         const group = sections.projects;
-        const visibleItems = group.items.filter((it) => it.isVisible);
+        const visibleItems = group.items.filter(
+          (it) => it.isVisible && isNonEmptyProjectItem(it)
+        );
         if (!group.isVisible || visibleItems.length === 0) return null;
         return (
           <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
@@ -302,7 +325,9 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
 
       case "skills": {
         const group = sections.skills;
-        const visibleItems = group.items.filter((it) => it.isVisible);
+        const visibleItems = group.items.filter(
+          (it) => it.isVisible && isNonEmptySkillItem(it)
+        );
         if (!group.isVisible || visibleItems.length === 0) return null;
         return (
           <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
@@ -326,12 +351,17 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
 
       case "certifications": {
         const group = sections.certifications;
-        const visibleItems = group.items.filter((it) => it.isVisible);
+        const visibleItems = group.items.filter(
+          (it) => it.isVisible && isNonEmptyCertificationItem(it)
+        );
         if (!group.isVisible || visibleItems.length === 0) return null;
         return (
           <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
             {renderSectionHeading(group.title)}
-            <div className="flex flex-col" style={{ gap: `${density.bulletGapPt}pt` }}>
+            <div
+              className={`flex flex-col ${listIndentClass}`}
+              style={{ gap: `${density.bulletGapPt}pt` }}
+            >
               {visibleItems.map((item) => (
                 <div key={item.id} className="flex items-baseline justify-between gap-4">
                   <span>
@@ -355,12 +385,17 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
 
       case "awards": {
         const group = sections.awards;
-        const visibleItems = group.items.filter((it) => it.isVisible);
+        const visibleItems = group.items.filter(
+          (it) => it.isVisible && isNonEmptyAwardItem(it)
+        );
         if (!group.isVisible || visibleItems.length === 0) return null;
         return (
           <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
             {renderSectionHeading(group.title)}
-            <div className="flex flex-col" style={{ gap: `${density.bulletGapPt}pt` }}>
+            <div
+              className={`flex flex-col ${listIndentClass}`}
+              style={{ gap: `${density.bulletGapPt}pt` }}
+            >
               {visibleItems.map((item) => (
                 <div key={item.id} className="flex items-baseline justify-between gap-4">
                   <span>
@@ -384,12 +419,14 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
 
       case "languages": {
         const group = sections.languages;
-        const visibleItems = group.items.filter((it) => it.isVisible);
+        const visibleItems = group.items.filter(
+          (it) => it.isVisible && isNonEmptyLanguageItem(it)
+        );
         if (!group.isVisible || visibleItems.length === 0) return null;
         return (
           <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
             {renderSectionHeading(group.title)}
-            <div className="text-[#18181B]">
+            <div className={`text-[#18181B] ${listIndentClass}`}>
               {visibleItems
                 .map((item) =>
                   item.proficiency
