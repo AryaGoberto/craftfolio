@@ -1,4 +1,4 @@
-# Task Breakdown & Todo List — FormaCV
+# Task Breakdown & Todo List — Craftfolio
 
 Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list) yang disusun menggunakan skill `planning-and-task-breakdown` berdasarkan spesifikasi di `agents-md/` (`PRD.md`, `DESIGN.md`, `FEATURES.md`, `GIT_RULES.md`, dan `brand-guideline.md`).
 
@@ -437,7 +437,7 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
 
 3. **Langkah 3 — Buat Halaman Dashboard `src/app/dashboard/page.tsx`:**
    - Pasang `<CloudSyncManager />` agar sesi Firebase Auth dan koleksi Firestore `users/{uid}/resumes` langsung tersinkron saat halaman dibuka.
-   - **Header Dashboard:** Logo `FormaCV`, indikator status Cloud (`Tersinkron ke Cloud` / `Menyinkronkan...`), tombol navigasi ke **Galeri Template** & **Buka Editor**, serta menu akun (**Keluar**).
+   - **Header Dashboard:** Logo `Craftfolio`, indikator status Cloud (`Tersinkron ke Cloud` / `Menyinkronkan...`), tombol navigasi ke **Galeri Template** & **Buka Editor**, serta menu akun (**Keluar**).
    - **State Loading & Belum Login:**
      - Saat `!hasHydrated || authLoading`: tampilkan skeleton 3 kartu CV yang rapi.
      - Saat `!authUser`: tampilkan panel informasi bersih bahwa Dashboard Cloud diperuntukkan bagi pengguna yang masuk akun, lengkap dengan tombol **"Masuk / Daftar Akun"** (membuka `AuthModal`) serta opsi **"Lanjut ke Editor (Guest Mode)"**.

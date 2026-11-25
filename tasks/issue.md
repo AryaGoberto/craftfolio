@@ -1,218 +1,221 @@
-# ISSUE-016: Overleaf-Grade `.tex` Generator & `pdflatex` PDF Compiler Engine (Opsi 1)
+# ISSUE-018: Visual & Typographic Parity — Menyamakan Hasil PDF (`Alan_Walker_CV.pdf`) dengan Referensi Overleaf (`Nov-Resume`)
 
 | Atribut | Detail |
 | :--- | :--- |
-| **Branch Git Target** | `feat/overleaf-latex-pdf` *(buat dari `main` terbaru)* |
-| **Target Eksekutor** | Junior Developer |
-| **Estimasi Scope** | Medium–Large (8–10 file) |
-| **Prasyarat Lokal (Opsional untuk Dev)** | TeX Live / MacTeX (`pdflatex`) atau Docker container (`web-dev` / `web-prod`) |
+| **Branch Git Target** | `fix/pdf-overleaf-typography-parity` *(buat dari `main` setelah PR #17)* |
+| **Target Eksekutor** | Junior / Mid Developer |
+| **Estimasi Scope** | Medium (6–8 file) |
+| **Fokus Area** | Fallback PDF (`@react-pdf/renderer`), Generator LaTeX (`.tex`), Live Preview HTML, dan Default Bahasa Section |
 
 ---
 
-## 1. Latar Belakang & Masalah yang Diselesaikan
+## 1. Temuan Forensik: Mengapa `Alan_Walker_CV.pdf` Masih Berbeda dari Overleaf Asli?
 
-Berdasarkan perbandingan langsung antara PDF ekspor web saat ini (**`@react-pdf/renderer`**) dengan PDF hasil kompilasi **Overleaf (`pdfTeX-1.40.26`)**, ditemukan 2 masalah utama:
+Setelah menginspeksi kedua file PDF secara visual dan membongkar metadata serta koordinat teks (`pdfjs-dist`) pada **`Alan_Walker_CV.pdf`** vs **`Nov-Resume-Arya Gunavaro Goberto.pdf`**, ditemukan **1 fakta arsitektur penting** ditambah **5 pembeda tipografi & layout spesifik**:
 
-1. **Bug pada Renderer PDF Saat Ini (`src/components/pdf/PdfDocument.tsx`):**
-   - **Header Bertabrakan (Overlap):** Nama di header (`styles.name`, `fontSize: 24`) tidak memiliki `lineHeight` eksplisit sehingga mewarisi `lineHeight` dari `Page` (`fontSize: 10`), menyebabkan baris kontak di bawahnya naik menimpa nama (*selisih Y hanya ~1.6pt*).
-   - **Section Kosong Ikut Tercetak:** Custom section yang baru ditambahkan dengan item kosong (`title: ""`) tetap mencetak judul section kosong di PDF.
-2. **Perbedaan Visual dengan Hasil Compile `.tex` Overleaf:**
-   - `@react-pdf/renderer` memakai *Flexbox* JS dan font Google (`EB Garamond` / `Merriweather`) tanpa dukungan *True Small Caps* (`\scshape`), *Knuth–Plass paragraph justification*, *Computer Modern Roman* asli LaTeX, maupun metrik margin/indentasi `\resumeSubheading` ala *Jake's Resume*.
-   - Agar hasil unduhan PDF **100% identik secara matematis & tipografis dengan Overleaf**, aplikasi perlu men-generate kode **`.tex`** dari data JSON form (`ResumeDocument`) lalu meng-compile-nya dengan **`pdflatex`** (Opsi 1).
+### Fakta Kunci: Engine yang Menghasilkan `Alan_Walker_CV.pdf`
+| Properti Metadata | `Alan_Walker_CV.pdf` (Hasil Terbaru Web) | `Nov-Resume-Arya Gunavaro Goberto.pdf` (Overleaf Asli) |
+| :--- | :--- | :--- |
+| **PDF Producer** | **`react-pdf`** *(Mode Browser Fallback)* | **`pdfTeX-1.40.26`** *(LaTeX Compiler)* |
+| **Ukuran Kertas** | `A4` (`595.28 × 841.89 pt`) | `US Letter` (`612.00 × 792.00 pt`) |
+| **Margin Kiri / Kanan** | `38.0 pt` (area tulis `519.3 pt`) | `36.0 pt` / `0.5 in` (area tulis `540.0 pt`) |
+| **Font Utama** | `EB Garamond` *(x-height kecil secara optik)* | `Computer Modern Roman` (`CMR` / `CMBX` / `CMCSC`) |
+| **Ukuran Nama Header** | `24.00 pt` | `24.79 pt` (`\Huge`) |
+| **Ukuran Kontak** | `9.50 pt` | `9.96 pt` (`\small`) |
+| **Ukuran Paragraf Summary** | **`10.00 pt`** | **`10.91 pt`** (`\normalsize` 11pt) |
+| **Ukuran Sub-Header Section** | **`11.00 pt` (All-Caps biasa)** | **`11.96 pt` (*True Small Caps* `\scshape`)** |
+| **Ukuran Posisi / Kampus / Tanggal** | `10.00 pt` / `9.50 pt` | `10.91 pt` *(keduanya 11pt)* |
+| **Ukuran Subjudul Italic** | `9.50 pt` | `9.96 pt` |
+| **Ukuran Titik Bullet (`•`)** | `10.00 pt` *(terlalu besar)* | `5.98 pt` *(kecil & rapi di tengah)* |
 
----
-
-## 2. Arsitektur Solusi (Opsi 1 — Real `.tex` Compilation + Safe Fallback)
-
-```text
-[Form Editor / Dashboard]
-         │
-         ├──► Klik "Download .tex (Overleaf)" ──► [generateLatexDocument(doc)] ──► File .tex
-         │
-         └──► Klik "Download PDF"
-                   │
-                   ▼
-          [POST /api/pdf/latex]
-                   ├── Jika `pdflatex` tersedia (Docker / Server / Lokal):
-                   │      Compile .tex di temp folder terisolasi (-no-shell-escape)
-                   │      ──► Kembalikan PDF 100% identik Overleaf (application/pdf)
-                   │
-                   └── Jika `pdflatex` BELUM terpasang (503 LATEX_UNAVAILABLE):
-                          Fallback otomatis ke `@react-pdf/renderer` (yang sudah diperbaiki)
-                          + tampilkan info halus bahwa PDF memakai mode browser fallback
-```
-
-### Prinsip Keamanan & Kepatuhan (*WAJIB DIPATUHI*)
-1. **Dilarang LaTeX Injection / Crash Karakter Khusus:** Semua input teks user (`&`, `%`, `$`, `#`, `_`, `{`, `}`, `~`, `^`, `\`) **wajib** di-escape via `escapeLatex()` sebelum dimasukkan ke file `.tex`. Tanpa ini, karakter seperti `"40%"`, `"C#"`, `"R&D"`, atau perintah jahat `\input{/etc/passwd}` akan merusak kompilasi atau membocorkan file server.
-2. **Dilarang Shell Escape & Command Injection:** Pemanggilan `pdflatex` **wajib** memakai `execFile` (bukan `exec`), selalu menyertakan flag `-no-shell-escape -interaction=nonstopmode -halt-on-error`, berjalan di direktori sementara unik (`fs.mkdtemp`), dan folder sementara tersebut **wajib dihapus** di blok `try / finally`.
-3. **Guest Mode & Dev Tanpa TeX Tetap Jalan:** Jika developer atau pengguna menjalankan `npm run dev` tanpa `pdflatex` terinstal di laptopnya, aplikasi tidak boleh error/crash—tombol PDF harus otomatis *fallback* ke `@react-pdf/renderer` (yang bug header-nya sudah diperbaiki), dan tombol **Export `.tex`** tetap berfungsi 100% di browser.
-
-### Yang TIDAK Dikerjakan (*Not Doing*)
-- **TIDAK** meminta user menulis kode LaTeX secara manual (user tetap memakai form UI FormaCV).
-- **TIDAK** mengganti Live Preview HTML kanan menjadi compiler PDF realtime (Live Preview HTML di `ResumeHtmlRenderer.tsx` tetap dipakai agar ketikan instan `< 100ms`).
-- **TIDAK** menjalankan `pdflatex` dengan `--shell-escape`.
+> **Mengapa `Alan_Walker_CV.pdf` memakai `react-pdf` bukan `pdflatex`?**
+> Karena saat aplikasi dijalankan lokal lewat `npm run dev` tanpa instalasi `pdflatex` (BasicTeX / MacTeX / Docker), endpoint `/api/pdf/latex` mengembalikan `503 LATEX_COMPILER_UNAVAILABLE` sehingga tombol **Download PDF** otomatis turun ke mode **Browser Fallback (`src/components/pdf/PdfDocument.tsx`)**.
+>
+> **Kesimpulan Penting:** Kita harus menyempurnakan **KEDUA jalur** — baik **Mode Browser Fallback (`PdfDocument.tsx` + `template-tokens.ts`)** agar tanpa `pdflatex` pun hasilnya hampir 100% identik dengan Overleaf, maupun **Mode LaTeX (`latex-generator.ts`)** agar saat dikompilasi di Docker/Overleaf hasilnya persis sampai ke detail paragraf & heading.
 
 ---
 
-## 3. Tahapan Pengerjaan (Step-by-Step untuk Junior Developer)
+## 2. Analisis Pembeda Utama, Akar Masalah (*Root Cause*), & Solusi
 
-### Tahap 1 — Perbaiki Bug Kritis di `@react-pdf/renderer` (`PdfDocument.tsx`)
-Sebelum membangun engine `.tex`, pastikan fallback PDF di browser bebas dari bug fatal:
-1. Buka `src/components/pdf/PdfDocument.tsx`:
-   - Tambahkan `lineHeight: 1.2` secara eksplisit pada `styles.name`, `lineHeight: 1.3` pada `styles.headline`, `styles.contact`, dan `styles.sectionHeading` agar teks besar tidak bertabrakan dengan baris di bawahnya.
-   - Tambahkan helper pengecekan item non-kosong sebelum merender item/section (misal untuk `customSections`: item dianggap valid hanya jika `title.trim()`, `subtitle?.trim()`, `date?.trim()`, atau ada bullet visible non-kosong—jika sebuah section tidak punya item berisi sama sekali, jangan cetak heading section-nya).
-   - Beri `paddingLeft: isClassic ? 11 : 0` pada `skills`, `certifications`, `awards`, dan `languages` agar sejajar konsisten dengan section lainnya saat memakai template *Classic Academic*.
-
----
-
-### Tahap 2 — Buat Generator `.tex` Overleaf (`src/lib/latex-generator.ts`)
-Buat modul *pure function* (tanpa dependensi Node `fs` agar bisa jalan baik di browser maupun server API):
-
-1. **Buat Helper Escaping (`escapeLatex(input: string): string`):**
-   - Wajib memetakan seluruh 10 karakter khusus TeX dengan urutan aman (backslash **harus** pertama agar tidak menggandakan `{}` dari hasil escape karakter lain!):
-     - `\` → `\textbackslash{}`
-     - `{` → `\{`
-     - `}` → `\}`
-     - `&` → `\&`
-     - `%` → `\%`
-     - `$` → `\$`
-     - `#` → `\#`
-     - `_` → `\_`
-     - `~` → `\textasciitilde{}`
-     - `^` → `\textasciicircum{}`
-   - Konversi tanda pisah rentang tanggal agar rapi di TeX: `–` (en-dash) → `--`, `—` (em-dash) → `---`, dan rapikan newline ganda menjadi spasi/baris baru aman.
-2. **Buat Helper Link (`formatLatexHref(url: string, label: string): string`):**
-   - Validasi & normalkan URL memakai `normalizeUrl` / `toMailtoHref` dari `src/lib/url-utils.ts`.
-   - Jika URL tidak valid/kosong, kembalikan `escapeLatex(label)` saja tanpa `\href`.
-   - Jika valid, escape karakter `%`, `#`, `&` pada URL agar `\href{...}{\underline{...}}` tidak error saat compile.
-3. **Buat Fungsi Utama `generateLatexDocument(doc: ResumeDocument): string`:**
-   - Hasilkan dokumen `.tex` lengkap berstruktur **Jake's Resume / Overleaf Classic Academic** yang persis menghasilkan layout seperti PDF Overleaf referensi:
-     - **Preamble:**
-       - `\documentclass[letterpaper,11pt]{article}` (atau `a4paper` sesuai `doc.config.paperSize`, ukuran `10pt`/`10.5pt`/`11pt` sesuai `doc.config.density` & `compact`).
-       - Paket standar: `latexsym`, `fullpage` / `geometry` (margin `0.4in` untuk `compact`, `0.5in` untuk `normal`, `0.6in` untuk `relaxed`), `titlesec`, `enumitem`, `[hidelinks]{hyperref}`, `fancyhdr`, `tabularx`, `[T1]{fontenc}`, `[utf8]{inputenc}`.
-       - Preset font: `serif` memakai font default **Computer Modern Roman** (identik 100% dengan Overleaf PDF referensi); `inter` / `roboto` memakai `\usepackage[sfdefault]{roboto}` (jika tersedia) atau `\usepackage[sfdefault]{helvet}`; `georgia` memakai `\usepackage{charter}`.
-       - Heading section: `\titleformat{\section}{\vspace{-4pt}\scshape\raggedright\large}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]` (menghasilkan *True Small Caps* + garis `\titlerule` tipis).
-       - Makro `\resumeItem`, `\resumeSubheading`, `\resumeProjectHeading`, `\resumeSubHeadingListStart`, `\resumeItemListStart`, `\resumeItemListEnd`, `\resumeSubHeadingListEnd`.
-     - **Header:**
-       - `\textbf{\Huge <Nama Mixed Case>} \\ \vspace{2pt}` (rata kiri untuk `modern-minimal` / `executive`, rata tengah untuk `classic-latex` / `compact`).
-       - Baris kontak terpusat dipisahkan `$|$` dengan `\href` clickable (`phone | email | links`).
-     - **Isi Sections (`doc.config.sectionOrder`):**
-       - Loop `doc.config.sectionOrder` sesuai urutan pengguna.
-       - Abaikan setiap section/item/bullet yang `isVisible === false` atau isinya benar-benar kosong.
-       - Mapping section `summary` (tanpa heading untuk `classic-latex`, rata kiri-kanan bawaan LaTeX), `experience`, `volunteering`, `education`, `projects`, `skills`, `certifications`, `awards`, `languages`, dan `customSections`.
-   - **Bonus Export `.tex` Client-Side (`downloadResumeTex(doc)`):**
-     - Tambahkan helper `downloadResumeTex(doc)` di `src/lib/pdf-download.tsx` untuk mengunduh string hasil `generateLatexDocument(doc)` sebagai `${safeName}_CV.tex` (`text/plain;charset=utf-8`).
+### Pembeda 1 — Lebar Paragraf Ringkasan Profesional Terlalu Sempit (Tidak Mencapai Ujung Kanan)
+- **Bukti Pengukuran (`pdfjs-dist`):**
+  - Di **Overleaf asli (`Nov-Resume`)**, batas kanan area isi CV berada di `x = 576.0 pt`, dan teks summary mengalir hingga **`x = 553.9 – 571.4 pt`** (**96%–99%** lebar area tulis).
+  - Di **`Alan_Walker_CV.pdf`**, batas kanan area isi CV (garis horizontal & tanggal) berada di `x = 557.3 pt`, tetapi teks summary berhenti di **`x = 432.5 – 462.8 pt`** — menyisakan ruang kosong **`95 – 125 pt` (~3.5–4.4 cm)** di sebelah kanan!
+- **Akar Masalah (*Root Cause*):**
+  1. **Karakter Newline Keras (`\n`) Hasil Copy-Paste Dipertahankan Apa Adanya:** Saat teks summary (atau bullet) disalin dari PDF lalu di-paste ke textarea editor, terdapat karakter `\n` tunggal di akhir setiap baris PDF lama (persis setelah `"data science,"`, `"versatile"`, `"LLM performance"`, `"contribute to"`). Di `PdfDocument.tsx` (`<Text>{basics.summary.text}</Text>`) dan `ResumeHtmlRenderer.tsx` (`whitespace-pre-line`), `\n` tunggal memaksa teks turun baris sebelum menyentuh tepi kanan!
+  2. **Tidak Ada Perataan Kanan-Kiri (`textAlign: "justify"`):** Pada `PdfDocument.tsx` (baris 157), `<Text>` summary tidak memiliki `textAlign: "justify"`, sehingga tepi kanan bergerigi (*ragged right*). Demikian juga di `latex-generator.ts`, perintah global `\raggedright` (baris 495) ikut mematikan rata kanan-kiri pada paragraf summary.
+  3. **Ukuran Font Summary Lebih Kecil & Sempit:** Summary di `Alan_Walker_CV.pdf` memakai `10.00 pt` `EB Garamond` (lebih sempit ~15% dibanding `10.91 pt` Computer Modern), sehingga baris yang patah karena `\n` tampak makin pendek dan "menggantung" di kiri.
+- **Solusi:**
+  1. Buat helper normalisasi paragraf (mis. `normalizeParagraphText(text: string)` di `src/lib/resume-item-utils.ts`): ubah *single newline* (`\n`) menjadi spasi tunggal agar teks mengalir penuh (*reflow*) ke tepi kanan, sementara baris kosong ganda (`\n\n`) tetap dipertahankan sebagai pemisah paragraf. Terapkan juga normalisasi *single newline* untuk teks bullet.
+  2. Terapkan `textAlign: "justify"` (dan `width: "100%"`) pada teks summary di `PdfDocument.tsx` dan `ResumeHtmlRenderer.tsx`.
+  3. Di `latex-generator.ts`, ubah summary dari `\small{...}` menjadi ukuran normal (`\normalsize`) dan gunakan `\usepackage{ragged2e}` dengan blok `{\justifying ... \par}` agar paragraf summary rata kiri-kanan penuh sejajar ujung kanan tanggal/garis section.
 
 ---
 
-### Tahap 3 — Buat Endpoint API Server Compiler (`src/app/api/pdf/latex/route.ts` & `src/lib/latex-compiler.ts`)
-Buat Route Handler Next.js App Router (berjalan otomatis di Node.js runtime tanpa `export const runtime` agar kompatibel dengan `nextConfig.cacheComponents`):
-
-1. **Validasi Request Body dengan Zod:**
-   - Parse JSON body menggunakan `ResumeDocumentSchema.safeParse(body)`. Jika gagal, kembalikan `400 Bad Request`.
-2. **Deteksi Ketersediaan Binary `pdflatex`:**
-   - Cek path binary dari env `PDFLATEX_BIN` (default `"pdflatex"`).
-   - Jika binary tidak ditemukan (`ENOENT`), kembalikan respons JSON terstruktur `503 Service Unavailable`:
-     ```json
-     { "code": "LATEX_COMPILER_UNAVAILABLE", "error": "Compiler pdflatex belum tersedia di server ini." }
-     ```
-3. **Eksekusi Aman di Direktori Temporer Terisolasi:**
-   - Buat folder sementara: `const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "formacv-tex-"))`.
-   - Generate sumber TeX via `generateLatexDocument(parsed.data)` dan tulis ke `path.join(tmpDir, "resume.tex")`.
-   - Jalankan `pdflatex` menggunakan `execFile` (`node:child_process` yang di-promisify):
-     ```typescript
-     const args = [
-       "-no-shell-escape",
-       "-interaction=nonstopmode",
-       "-halt-on-error",
-       `-output-directory=${tmpDir}`,
-       texFilePath,
-     ];
-     ```
-   - **Jalankan 2 kali (`pass 1` & `pass 2`)** atau `1` kali jika tidak ada cross-reference (untuk `tabularx` / `\extracolsep` / `hyperref` bookmark, jalankan 2 pass cepat atau `1` pass cukup karena `tabular*` selesai dalam 1 pass; verifikasi hasil log). Batasi timeout `15_000` ms dan `maxBuffer: 2 * 1024 * 1024`.
-   - Baca file hasil `path.join(tmpDir, "resume.pdf")`, kembalikan `new NextResponse(pdfBuffer, { status: 200, headers: { "Content-Type": "application/pdf", "X-Pdf-Engine": "pdflatex" } })`.
-   - Jika kompilasi gagal, baca potongan error log (misal baris yang diawali `!` di `resume.log`) untuk debugging server, kembalikan `500` dengan pesan error ringkas tanpa membocorkan path sensitif server.
-   - **Wajib di `finally`:** Hapus folder sementara `await fs.rm(tmpDir, { recursive: true, force: true })`.
+### Pembeda 2 — Ukuran Font Terlihat Lebih Kecil pada Level Zoom yang Sama
+- **Bukti Pengukuran:**
+  - Hampir seluruh elemen teks di `Alan_Walker_CV.pdf` lebih kecil **`0.5 pt` s/d `1.4 pt`** dibanding Overleaf asli (`Summary` `10pt` vs `10.91pt`, `Section Heading` `11pt` vs `11.96pt`, `Judul Posisi/Tanggal` `10pt/9.5pt` vs `10.91pt`, `Nama` `24pt` vs `24.79pt`).
+  - Ditambah lagi, font **`EB Garamond`** secara optik memiliki *x-height* (tinggi huruf kecil seperti `a, e, o, x`) sekitar **12% lebih kecil** daripada **Computer Modern Roman** pada ukuran `pt` yang sama!
+  - Selain itu, kertas default `A4` (`841.89 pt` tinggi) lebih panjang `50 pt` dibanding `US Letter` (`792 pt`), sehingga pada tampilan *Fit to Page* di PDF viewer, teks A4 tampak sedikit lebih kecil.
+- **Solusi:**
+  1. **Kalibrasi Skala Font `classic-latex` ke Metrik LaTeX `11pt` Asli (`src/lib/template-tokens.ts` & `PdfDocument.tsx`):**
+     - `name`: `~25 pt` (untuk `normal`), `margin`: `36 pt` (`0.5 in`) kiri/kanan & atas/bawah.
+     - `sectionHeading`: `12 pt` (`\large`).
+     - `summary`, `boldTitle` (posisi/institusi), dan `dateText` baris 1: **`11 pt`** (`10.91 pt` di LaTeX).
+     - `contact`, `italicSubText`, dan `bulletText`: **`10 pt`** (`9.96 pt` di LaTeX).
+  2. **Tambahkan / Gunakan Font *Computer Modern Unicode* (`CMU Serif`) untuk Preset `serif` (Classic Academic):**
+     - Unduh 4 varian font `.ttf` open-source (lisensi *SIL Open Font License*) **CMU Serif** (`cmunrm.ttf`, `cmunbx.ttf`, `cmunti.ttf`, `cmunbi.ttf`) ke `public/fonts/` dan daftarkan di `src/lib/pdf-fonts.ts` (serta `@font-face` lokal di CSS untuk HTML Preview).
+     - Dengan `CMU Serif`, baik tampilan *Browser Fallback PDF* maupun *Live Preview HTML* memiliki proporsi lebar huruf, *x-height*, dan nuansa klasik **100% setara Computer Modern Overleaf**!
 
 ---
 
-### Tahap 4 — Perbarui `Dockerfile` & `.env.example` untuk Menjalankan `pdflatex`
-1. **Perbarui `Dockerfile` (Stage `runner`):**
-   - Image `node:20-alpine` sebelumnya belum memiliki LaTeX. Ganti base stage `runner` ke `node:20-bookworm-slim` (atau pasang `texlive` Alpine) dan install paket LaTeX minimal yang memuat `pdflatex`, `titlesec`, `enumitem`, `fullpage`, `hyperref`, `marvosym`, `roboto`:
-     ```dockerfile
-     FROM node:20-bookworm-slim AS runner
-     WORKDIR /app
-     ENV NODE_ENV=production
-     ENV NEXT_TELEMETRY_DISABLED=1
-
-     RUN apt-get update && apt-get install -y --no-install-recommends \
-         texlive-latex-base \
-         texlive-latex-recommended \
-         texlive-latex-extra \
-         texlive-fonts-recommended \
-         texlive-fonts-extra \
-       && rm -rf /var/lib/apt/lists/*
-     ```
-   - *Catatan:* Pastikan `addgroup`/`adduser` di Debian memakai syntax Debian (`groupadd -r nodejs && useradd -r -g nodejs -u 1001 nextjs`) serta direktori `/tmp` dapat ditulisi oleh user `nextjs`.
-   - Uji build container: `docker compose --profile prod build` dan tes endpoint `/api/pdf/latex` di dalam container.
-2. **Tambahkan `PDFLATEX_BIN=` (opsional) di `.env.example`.**
-
----
-
-### Tahap 5 — Hubungkan ke UI Ekspor PDF, Menu Overflow `⋯` & Dashboard Card
-1. **Perbarui `downloadResumePdf(doc)` di `src/lib/pdf-download.tsx`:**
-   - Tambahkan return type status `{ engine: "pdflatex" | "react-pdf-fallback" }`.
-   - Pertama coba `fetch("/api/pdf/latex", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(doc) })`.
-   - Jika respons `200 OK` dan `Content-Type` adalah `application/pdf`, unduh blob PDF hasil compile `pdflatex` asli (`Overleaf-grade`).
-   - Jika status `503` (`LATEX_COMPILER_UNAVAILABLE`) atau jaringan endpoint tidak tersedia, lakukan **fallback otomatis** ke `@react-pdf/renderer` (`ResumePdfDocument`) yang bug-nya sudah diperbaiki di Tahap 1 — sehingga pengguna tidak pernah mengalami tombol macet!
-2. **Tambahkan Opsi Export `.tex (Overleaf)` di UI:**
-   - Di **Editor (`EditorTopBar.tsx`)**: Tambahkan item menu **"Export LaTeX (.tex)"** di dropdown `⋯` (sebelah *Export Backup .json*).
-   - Di **Dashboard (`CvDocumentCard.tsx`)**: Tambahkan item menu **"Export LaTeX (.tex)"** di dalam menu titik tiga `⋮`.
-   - Di **`PdfExportButton.tsx`**: Tampilkan tooltip/judul jelas (*"Download PDF (Overleaf LaTeX)"*) dan notifikasi ringan jika sedang memakai fallback lokal tanpa `pdflatex`.
+### Pembeda 3 — Underline Tautan Informasi Pribadi Terlalu Rapat
+- **Bukti Visual:**
+  - Di `Alan_Walker_CV.pdf`, garis bawah pada `Alan@gmail.com`, `https://aryag12.vercel.app/`, `github.com/alanwalker`, dan `linkedin.com/alanwalker` menempel langsung ke dasar huruf (*baseline*) dan memotong ekor huruf turun (`g`, `p`, `y`).
+- **Akar Masalah (*Root Cause*):**
+  - Di `PdfDocument.tsx` baris 72, `<Link>` memakai `textDecoration: "underline"`. Mesin `@react-pdf/renderer` menggambar garis tepat pada posisi `underlinePosition` font yang sangat rapat dan **tidak mendukung properti CSS `textUnderlineOffset`**.
+  - Di `latex-generator.ts`, `\underline{...}` standar TeX juga relatif dekat pada huruf berekor jika tidak diatur kedalaman garisnya.
+- **Solusi:**
+  1. **Di `PdfDocument.tsx` (Browser Fallback):**
+     - Ubah baris kontak dari satu `<Text>` datar menjadi kontainer flex-wrap terpusat (`flexDirection: "row", flexWrap: "wrap", justifyContent: "center", alignItems: "center"`).
+     - Untuk setiap kontak yang berupa tautan (`email`, `links`), hapus `textDecoration: "underline"` dan ganti dengan **border bawah terkontrol**:
+       ```tsx
+       linkWrapper: {
+         borderBottomWidth: 0.6,
+         borderBottomColor: "#18181B",
+         paddingBottom: 1.5, // Memberi jarak napas ~1.5pt agar tidak menempel ke g/p/y
+       }
+       ```
+     - Pastikan pemisah `|` juga memiliki jarak horizontal yang seimbang (`marginHorizontal: 5`) dan sejajar secara vertikal.
+  2. **Di `ResumeHtmlRenderer.tsx`:**
+     - Gunakan `underline underline-offset-[3px] decoration-[0.75px]` agar tampilan HTML Preview konsisten lega dengan PDF.
+  3. **Di `latex-generator.ts` (`pdflatex`):**
+     - Gunakan paket `\usepackage[normalem]{ulem}` (dengan `\IfFileExists{ulem.sty}{\usepackage[normalem]{ulem}\setlength{\ULdepth}{2pt}}{}`) dan makro `\uline{...}` (fallback `\underline{...}`) agar garis bawah pada tautan di hasil compile `pdflatex` juga berjarak rapi di bawah *descender*.
 
 ---
 
-### Tahap 6 — Tambahkan Unit Test Lengkap (`src/lib/__tests__/latex-generator.test.ts` & Route Test)
-1. **Uji `escapeLatex` & `formatLatexHref`:**
-   - Menguji seluruh 10 karakter khusus (`& % $ # _ { } ~ ^ \`), memastikan tidak terjadi *double escaping*.
-   - Menguji input berbahaya seperti `\input{/etc/passwd}` atau `\write18{ls}` agar ter-escape aman menjadi teks literal `\textbackslash{}input\{/etc/passwd\}`.
-   - Menguji link `mailto:` dan `https://` valid vs input kosong / `javascript:alert(1)`.
-2. **Uji `generateLatexDocument`:**
-   - Menguji bahwa `isVisible: false` (baik level section, item, maupun bullet) **tidak muncul** di output `.tex`.
-   - Menguji bahwa custom section dengan item kosong **tidak mencetak** `\section{...}`.
-   - Menguji kesesuaian `paperSize` (`a4paper` vs `letterpaper`), header mixed-case nama, pemisah kontak `$|$`, urutan `sectionOrder`, dan keberadaan makro `\titleformat{\section}` (`\scshape` + `\titlerule`).
-3. **Uji API Route `/api/pdf/latex` (dengan mocking `execFile`):**
-   - Input tidak valid → mengembalikan status `400`.
-   - Saat binary tidak ditemukan (`ENOENT`) → mengembalikan status `503` dengan `code: "LATEX_COMPILER_UNAVAILABLE"`.
-   - Saat kompilasi sukses → mengembalikan `200` `application/pdf` dan membersihkan direktori sementara `tmpDir`.
+### Pembeda 4 — Sub-Header Masih Bahasa Indonesia & Belum *True Small Caps* (`E` Lebih Besar dari `XPERIENCE`)
+- **Bukti Visual & Kode:**
+  - Di `Nov-Resume`, judul section berbahasa Inggris (**`Education`**, **`Experience`**, **`Projects`**, **`Technical Skills`**) dan dirender dengan **True Small Caps (`\scshape`)**: huruf kapital awal (**`E`**, **`P`**, **`T`**, **`S`**) berukuran penuh (`12 pt`), sementara huruf lainnya (**`DUCATION`**, **`XPERIENCE`**, **`ROJECTS`**) berbentuk huruf kapital kecil (`~9.5 pt`).
+  - Di `Alan_Walker_CV.pdf`, judulnya masih Bahasa Indonesia (`PENGALAMAN KERJA`, `PENDIDIKAN`, `PROYEK`, `KEAHLIAN`) dan seluruh huruf berukuran sama besar (`11 pt` *all-caps*).
+- **Akar Masalah (*Root Cause*):**
+  1. **Default Bahasa pada CV Baru Masih `"id"`:** Di `src/lib/default-resume.ts` baris 203–240, fungsi `createEmptyResume()` (yang dipanggil saat pengguna klik **+ Buat CV Baru**) menginisialisasi `language: "id"` dan judul section Bahasa Indonesia (`"Pengalaman Kerja"`, `"Pendidikan"`, `"Proyek"`, `"Keahlian"`), berbeda dengan `createSampleResume()` yang memakai `"en"`.
+  2. **`@react-pdf/renderer` Tidak Mendukung `fontVariant: "small-caps"`:** Di `PdfDocument.tsx` baris 84, heading memakai `textTransform: "uppercase"` sehingga semua huruf memiliki tinggi yang sama persis.
+  3. **Potensi Jebakan `\scshape` di `latex-generator.ts`:** Di LaTeX, `\scshape` hanya mengecilkan huruf *lowercase* (`a–z`). Jika judul section tersimpan sebagai huruf kapital semua (mis. `"EXPERIENCE"`), `\scshape` tetap akan merendernya sama tinggi!
+- **Solusi:**
+  1. **Default Bahasa Inggris untuk CV Baru (`src/lib/default-resume.ts`):**
+     - Ubah `createEmptyResume()` agar default-nya `language: "en"` dengan judul section Bahasa Inggris standar Overleaf (`"Experience"`, `"Education"`, `"Projects"`, `"Technical Skills"`, `"Certifications"`, `"Awards"`, `"Volunteering"`, `"Languages"`).
+     - Pengguna tetap bisa beralih ke Bahasa Indonesia kapan saja lewat dropdown **Tampilan → Bahasa CV**.
+  2. **Komponen `<SmallCapsHeading />` di `PdfDocument.tsx` (Untuk `classic-latex`):**
+     - Buat helper `formatTitleCaseForSmallCaps(title: string)` dan komponen kecil `<SmallCapsHeading title={...} style={...} />` yang tetap merender **satu elemen `<Text>` utuh** (aman 100% untuk ATS linear text extraction) dengan `<Text>` anak per segmen kata:
+       - Karakter pertama tiap kata (atau huruf kapital awal) dirender pada ukuran penuh **`12 pt`** (`headingSizePt`).
+       - Karakter sisanya dirender dalam huruf kapital pada ukuran **`~9.3 pt`** (`headingSizePt * 0.78`, `letterSpacing: 0.35`).
+     - Contoh hasil visual untuk `"Experience"` → **`E`** (`12 pt`) + **`XPERIENCE`** (`9.3 pt`), dan `"Technical Skills"` → **`T`**`ECHNICAL` **`S`**`KILLS` — identik dengan *Small Caps* Overleaf!
+  3. **Normalisasi Title Case di `latex-generator.ts`:**
+     - Buat helper `toSmallCapsInput(title: string)`: jika seluruh huruf input berupa uppercase semua (mis. `"EXPERIENCE"`), ubah ke Title Case (`"Experience"`) sebelum dibungkus `\section{...}` agar `\scshape` selalu memunculkan kontras huruf awal besar & huruf berikutnya kecil.
+  4. **Sinkronisasi `ResumeHtmlRenderer.tsx`:**
+     - Pastikan heading `classic-latex` memakai `fontVariant: "small-caps"` dengan Title Case yang rapi (termasuk untuk judul 2 kata seperti `"Technical Skills"`).
+
+---
+
+### Pembeda 5 (Bonus Penyelarasan Detail Visual) — Ukuran Titik Bullet & Sub-Heading
+- **Bullet Dot (`•`):** Di `Nov-Resume`, ukuran titik bullet hanya `5.98 pt` (halus & tidak mendominasi teks), sedangkan di `PdfDocument.tsx` ukurannya `10 pt` (terlalu tebal/besar). Ubah `bulletDot` di `PdfDocument.tsx` (khusus `classic-latex`) menjadi `fontSize: 7.5, paddingTop: 1.5, width: 9` agar halus seperti `\tiny\bullet` di LaTeX.
+- **Tebal Garis Section (`\titlerule`):** Di `PdfDocument.tsx`, gunakan `borderBottomWidth: 0.6`, `borderBottomColor: "#000000"`, `paddingBottom: 1.5`, `marginBottom: 6` agar ketebalan garis bawah heading sangat mirip `\titlerule` (`0.4pt`–`0.6pt`) di Overleaf.
+
+---
+
+## 3. Tahapan Pengerjaan (Step-by-Step untuk Developer)
+
+> **Catatan:** Jangan mengubah kode dulu sebelum issue ini disetujui & dibuatkan branch `fix/pdf-overleaf-typography-parity`.
+
+### Tahap 1 — Tambah Helper Normalisasi Paragraf & Title Case (`src/lib/resume-item-utils.ts`)
+1. Tambahkan `normalizeParagraphText(text: string): string`:
+   - Ubah `\r\n` → `\n`.
+   - Pisahkan berdasarkan paragraf ganda (`/\n\s*\n+/`), lalu di dalam tiap paragraf ubah single `\n` dan spasi berlebih menjadi satu spasi `" "`.
+   - Gabungkan kembali dengan `"\n\n"` (untuk multi-paragraf) atau kembalikan satu blok teks bersih (untuk bullet).
+2. Tambahkan `normalizeSmallCapsTitle(title: string): string`:
+   - Jika seluruh huruf alfabet di `title` adalah huruf kapital (mis. `"EXPERIENCE"` atau `"TECHNICAL SKILLS"`), ubah ke Title Case (`"Experience"`, `"Technical Skills"`). Jika sudah mixed-case (mis. `"UI/UX Experience"`), pertahankan huruf kapitalnya.
+3. Tulis unit test untuk kedua helper tersebut di `src/lib/__tests__/latex-generator.test.ts` (atau file test terpisah) **sebelum** implementasi (TDD).
+
+---
+
+### Tahap 2 — Ubah Default Sub-Header CV Baru ke Bahasa Inggris (`src/lib/default-resume.ts` & `src/lib/i18n.ts`)
+1. Di `src/lib/default-resume.ts`:
+   - Pada `createEmptyResume()`, ubah `language: "en"` dan perbarui seluruh `sections.*.title` ke Bahasa Inggris standar Overleaf:
+     - `experience`: `"Experience"`
+     - `education`: `"Education"`
+     - `projects`: `"Projects"`
+     - `skills`: `"Technical Skills"`
+     - `certifications`: `"Certifications"`
+     - `awards`: `"Awards"`
+     - `volunteering`: `"Volunteering"`
+     - `languages`: `"Languages"`
+   - Samakan juga `skills.title` di `createSampleResume()` jika ingin konsisten `"Technical Skills"` (cek dulu apakah ada unit test di `ats-linter.test.ts` yang mengecek `"SKILLS"` — karena `"TECHNICAL SKILLS"` tetap mengandung `"SKILLS"`, pastikan seluruh test di `ats-linter.test.ts` dan `dashboard-utils.test.ts` tetap hijau!).
+2. Pastikan ketika pengguna secara eksplisit mengganti dropdown **Bahasa CV** ke `"id"` di `EditorTopBar.tsx`, judul section masih dapat berubah ke Bahasa Indonesia seperti sebelumnya.
+
+---
+
+### Tahap 3 — Kalibrasi Ukuran Font, Margin, & Aset Font `NewCM10-Book` (`public/fonts/`, `src/lib/pdf-fonts.ts`, `src/lib/template-tokens.ts`, `src/app/globals.css`)
+1. Tambahkan 4 file `.otf` resmi **New Computer Modern 10pt Book** (weight `450`, lisensi SIL OFL — versi *Computer Modern* dengan ketebalan teks regular yang lebih solid di layar & PDF viewer dibanding `CMUSerif-Roman` weight `400` yang tipis) ke `public/fonts/`:
+   - `NewCM10-Book.otf` (400/450 normal)
+   - `NewCM10-Bold.otf` (700 normal)
+   - `NewCM10-BookItalic.otf` (400/450 italic)
+   - `NewCM10-BoldItalic.otf` (700 italic)
+2. Daftarkan keluarga font `"CMU Serif"` di `src/lib/pdf-fonts.ts` dan petakan `PDF_FONT_FAMILIES.serif = "CMU Serif"` (serta `@font-face` lokal `"CMU Serif"` di `globals.css` untuk `HTML_FONT_FAMILIES.serif`) sehingga *Classic Academic* memakai *Computer Modern* asli baik di HTML Preview maupun PDF Fallback!
+3. Kalibrasi `DENSITY_TOKENS` di `src/lib/template-tokens.ts` (khususnya preset `normal`) agar sejajar dengan LaTeX `11pt`:
+   - `paddingYPt: 36`, `paddingXPt: 36` (`0.5 in`)
+   - `nameSizePt: 23` (`+2 = 25 pt` untuk `classic-latex`, sangat dekat dengan `24.79 pt` Overleaf)
+   - `headingSizePt: 12` (`11.96 pt` Overleaf)
+   - `bodySizePt: 10.5`–`11` untuk summary & subheading, sementara bullet/subjudul/kontak memakai `10 pt` (`9.96 pt` Overleaf).
+
+---
+
+### Tahap 4 — Perbaiki Paragraf Full-Width, Underline Renggang, *Small Caps*, & Bullet Dot di `PdfDocument.tsx` dan `ResumeHtmlRenderer.tsx`
+1. **Paragraf Summary & Bullet Full-Width (`PdfDocument.tsx` & `ResumeHtmlRenderer.tsx`):**
+   - Lewatkan `basics.summary.text` dan `b.text` ke `normalizeParagraphText(...)` sebelum dirender.
+   - Beri `textAlign: "justify"` pada paragraf summary di `PdfDocument.tsx` (dan pastikan container summary memiliki `width: "100%"` tanpa padding kanan ekstra).
+2. **Underline Tautan Kontak yang Lega (`PdfDocument.tsx` & `ResumeHtmlRenderer.tsx`):**
+   - Di `PdfDocument.tsx`, ubah baris kontak (`isClassic`) menjadi flex-wrap row (`flexDirection: "row", flexWrap: "wrap", justifyContent: "center", alignItems: "center"`).
+   - Hilangkan `textDecoration: "underline"` pada link kontak; bungkus `<Link>` dalam `<View style={styles.contactLinkUnderline}>` dengan `borderBottomWidth: 0.6, borderBottomColor: "#18181B", paddingBottom: 1.5`.
+   - Di `ResumeHtmlRenderer.tsx`, gunakan `underline underline-offset-[3px] decoration-[0.75px]`.
+3. **Sub-Header *Small Caps* (`E` Lebih Besar dari `XPERIENCE`) di `PdfDocument.tsx`:**
+   - Implementasikan komponen `SmallCapsSectionHeading` khusus untuk `isClassic`:
+     - Bungkus seluruh judul di dalam satu `<Text style={styles.sectionHeading}>`.
+     - Pecah judul hasil `normalizeSmallCapsTitle(title)` menjadi token huruf kapital awal (`fontSize: density.headingSizePt`) dan huruf non-awal (`fontSize: Number((density.headingSizePt * 0.78).toFixed(2))`, `textTransform: "uppercase"`, `letterSpacing: 0.35`).
+   - Pastikan secara teks PDF (`extractTextFromPdfBuffer`), kata `"Experience"` tetap terbaca utuh tanpa spasi terpecah!
+4. **Bullet Dot Halus:**
+   - Kecilkan `bulletDot` pada `isClassic` menjadi `fontSize: 7.5`, `paddingTop: 1.5`, `width: 9` agar proporsional dengan `•` `5.98 pt` di Overleaf.
+
+---
+
+### Tahap 5 — Penyelarasan `latex-generator.ts` (Untuk Jalur `pdflatex` / Overleaf)
+1. **Summary Full-Width & Ukuran `11pt` (`\normalsize`):**
+   - Hapus pembungkus `\small{...}` pada paragraf summary agar ukuran fontnya `10.91 pt` (`\normalsize`) persis seperti `Nov-Resume`.
+   - Muat `\IfFileExists{ragged2e.sty}{\usepackage{ragged2e}}{}` dan bungkus paragraf summary dengan `\justifying` (atau nonaktifkan `\raggedright` khusus blok summary) agar teks merata sampai tepi kanan area CV.
+   - Terapkan `normalizeParagraphText` pada summary dan bullet sebelum `escapeLatex`.
+2. **Underline Tautan yang Rapi:**
+   - Muat `\IfFileExists{ulem.sty}{\usepackage[normalem]{ulem}\setlength{\ULdepth}{2pt}}{}` dan pakai `\uline{...}` (fallback `\underline{...}`) pada `formatLatexHref` agar garis bawah tautan tidak terlalu rapat ke huruf `g/p/y`.
+3. **Jaminan *Small Caps* pada `\section{...}`:**
+   - Lewatkan setiap judul section ke `normalizeSmallCapsTitle(...)` sebelum `escapeLatex` sehingga `\titleformat{\section}{...\scshape...}` selalu menghasilkan huruf pertama besar & huruf berikutnya *small caps*.
+
+---
+
+### Tahap 6 — Unit Test Regresi & Verifikasi Visual
+1. Perbarui & tambahkan test di `src/lib/__tests__/pdf-document.test.ts`:
+   - **Test lebar paragraf summary:** Render CV dengan summary yang mengandung hard `\n` (simulasi copy-paste dari PDF), ekstrak koordinat `x..right` tiap baris dengan `pdfjs-dist`, dan pastikan baris summary mengisi **≥ 85%** lebar area konten (`rightX >= pageWidth - marginRight - 45`).
+   - **Test ukuran font:** Pastikan `summary` ≥ `10.5 pt`, `sectionHeading` ≥ `11.5 pt`, dan huruf pertama heading (`E`) memiliki `fontSize` lebih besar daripada huruf sisanya (`XPERIENCE`) pada template `classic-latex`.
+   - **Test teks ATS tetap utuh:** Pastikan `extractTextFromPdfBuffer` tetap membaca `"Experience"` / `"Education"` sebagai kata utuh (bukan `"E xperience"`).
+2. Perbarui test di `src/lib/__tests__/latex-generator.test.ts`:
+   - Pastikan summary tidak lagi dibungkus `\small{...}`, single `\n` ternormalisasi menjadi spasi, dan judul all-caps `"EXPERIENCE"` dikonversi menjadi `\section{Experience}` agar `\scshape` bekerja benar.
+3. Perbarui test default bahasa di `src/lib/__tests__/dashboard-utils.test.ts` / `workspace-tabs.test.ts` bila diperlukan.
+4. Jalankan `npm test && npx tsc --noEmit && npm run lint && npm run build`, lalu unduh ulang PDF di browser dan bandingkan berdampingan pada zoom 100% dengan `Nov-Resume-Arya Gunavaro Goberto.pdf`.
 
 ---
 
 ## 4. Kriteria Penerimaan (*Acceptance Criteria*)
 
-- [x] `src/lib/latex-generator.ts` menghasilkan dokumen `.tex` valid bergaya Overleaf (*Jake's Resume*: *True Small Caps* `\scshape`, `\titlerule`, Computer Modern Roman default, indentasi seragam, hyperlink `\href`, serta escaping aman untuk seluruh karakter khusus TeX).
-- [x] `src/app/api/pdf/latex/route.ts` memvalidasi input via `ResumeDocumentSchema`, mengeksekusi `pdflatex` dengan `-no-shell-escape` di temp directory yang selalu dibersihkan, dan mengembalikan `503 LATEX_COMPILER_UNAVAILABLE` secara aman jika `pdflatex` belum terpasang.
-- [x] `Dockerfile` menyertakan instalasi paket TeX Live minimal sehingga `docker compose --profile prod up` mampu menghasilkan PDF asli yang 100% identik dengan Overleaf.
-- [x] `downloadResumePdf` di `src/lib/pdf-download.tsx` memprioritaskan `/api/pdf/latex` dan melakukan fallback otomatis ke `@react-pdf/renderer` (yang sudah bebas bug header overlap dan section kosong di `PdfDocument.tsx`).
-- [x] Tombol **Export LaTeX (.tex)** tersedia di menu `⋯` `EditorTopBar.tsx` dan menu `⋮` `CvDocumentCard.tsx` (file `.tex` dapat langsung di-upload & dicompile di Overleaf.com tanpa error).
-- [x] Seluruh unit test (termasuk `src/lib/__tests__/latex-generator.test.ts`), `tsc`, `lint`, dan `build` lulus seluruhnya.
-
----
-
-## 5. Cara Verifikasi
-
-```bash
-# 1. Jalankan pengujian unit, typecheck, linter, dan build
-npm test
-npx tsc --noEmit && npm run lint
-npm run build
-
-# 2. Uji Ekspor .tex di Overleaf:
-#    - Klik menu "Export LaTeX (.tex)" di Editor atau Dashboard.
-#    - Upload file .tex ke proyek baru di Overleaf.com dan pastikan compile sukses (0 error).
-
-# 3. Uji Server pdflatex via Docker (atau MacTeX lokal):
-docker compose --profile prod up --build
-#    - Buka /editor -> Download PDF -> periksa bahwa header respons /api/pdf/latex adalah 200 application/pdf
-#    - Cek PDF hasil unduhan: font Computer Modern, Small Caps pada heading section, tidak ada overlap, dan identik dengan hasil Overleaf.
-```
+- [x] Paragraf **Summary** (termasuk teks hasil copy-paste yang memiliki `\n` tunggal) mengalir penuh & rata sampai ujung kanan sejajar batas kanan tanggal/garis CV, baik di mode fallback `@react-pdf/renderer`, Live Preview HTML, maupun hasil `pdflatex`.
+- [x] Ukuran font pada zoom yang sama setara dengan Overleaf referensi (`~25 pt` nama, `~12 pt` heading, `~11 pt` summary & judul pengalaman/pendidikan/tanggal, `~10 pt` kontak/subjudul/bullet) menggunakan font *Computer Modern* (`CMU Serif`) pada template *Classic Academic*.
+- [x] Garis bawah (*underline*) pada tautan kontak (`email`, `portfolio`, `github`, `linkedin`) memiliki jarak napas yang jelas (~`1.5–2 pt`) dan tidak menempel/memotong huruf `g`, `p`, `y`.
+- [x] Sub-header CV baru (`createEmptyResume`) default menggunakan **Bahasa Inggris** (`Experience`, `Education`, `Projects`, `Technical Skills`, dll.) dan dirender dengan tipografi **Small Caps** (huruf awal tiap kata lebih besar daripada huruf sisanya) yang tetap terbaca utuh oleh parser ATS.
+- [x] Seluruh unit test (termasuk test regresi lebar paragraf & *Small Caps*), `npx tsc --noEmit`, `npm run lint`, dan `npm run build` lulus tanpa error.

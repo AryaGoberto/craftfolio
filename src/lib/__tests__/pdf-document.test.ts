@@ -77,4 +77,79 @@ describe("ResumePdfDocument (@react-pdf/renderer fallback)", () => {
       "SERTIFIKASI / KUSTOM"
     );
   });
+
+  it("reflows pasted multi-line summary across full page width and renders Small Caps section headings", async () => {
+    const doc = createSampleResume("2026-01-01T00:00:00.000Z");
+    doc.config.templateId = "classic-latex";
+    doc.config.paperSize = "A4";
+    doc.config.density = "normal";
+    doc.config.fontFamily = "serif";
+    // Simulate hard single-newlines pasted from an external PDF
+    doc.basics.summary.text =
+      "Final-year Informatics Engineering student at Hasanuddin University with a strong passion for data science,\n" +
+      "particularly Natural Language Processing (NLP) and Large Language Models (LLMs). I bring a versatile\n" +
+      "technical skill set that bridges AI and software engineering, featuring hands-on experience in LLM performance\n" +
+      "evaluation, responsive web development, and multiplatform application engineering. I am eager to contribute to\n" +
+      "impactful tech projects and grow within a collaborative, fast-paced environment.";
+    doc.sections.experience.title = "Experience";
+
+    const buffer = await renderToBuffer(ResumePdfDocument({ doc }));
+    const loadingTask = getDocument({
+      data: new Uint8Array(buffer),
+      useSystemFonts: true,
+      disableFontFace: true,
+    });
+
+    try {
+      const pdfDoc = await loadingTask.promise;
+      const page = await pdfDoc.getPage(1);
+      const content = await page.getTextContent();
+
+      let maxSummaryRightX = 0;
+      let summaryFontSize = 0;
+      let expInitialSize: number | null = null;
+      let expRestSize: number | null = null;
+
+      for (const item of content.items) {
+        if (!("str" in item) || !item.str.trim()) continue;
+        const rightX = Number(item.transform[4]) + Number(item.width || 0);
+        const fontSize = Math.hypot(
+          Number(item.transform[0]),
+          Number(item.transform[1])
+        );
+
+        if (item.str.includes("Final-year Informatics")) {
+          summaryFontSize = fontSize;
+        }
+        if (
+          item.str.includes("Informatics") ||
+          item.str.includes("Natural Language") ||
+          item.str.includes("software engineering")
+        ) {
+          maxSummaryRightX = Math.max(maxSummaryRightX, rightX);
+        }
+        if (item.str === "E") {
+          expInitialSize = fontSize;
+        }
+        if (item.str === "XPERIENCE") {
+          expRestSize = fontSize;
+        }
+      }
+
+      // Printable right edge on A4 (595.28pt - 36pt margin = 559.28pt); justified line should reach >= 520pt
+      expect(maxSummaryRightX).toBeGreaterThanOrEqual(520);
+      // Summary body size should match 11pt LaTeX (~10.9-11pt)
+      expect(summaryFontSize).toBeGreaterThanOrEqual(10.8);
+      // True Small Caps contrast: initial 'E' (~12pt) strictly larger than 'XPERIENCE' (~9.3pt)
+      expect(expInitialSize).not.toBeNull();
+      expect(expRestSize).not.toBeNull();
+      expect(expInitialSize as number).toBeGreaterThan((expRestSize as number) + 1.5);
+    } finally {
+      await loadingTask.destroy();
+    }
+
+    // Ensure ATS text extraction still reads EXPERIENCE intact without broken spaces
+    const extracted = await extractTextFromPdfBuffer(new Uint8Array(buffer));
+    expect(extracted.fullText.toUpperCase()).toContain("EXPERIENCE");
+  });
 });

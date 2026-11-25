@@ -13,6 +13,8 @@ import {
   isNonEmptyLanguageItem,
   isNonEmptyProjectItem,
   isNonEmptySkillItem,
+  normalizeParagraphText,
+  normalizeSmallCapsTitle,
 } from "@/lib/resume-item-utils";
 import { normalizeUrl, toMailtoHref } from "@/lib/url-utils";
 
@@ -101,12 +103,18 @@ function renderBulletsBlock(bullets: BulletPoint[]): string {
   const visible = getVisibleNonEmptyBullets(bullets);
   if (visible.length === 0) return "";
 
-  const lines = visible.map((b) => `        \\resumeItem{${escapeLatex(b.text.trim())}}`);
+  const lines = visible.map(
+    (b) => `        \\resumeItem{${escapeLatex(normalizeParagraphText(b.text))}}`
+  );
   return [
     "      \\resumeItemListStart",
     ...lines,
     "      \\resumeItemListEnd",
   ].join("\n");
+}
+
+function formatSectionCommand(rawTitle: string): string {
+  return `\\section{${escapeLatex(normalizeSmallCapsTitle(rawTitle))}}`;
 }
 
 function getFontPreamble(fontFamily: ResumeDocument["config"]["fontFamily"]): string {
@@ -188,21 +196,29 @@ export function generateLatexDocument(doc: ResumeDocument): string {
 
   const renderSection = (key: SectionKey): string => {
     if (key === "summary") {
-      if (!basics.summary.isVisible || !basics.summary.text.trim()) return "";
-      const summaryText = escapeLatex(basics.summary.text.trim());
+      const normalizedSummary = normalizeParagraphText(basics.summary.text);
+      if (!basics.summary.isVisible || !normalizedSummary) return "";
+      const summaryParagraphs = normalizedSummary
+        .split("\n\n")
+        .map((para) => escapeLatex(para))
+        .join("\n\n");
+
       if (isClassic) {
         return [
           "%-----------SUMMARY-----------",
-          `\\small{${summaryText}}`,
-          "\\vspace{-4pt}",
+          "{\\csname justifying\\endcsname\\noindent",
+          summaryParagraphs,
+          "\\par}\\vspace{-4pt}",
         ].join("\n");
       }
       const summaryHeading =
         doc.language === "id" ? "Ringkasan Profesional" : "Summary";
       return [
         "%-----------SUMMARY-----------",
-        `\\section{${escapeLatex(summaryHeading)}}`,
-        `  \\small{${summaryText}}`,
+        formatSectionCommand(summaryHeading),
+        "{\\csname justifying\\endcsname\\noindent",
+        summaryParagraphs,
+        "\\par}",
       ].join("\n");
     }
 
@@ -230,7 +246,7 @@ export function generateLatexDocument(doc: ResumeDocument): string {
 
       return [
         `%-----------CUSTOM: ${escapeLatex(custom.title.trim())}-----------`,
-        `\\section{${escapeLatex(custom.title.trim())}}`,
+        formatSectionCommand(custom.title),
         "  \\resumeSubHeadingListStart",
         ...itemBlocks,
         "  \\resumeSubHeadingListEnd",
@@ -274,7 +290,7 @@ export function generateLatexDocument(doc: ResumeDocument): string {
 
         return [
           `%-----------${key.toUpperCase()}-----------`,
-          `\\section{${escapeLatex(group.title.trim())}}`,
+          formatSectionCommand(group.title),
           "  \\resumeSubHeadingListStart",
           ...itemBlocks,
           "  \\resumeSubHeadingListEnd",
@@ -315,7 +331,7 @@ export function generateLatexDocument(doc: ResumeDocument): string {
 
         return [
           "%-----------EDUCATION-----------",
-          `\\section{${escapeLatex(group.title.trim())}}`,
+          formatSectionCommand(group.title),
           "  \\resumeSubHeadingListStart",
           ...itemBlocks,
           "  \\resumeSubHeadingListEnd",
@@ -354,7 +370,7 @@ export function generateLatexDocument(doc: ResumeDocument): string {
 
         return [
           "%-----------PROJECTS-----------",
-          `\\section{${escapeLatex(group.title.trim())}}`,
+          formatSectionCommand(group.title),
           "  \\resumeSubHeadingListStart",
           ...itemBlocks,
           "  \\resumeSubHeadingListEnd",
@@ -378,7 +394,7 @@ export function generateLatexDocument(doc: ResumeDocument): string {
 
         return [
           "%-----------TECHNICAL SKILLS-----------",
-          `\\section{${escapeLatex(group.title.trim())}}`,
+          formatSectionCommand(group.title),
           " \\begin{itemize}[leftmargin=0.15in, label={}]",
           "    \\small{\\item{",
           skillLines.join(" \\\\\n"),
@@ -408,7 +424,7 @@ export function generateLatexDocument(doc: ResumeDocument): string {
 
         return [
           "%-----------CERTIFICATIONS-----------",
-          `\\section{${escapeLatex(group.title.trim())}}`,
+          formatSectionCommand(group.title),
           "  \\resumeSubHeadingListStart",
           ...itemBlocks,
           "  \\resumeSubHeadingListEnd",
@@ -437,7 +453,7 @@ export function generateLatexDocument(doc: ResumeDocument): string {
 
         return [
           "%-----------AWARDS-----------",
-          `\\section{${escapeLatex(group.title.trim())}}`,
+          formatSectionCommand(group.title),
           "  \\resumeSubHeadingListStart",
           ...itemBlocks,
           "  \\resumeSubHeadingListEnd",
@@ -461,7 +477,7 @@ export function generateLatexDocument(doc: ResumeDocument): string {
 
         return [
           "%-----------LANGUAGES-----------",
-          `\\section{${escapeLatex(group.title.trim())}}`,
+          formatSectionCommand(group.title),
           " \\begin{itemize}[leftmargin=0.15in, label={}]",
           `    \\small{\\item{${joined}}}`,
           " \\end{itemize}",
@@ -479,7 +495,7 @@ export function generateLatexDocument(doc: ResumeDocument): string {
 
   return [
     "%-------------------------",
-    "% Resume in LaTeX (Generated by FormaCV — Overleaf / Jake's Resume Compatible)",
+    "% Resume in LaTeX (Generated by Craftfolio — Overleaf / Jake's Resume Compatible)",
     "% License : MIT",
     "%------------------------",
     "",
@@ -495,6 +511,8 @@ export function generateLatexDocument(doc: ResumeDocument): string {
     "\\usepackage[hidelinks]{hyperref}",
     "\\usepackage{fancyhdr}",
     "\\usepackage{tabularx}",
+    "\\IfFileExists{ragged2e.sty}{\\usepackage{ragged2e}}{}",
+    "\\IfFileExists{ulem.sty}{\\usepackage[normalem]{ulem}\\setlength{\\ULdepth}{2pt}\\let\\underline\\uline}{}",
     fontPreamble,
     "\\IfFileExists{glyphtounicode.tex}{\\input{glyphtounicode}\\pdfgentounicode=1}{}",
     "",

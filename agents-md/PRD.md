@@ -1,8 +1,8 @@
-# Product Requirements Document (PRD): FormaCV — ATS-Friendly CV Builder
+# Product Requirements Document (PRD): Craftfolio — ATS-Friendly CV Builder
 
 | Atribut | Detail |
 | :--- | :--- |
-| **Nama Proyek (Working Title)** | **FormaCV** *(Opsi alternatif: CVFlow, ClearCV, ResumeCraft, Forma, CV Studio, PathCV, Paperwise)* |
+| **Nama Proyek (Working Title)** | **Craftfolio** *(Sebelumnya working title: FormaCV)* |
 | **Versi Dokumen** | 2.0 (Unified PRD) |
 | **Status** | Ready for Development |
 | **Target Platform** | Web Application (Desktop-first Split-Screen Editor, Mobile-friendly Tabbed View) |
@@ -15,7 +15,7 @@
 ### 1.1 Visi & Positioning Produk
 > **"Kualitas tipografi sekelas LaTeX, semudah mengisi Google Form."**
 
-**FormaCV** adalah platform pembuat CV berbasis web yang memungkinkan siapa saja—baik pengguna teknis maupun non-teknis—membuat CV yang bersih, profesional, dan ramah *Applicant Tracking System* (ATS) dalam hitungan menit, tanpa perlu menulis kode LaTeX dan tanpa repot mengatur margin, garis, kolom, atau spasi secara manual seperti di Canva atau Microsoft Word.
+**Craftfolio** adalah platform pembuat CV berbasis web yang memungkinkan siapa saja—baik pengguna teknis maupun non-teknis—membuat CV yang bersih, profesional, dan ramah *Applicant Tracking System* (ATS) dalam hitungan menit, tanpa perlu menulis kode LaTeX dan tanpa repot mengatur margin, garis, kolom, atau spasi secara manual seperti di Canva atau Microsoft Word.
 
 Editor dirancang agar terasa seperti **alat tulis/produktivitas (seperti Notion)** yang terstruktur dan fokus pada kualitas konten, bukan seperti kanvas desain grafis.
 

@@ -35,7 +35,7 @@ const CAPABILITIES = [
     label: "Transparansi ATS",
     title: "ATS Readability Checker & PDF X-Ray Asli",
     description:
-      "Kami tidak menampilkan skor ATS palsu. FormaCV mengekstrak teks langsung dari file PDF hasil render agar Anda melihat persis urutan baca linear yang diterima sistem rekrutmen.",
+      "Kami tidak menampilkan skor ATS palsu. Craftfolio mengekstrak teks langsung dari file PDF hasil render agar Anda melihat persis urutan baca linear yang diterima sistem rekrutmen.",
     detail: "11 aturan deterministik · Parser blob PDF via pdfjs-dist",
   },
   {

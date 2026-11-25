@@ -1,6 +1,6 @@
 # DESIGN.md — Technical Design Document (MVP)
 
-Dokumen ini merinci arsitektur teknis, kontrak *state*, sinkronisasi preview/PDF, aturan deterministik *ATS Linter*, serta *component tree* untuk tahap MVP **FormaCV**, melengkapi spesifikasi di [PRD.md](file:///Users/aryagunavarogoberto/projects/online-cv-ats-maker/agents/PRD.md) dan [brand-guideline.md](file:///Users/aryagunavarogoberto/projects/online-cv-ats-maker/agents/brand-guideline.md).
+Dokumen ini merinci arsitektur teknis, kontrak *state*, sinkronisasi preview/PDF, aturan deterministik *ATS Linter*, serta *component tree* untuk tahap MVP **Craftfolio**, melengkapi spesifikasi di [PRD.md](file:///Users/aryagunavarogoberto/projects/online-cv-ats-maker/agents-md/PRD.md) dan [brand-guideline.md](file:///Users/aryagunavarogoberto/projects/online-cv-ats-maker/agents-md/brand-guideline.md).
 
 ---
 
@@ -34,7 +34,7 @@ interface ResumeStoreState {
    - Abaikan perubahan pada `saveStatus`, `activeSection`, `mobileTab`, `previewZoom`, dan `hasHydrated` agar menekan `Ctrl+Z` hanya mengembalikan isi CV, bukan memindahkan tab UI.
    - Batasi `limit: 50` langkah undo.
 3. **Konfigurasi `persist` & Migrasi `schemaVersion`:**
-   - `name`: `'formacv-storage'`
+   - `name`: `'craftfolio-storage'`
    - `version`: `1`
    - `partialize`: hanya simpan `{ documents, activeDocumentId }`.
    - `onRehydrateStorage`: set `hasHydrated = true` setelah pembacaan `localStorage` selesai (mencegah Next.js *hydration mismatch*).

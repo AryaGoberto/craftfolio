@@ -31,9 +31,9 @@ const TEMPLATE_CATALOG: TemplateCatalogItem[] = [
     name: "Classic Academic",
     tagline: "Terinspirasi Jake's Resume (LaTeX) dengan garis tipis penuh & small-caps.",
     audience: "Mahasiswa, Fresh Graduate, Tech & Akademisi",
-    typographyNote: "EB Garamond · Rata tengah · 2-baris subheading",
+    typographyNote: "Computer Modern · Rata tengah · 2-baris subheading",
     recommendedFont: "serif",
-    recommendedFontLabel: "EB Garamond",
+    recommendedFontLabel: "Computer Modern (LaTeX)",
     recommendedDensity: "normal",
     highlights: [
       "Header small-caps & garis bawah hairline 0.75pt",
@@ -116,7 +116,7 @@ export default function TemplatesPage() {
           <Link href="/" className="flex items-center gap-2.5">
             <BrandLogo className="h-7 w-auto shrink-0" />
             <span className="text-[14px] font-semibold tracking-[-0.01em]">
-              FormaCV
+              Craftfolio
             </span>
           </Link>
 

@@ -68,7 +68,7 @@ async function safeRemoveTmpDir(tmpDir: string): Promise<void> {
 
   if (
     path.dirname(resolvedTarget) === resolvedRoot &&
-    path.basename(resolvedTarget).startsWith("formacv-tex-")
+    path.basename(resolvedTarget).startsWith("craftfolio-tex-")
   ) {
     await fs.rm(resolvedTarget, { recursive: true, force: true });
   }
@@ -115,7 +115,7 @@ export async function handleLatexPdfPost(
 
   const runPdflatex = deps?.runPdflatex ?? defaultRunPdflatex;
   const pdflatexBin = await resolvePdflatexBinary();
-  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "formacv-tex-"));
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "craftfolio-tex-"));
 
   try {
     const texSource = generateLatexDocument(parsed.data);

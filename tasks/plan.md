@@ -1,10 +1,10 @@
-# Implementation Plan: FormaCV — Remaining MVP, Phase 2 (AI/ATS Intelligence) & Phase 3 (Cloud Sync)
+# Implementation Plan: Craftfolio — Remaining MVP, Phase 2 (AI/ATS Intelligence) & Phase 3 (Cloud Sync)
 
 Source spec: `agents-md/PRD.md`, `agents-md/DESIGN.md`, `agents-md/FEATURES.md`, `agents-md/AGENTS.md`, `tasks/todo.md`
 
 ## Overview
 
-**FormaCV** adalah aplikasi web pembuat CV ramah ATS (*Applicant Tracking System*) dengan filosofi *"Kualitas tipografi sekelas LaTeX, semudah mengisi Google Form"*. Evaluasi terhadap kode saat ini (`src/`) menunjukkan bahwa **~85% fitur inti Fase 1 (MVP)** telah selesai dibangun (Landing Page, Split-Screen Editor, Zustand Store + Undo/Redo + Multi-CV Switcher, 4 Template ATS HTML & PDF, Rule-Based ATS Linter, JSON ATS X-Ray, dan Backup JSON). Rencana implementasi ini memetakan penyelesaian sisa **Fase 1 (MVP Polish & Verification)** sebagai prioritas utama sesuai aturan disiplin scope di `agents-md/AGENTS.md`, diikuti oleh **Fase 2 (ATS Intelligence, JD Tailoring & AI dengan Factuality Guardrails)** dan **Fase 3 (Supabase Cloud Sync & Multi-CV Dashboard)**.
+**Craftfolio** adalah aplikasi web pembuat CV ramah ATS (*Applicant Tracking System*) dengan filosofi *"Kualitas tipografi sekelas LaTeX, semudah mengisi Google Form"*. Evaluasi terhadap kode saat ini (`src/`) menunjukkan bahwa **~85% fitur inti Fase 1 (MVP)** telah selesai dibangun (Landing Page, Split-Screen Editor, Zustand Store + Undo/Redo + Multi-CV Switcher, 4 Template ATS HTML & PDF, Rule-Based ATS Linter, JSON ATS X-Ray, dan Backup JSON). Rencana implementasi ini memetakan penyelesaian sisa **Fase 1 (MVP Polish & Verification)** sebagai prioritas utama sesuai aturan disiplin scope di `agents-md/AGENTS.md`, diikuti oleh **Fase 2 (ATS Intelligence, JD Tailoring & AI dengan Factuality Guardrails)** dan **Fase 3 (Supabase Cloud Sync & Multi-CV Dashboard)**.
 
 ## Evaluasi Status Proyek Saat Ini (Codebase Audit)
 

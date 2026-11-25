@@ -24,12 +24,35 @@ import {
   isNonEmptyLanguageItem,
   isNonEmptyProjectItem,
   isNonEmptySkillItem,
+  normalizeParagraphText,
+  normalizeSmallCapsTitle,
 } from "@/lib/resume-item-utils";
 import { normalizeUrl, toMailtoHref } from "@/lib/url-utils";
 
 interface ContactEntry {
   text: string;
   href?: string;
+}
+
+interface SmallCapsRun {
+  text: string;
+  isSmall: boolean;
+}
+
+function splitIntoSmallCapsRuns(rawTitle: string): SmallCapsRun[] {
+  const normalized = normalizeSmallCapsTitle(rawTitle);
+  const runs: SmallCapsRun[] = [];
+  const regex = /([a-zà-öø-ÿ]+)|([^a-zà-öø-ÿ]+)/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(normalized)) !== null) {
+    if (match[1]) {
+      runs.push({ text: match[1].toUpperCase(), isSmall: true });
+    } else if (match[2]) {
+      runs.push({ text: match[2], isSmall: false });
+    }
+  }
+  return runs;
 }
 
 export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
@@ -44,8 +67,13 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
   const isExecutive = config.templateId === "executive";
 
   const bodySize = isCompact
-    ? Math.max(9, density.bodySizePt - 0.5)
+    ? Math.max(9.5, Number((density.bodySizePt - 0.8).toFixed(2)))
     : density.bodySizePt;
+  const subSize = Math.max(9, Number((bodySize - 0.9).toFixed(2)));
+  const smallCapsInnerSize = Number((density.headingSizePt * 0.78).toFixed(2));
+
+  const inkColor = isClassic ? "#000000" : "#09090B";
+  const subInkColor = isClassic ? "#000000" : "#18181B";
 
   const styles = StyleSheet.create({
     page: {
@@ -56,7 +84,7 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
       fontFamily,
       fontSize: bodySize,
       lineHeight: density.lineHeight,
-      color: "#09090B",
+      color: inkColor,
       backgroundColor: "#FFFFFF",
     },
     header: {
@@ -68,39 +96,83 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
       lineHeight: 1.2,
       fontWeight: "bold",
       textTransform: isClassic ? "none" : "uppercase",
-      marginBottom: 2,
+      color: inkColor,
+      marginBottom: 3,
     },
     headline: {
-      fontSize: bodySize + 0.5,
+      fontSize: subSize + 0.5,
       lineHeight: 1.3,
       color: "#52525B",
       marginBottom: 2,
     },
-    contact: {
-      fontSize: bodySize - 0.5,
-      lineHeight: 1.3,
-      color: "#18181B",
+    contactRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: isModern || isExecutive ? "flex-start" : "center",
+      alignItems: "center",
+      rowGap: 2,
     },
+    contactItemText: {
+      fontSize: subSize,
+      lineHeight: 1.25,
+      color: subInkColor,
+    },
+    contactSeparator: {
+      fontSize: subSize,
+      lineHeight: 1.25,
+      color: subInkColor,
+      marginHorizontal: isClassic ? 4.5 : 5,
+    },
+    contactLinkWrap: isClassic
+      ? {
+          borderBottomWidth: 0.6,
+          borderBottomColor: "#000000",
+          paddingBottom: 1.6,
+        }
+      : {},
     link: {
-      color: "#18181B",
-      textDecoration: isClassic ? "underline" : "none",
+      fontSize: subSize,
+      lineHeight: 1.25,
+      color: subInkColor,
+      textDecoration: "none",
+    },
+    inlineLinkWrap: {
+      alignSelf: "flex-start",
+      borderBottomWidth: 0.6,
+      borderBottomColor: subInkColor,
+      paddingBottom: 1.2,
+      marginBottom: 2,
     },
     inlineLink: {
-      color: "#18181B",
-      textDecoration: "underline",
+      fontSize: subSize,
+      fontStyle: "italic",
+      color: subInkColor,
+      textDecoration: "none",
+    },
+    summaryParagraph: {
+      width: "100%",
+      fontSize: bodySize,
+      lineHeight: density.lineHeight,
+      textAlign: "justify",
+      color: inkColor,
     },
     section: {
+      width: "100%",
       marginBottom: density.sectionGapPt,
     },
     sectionHeading: {
       fontSize: density.headingSizePt,
-      lineHeight: 1.3,
+      lineHeight: 1.25,
       fontWeight: isClassic ? "normal" : "bold",
-      textTransform: "uppercase",
-      borderBottomWidth: 0.75,
-      borderBottomColor: isModern ? "#D4D4D8" : "#18181B",
-      paddingBottom: 2,
+      textTransform: isClassic ? "none" : "uppercase",
+      borderBottomWidth: 0.6,
+      borderBottomColor: isModern ? "#D4D4D8" : "#000000",
+      paddingBottom: 1.5,
       marginBottom: 5,
+    },
+    sectionHeadingSmallCaps: {
+      fontSize: smallCapsInnerSize,
+      letterSpacing: 0.3,
     },
     indentedList: {
       paddingLeft: isClassic ? 11 : 0,
@@ -115,16 +187,17 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
       alignItems: "baseline",
     },
     boldTitle: {
+      fontSize: bodySize,
       fontWeight: "bold",
     },
-    dateText: {
-      fontSize: bodySize - 0.5,
-      color: "#18181B",
+    primaryRightText: {
+      fontSize: isClassic ? bodySize : subSize,
+      color: subInkColor,
     },
     italicSubText: {
-      fontSize: bodySize - 0.5,
+      fontSize: subSize,
       fontStyle: "italic",
-      color: "#18181B",
+      color: subInkColor,
       marginBottom: 2,
     },
     bulletRow: {
@@ -133,12 +206,40 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
       paddingLeft: 10,
     },
     bulletDot: {
-      width: 10,
+      width: 9,
+      fontSize: isClassic ? 7 : subSize,
+      paddingTop: isClassic ? 1.5 : 0,
     },
     bulletText: {
       flex: 1,
+      fontSize: isClassic ? subSize : bodySize,
+      lineHeight: density.lineHeight,
+    },
+    compactSkillText: {
+      fontSize: isClassic ? subSize : bodySize,
+      lineHeight: density.lineHeight,
     },
   });
+
+  const renderHeading = (rawTitle: string) => {
+    if (!isClassic) {
+      return <Text style={styles.sectionHeading}>{rawTitle}</Text>;
+    }
+    const runs = splitIntoSmallCapsRuns(rawTitle);
+    return (
+      <Text style={styles.sectionHeading}>
+        {runs.map((run, idx) =>
+          run.isSmall ? (
+            <Text key={idx} style={styles.sectionHeadingSmallCaps}>
+              {run.text}
+            </Text>
+          ) : (
+            <Text key={idx}>{run.text}</Text>
+          )
+        )}
+      </Text>
+    );
+  };
 
   const visibleLinks = basics.links.filter((l) => l.isVisible && l.url.trim());
   const contactEntries: ContactEntry[] = [];
@@ -164,15 +265,27 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
 
   const renderSection = (key: SectionKey) => {
     if (key === "summary") {
-      if (!basics.summary.isVisible || !basics.summary.text.trim()) return null;
+      const normalizedSummary = normalizeParagraphText(basics.summary.text);
+      if (!basics.summary.isVisible || !normalizedSummary) return null;
+      const paragraphs = normalizedSummary.split("\n\n");
       return (
         <View key={key} style={styles.section}>
-          {!isClassic ? (
-            <Text style={styles.sectionHeading}>
-              {doc.language === "id" ? "Ringkasan Profesional" : "Summary"}
+          {!isClassic
+            ? renderHeading(
+                doc.language === "id" ? "Ringkasan Profesional" : "Summary"
+              )
+            : null}
+          {paragraphs.map((para, idx) => (
+            <Text
+              key={idx}
+              style={[
+                styles.summaryParagraph,
+                idx < paragraphs.length - 1 ? { marginBottom: 4 } : {},
+              ]}
+            >
+              {para}
             </Text>
-          ) : null}
-          <Text>{basics.summary.text}</Text>
+          ))}
         </View>
       );
     }
@@ -187,12 +300,14 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
       if (items.length === 0) return null;
       return (
         <View key={key} style={styles.section}>
-          <Text style={styles.sectionHeading}>{custom.title}</Text>
+          {renderHeading(custom.title)}
           {items.map((item) => (
             <View key={item.id} style={styles.itemBlock}>
               <View style={styles.rowBetween}>
                 <Text style={styles.boldTitle}>{item.title}</Text>
-                {item.date ? <Text style={styles.dateText}>{item.date}</Text> : null}
+                {item.date ? (
+                  <Text style={styles.primaryRightText}>{item.date}</Text>
+                ) : null}
               </View>
               {item.subtitle ? (
                 <Text style={styles.italicSubText}>{item.subtitle}</Text>
@@ -200,7 +315,9 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
               {getVisibleNonEmptyBullets(item.bullets).map((b) => (
                 <View key={b.id} style={styles.bulletRow}>
                   <Text style={styles.bulletDot}>•</Text>
-                  <Text style={styles.bulletText}>{b.text}</Text>
+                  <Text style={styles.bulletText}>
+                    {normalizeParagraphText(b.text)}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -219,7 +336,7 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
         if (!g.isVisible || items.length === 0) return null;
         return (
           <View key={key} style={styles.section}>
-            <Text style={styles.sectionHeading}>{g.title}</Text>
+            {renderHeading(g.title)}
             {items.map((item) => (
               <View key={item.id} style={styles.itemBlock}>
                 <View style={styles.rowBetween}>
@@ -228,7 +345,7 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
                       ? item.position || item.company
                       : [item.company, item.position].filter(Boolean).join(" — ")}
                   </Text>
-                  <Text style={styles.dateText}>
+                  <Text style={styles.primaryRightText}>
                     {[item.startDate, item.endDate].filter(Boolean).join(" – ")}
                   </Text>
                 </View>
@@ -242,7 +359,9 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
                 {getVisibleNonEmptyBullets(item.bullets).map((b) => (
                   <View key={b.id} style={styles.bulletRow}>
                     <Text style={styles.bulletDot}>•</Text>
-                    <Text style={styles.bulletText}>{b.text}</Text>
+                    <Text style={styles.bulletText}>
+                      {normalizeParagraphText(b.text)}
+                    </Text>
                   </View>
                 ))}
               </View>
@@ -259,13 +378,13 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
         if (!g.isVisible || items.length === 0) return null;
         return (
           <View key={key} style={styles.section}>
-            <Text style={styles.sectionHeading}>{g.title}</Text>
+            {renderHeading(g.title)}
             {items.map((item) => (
               <View key={item.id} style={styles.itemBlock}>
                 <View style={styles.rowBetween}>
                   <Text style={styles.boldTitle}>{item.institution}</Text>
                   {item.location ? (
-                    <Text style={styles.dateText}>{item.location}</Text>
+                    <Text style={styles.primaryRightText}>{item.location}</Text>
                   ) : null}
                 </View>
                 <View style={styles.rowBetween}>
@@ -281,7 +400,9 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
                 {getVisibleNonEmptyBullets(item.bullets).map((b) => (
                   <View key={b.id} style={styles.bulletRow}>
                     <Text style={styles.bulletDot}>•</Text>
-                    <Text style={styles.bulletText}>{b.text}</Text>
+                    <Text style={styles.bulletText}>
+                      {normalizeParagraphText(b.text)}
+                    </Text>
                   </View>
                 ))}
               </View>
@@ -298,32 +419,37 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
         if (!g.isVisible || items.length === 0) return null;
         return (
           <View key={key} style={styles.section}>
-            <Text style={styles.sectionHeading}>{g.title}</Text>
+            {renderHeading(g.title)}
             {items.map((item) => {
               const projectHref = item.url ? normalizeUrl(item.url) : "";
               return (
                 <View key={item.id} style={styles.itemBlock}>
                   <View style={styles.rowBetween}>
-                    <Text>
+                    <Text style={{ fontSize: bodySize }}>
                       <Text style={styles.boldTitle}>{item.name}</Text>
-                      {item.techStack ? ` | ${item.techStack}` : ""}
+                      {item.techStack ? (
+                        <Text style={styles.italicSubText}>
+                          {` | ${item.techStack}`}
+                        </Text>
+                      ) : null}
                     </Text>
                     {item.date ? (
-                      <Text style={styles.dateText}>{item.date}</Text>
+                      <Text style={styles.primaryRightText}>{item.date}</Text>
                     ) : null}
                   </View>
                   {projectHref ? (
-                    <Link
-                      src={projectHref}
-                      style={[styles.italicSubText, styles.inlineLink]}
-                    >
-                      {item.url?.trim()}
-                    </Link>
+                    <View style={styles.inlineLinkWrap}>
+                      <Link src={projectHref} style={styles.inlineLink}>
+                        {item.url?.trim()}
+                      </Link>
+                    </View>
                   ) : null}
                   {getVisibleNonEmptyBullets(item.bullets).map((b) => (
                     <View key={b.id} style={styles.bulletRow}>
                       <Text style={styles.bulletDot}>•</Text>
-                      <Text style={styles.bulletText}>{b.text}</Text>
+                      <Text style={styles.bulletText}>
+                        {normalizeParagraphText(b.text)}
+                      </Text>
                     </View>
                   ))}
                 </View>
@@ -341,13 +467,15 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
         if (!g.isVisible || items.length === 0) return null;
         return (
           <View key={key} style={styles.section}>
-            <Text style={styles.sectionHeading}>{g.title}</Text>
+            {renderHeading(g.title)}
             <View style={styles.indentedList}>
               {items.map((item) => (
                 <View key={item.id} style={{ marginBottom: density.bulletGapPt }}>
-                  <Text>
+                  <Text style={styles.compactSkillText}>
                     {item.category ? (
-                      <Text style={styles.boldTitle}>{item.category}: </Text>
+                      <Text style={[styles.boldTitle, { fontSize: isClassic ? subSize : bodySize }]}>
+                        {item.category}:{" "}
+                      </Text>
                     ) : null}
                     {item.skills}
                   </Text>
@@ -366,7 +494,7 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
         if (!g.isVisible || items.length === 0) return null;
         return (
           <View key={key} style={styles.section}>
-            <Text style={styles.sectionHeading}>{g.title}</Text>
+            {renderHeading(g.title)}
             <View style={styles.indentedList}>
               {items.map((item) => {
                 const certHref = item.url ? normalizeUrl(item.url) : "";
@@ -378,21 +506,31 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
                       { marginBottom: density.bulletGapPt },
                     ]}
                   >
-                    <Text>
+                    <Text style={styles.compactSkillText}>
                       {certHref ? (
                         <Link
                           src={certHref}
-                          style={[styles.boldTitle, styles.inlineLink]}
+                          style={[
+                            styles.boldTitle,
+                            { fontSize: isClassic ? subSize : bodySize, textDecoration: "none" },
+                          ]}
                         >
                           {item.name}
                         </Link>
                       ) : (
-                        <Text style={styles.boldTitle}>{item.name}</Text>
+                        <Text
+                          style={[
+                            styles.boldTitle,
+                            { fontSize: isClassic ? subSize : bodySize },
+                          ]}
+                        >
+                          {item.name}
+                        </Text>
                       )}
                       {item.issuer ? ` — ${item.issuer}` : ""}
                     </Text>
                     {item.date ? (
-                      <Text style={styles.dateText}>{item.date}</Text>
+                      <Text style={styles.italicSubText}>{item.date}</Text>
                     ) : null}
                   </View>
                 );
@@ -410,7 +548,7 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
         if (!g.isVisible || items.length === 0) return null;
         return (
           <View key={key} style={styles.section}>
-            <Text style={styles.sectionHeading}>{g.title}</Text>
+            {renderHeading(g.title)}
             <View style={styles.indentedList}>
               {items.map((item) => (
                 <View
@@ -420,12 +558,19 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
                     { marginBottom: density.bulletGapPt },
                   ]}
                 >
-                  <Text>
-                    <Text style={styles.boldTitle}>{item.title}</Text>
+                  <Text style={styles.compactSkillText}>
+                    <Text
+                      style={[
+                        styles.boldTitle,
+                        { fontSize: isClassic ? subSize : bodySize },
+                      ]}
+                    >
+                      {item.title}
+                    </Text>
                     {item.issuer ? ` — ${item.issuer}` : ""}
                   </Text>
                   {item.date ? (
-                    <Text style={styles.dateText}>{item.date}</Text>
+                    <Text style={styles.italicSubText}>{item.date}</Text>
                   ) : null}
                 </View>
               ))}
@@ -442,9 +587,9 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
         if (!g.isVisible || items.length === 0) return null;
         return (
           <View key={key} style={styles.section}>
-            <Text style={styles.sectionHeading}>{g.title}</Text>
+            {renderHeading(g.title)}
             <View style={styles.indentedList}>
-              <Text>
+              <Text style={styles.compactSkillText}>
                 {items
                   .map((i) =>
                     i.proficiency ? `${i.language} (${i.proficiency})` : i.language
@@ -460,8 +605,8 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
 
   return (
     <Document
-      title={doc.title || `${basics.fullName || "CV"} - FormaCV`}
-      author={basics.fullName || "FormaCV User"}
+      title={doc.title || `${basics.fullName || "CV"} - Craftfolio`}
+      author={basics.fullName || "Craftfolio User"}
     >
       <Page size={config.paperSize} style={styles.page}>
         <View style={styles.header}>
@@ -472,20 +617,29 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
             <Text style={styles.headline}>{basics.headline}</Text>
           ) : null}
           {contactEntries.length > 0 ? (
-            <Text style={styles.contact}>
+            <View style={styles.contactRow}>
               {contactEntries.map((entry, idx) => (
-                <Text key={`${entry.text}-${idx}`}>
-                  {idx > 0 ? (isClassic ? "  |  " : "  •  ") : ""}
+                <View
+                  key={`${entry.text}-${idx}`}
+                  style={{ flexDirection: "row", alignItems: "center" }}
+                >
+                  {idx > 0 ? (
+                    <Text style={styles.contactSeparator}>
+                      {isClassic ? "|" : "•"}
+                    </Text>
+                  ) : null}
                   {entry.href ? (
-                    <Link src={entry.href} style={styles.link}>
-                      {entry.text}
-                    </Link>
+                    <View style={styles.contactLinkWrap}>
+                      <Link src={entry.href} style={styles.link}>
+                        {entry.text}
+                      </Link>
+                    </View>
                   ) : (
-                    entry.text
+                    <Text style={styles.contactItemText}>{entry.text}</Text>
                   )}
-                </Text>
+                </View>
               ))}
-            </Text>
+            </View>
           ) : null}
         </View>
         {config.sectionOrder.map((key) => renderSection(key))}

@@ -176,7 +176,7 @@ export function AuthModal({
                 {mode === "signin"
                   ? "Masuk & Simpan ke Cloud"
                   : mode === "signup"
-                    ? "Buat Akun FormaCV"
+                    ? "Buat Akun Craftfolio"
                     : "Reset Kata Sandi"}
               </h2>
               <p className="text-[11px] text-[#52525B]">

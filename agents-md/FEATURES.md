@@ -1,6 +1,6 @@
-# FEATURES.md — Daftar Lengkap Fitur & Tracker Progres (FormaCV)
+# FEATURES.md — Daftar Lengkap Fitur & Tracker Progres (Craftfolio)
 
-Dokumen ini merangkum seluruh fitur **FormaCV** berdasarkan [PRD.md](./PRD.md), [DESIGN.md](./DESIGN.md), [brand-guideline.md](./brand-guideline.md), dan [todo.md](../tasks/todo.md). Gunakan checkbox di bawah untuk memantau fitur yang sudah selesai dibuat dan yang belum.
+Dokumen ini merangkum seluruh fitur **Craftfolio** berdasarkan [PRD.md](./PRD.md), [DESIGN.md](./DESIGN.md), [brand-guideline.md](./brand-guideline.md), dan [todo.md](../tasks/todo.md). Gunakan checkbox di bawah untuk memantau fitur yang sudah selesai dibuat dan yang belum.
 
 **Legenda Status:**
 - `[x]` Sudah dibuat & terverifikasi di kode (`src/`)
@@ -23,7 +23,7 @@ Dokumen ini merangkum seluruh fitur **FormaCV** berdasarkan [PRD.md](./PRD.md), 
   - **Penjelasan:** Layar desktop terbagi dua: Panel Kiri (Form Editor) dan Panel Kanan (Live Preview dokumen). Pada layar mobile/tablet otomatis beralih menjadi tab **Edit** dan **Preview**, lengkap dengan skeleton loading saat hidrasi `localStorage`.
   - **File:** `src/app/editor/page.tsx`, `src/components/editor/EditorPanel.tsx`, `src/components/preview/PreviewPanel.tsx`
 - [x] **Auto-Save Lokal & Migrasi Skema**
-  - **Penjelasan:** Penyimpanan otomatis ke `localStorage` (`formacv-storage`) via Zustand `persist` dengan debounce 300ms, indikator status (`Menyimpan...` / `Disimpan`), serta `schemaVersion` untuk migrasi data aman.
+  - **Penjelasan:** Penyimpanan otomatis ke `localStorage` (`craftfolio-storage`) via Zustand `persist` dengan debounce 300ms, indikator status (`Menyimpan...` / `Disimpan`), serta `schemaVersion` untuk migrasi data aman.
   - **File:** `src/store/use-resume-store.ts`, `src/lib/schemas/resume.ts`
 - [x] **Undo / Redo (50 Langkah)**
   - **Penjelasan:** Riwayat perubahan isi CV menggunakan `zundo` (`temporal`), hanya melacak perubahan konten CV tanpa mengikutsertakan state UI sementara.
