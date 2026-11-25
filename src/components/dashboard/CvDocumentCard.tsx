@@ -5,6 +5,7 @@ import {
   Copy,
   Download,
   ExternalLink,
+  FileCode2,
   FileJson,
   Loader2,
   MoreVertical,
@@ -17,7 +18,7 @@ import {
   formatDashboardDate,
   getCvCompletionStatus,
 } from "@/lib/dashboard-utils";
-import { downloadResumePdf } from "@/lib/pdf-download";
+import { downloadResumePdf, downloadResumeTex } from "@/lib/pdf-download";
 import { ResumeHtmlRenderer } from "@/components/preview/ResumeHtmlRenderer";
 
 interface CvDocumentCardProps {
@@ -237,7 +238,7 @@ export function CvDocumentCard({
             {menuOpen && (
               <div
                 role="menu"
-                className="absolute right-0 bottom-full mb-1.5 w-48 bg-white border border-[#E4E4E7] rounded-lg shadow-xl py-1 z-40 text-[12px]"
+                className="absolute right-0 bottom-full mb-1.5 w-52 bg-white border border-[#E4E4E7] rounded-lg shadow-xl py-1 z-40 text-[12px]"
               >
                 <button
                   type="button"
@@ -280,6 +281,18 @@ export function CvDocumentCard({
                 >
                   <Download className="w-3.5 h-3.5 text-[#52525B]" />
                   Download PDF
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    downloadResumeTex(doc);
+                  }}
+                  className="w-full text-left px-3 py-1.5 hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
+                >
+                  <FileCode2 className="w-3.5 h-3.5 text-[#52525B]" />
+                  Export LaTeX (.tex)
                 </button>
                 <button
                   type="button"

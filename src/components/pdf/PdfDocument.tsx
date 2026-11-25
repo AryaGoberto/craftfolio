@@ -14,6 +14,17 @@ import {
   DENSITY_TOKENS,
   PDF_FONT_FAMILIES,
 } from "@/lib/template-tokens";
+import {
+  getVisibleNonEmptyBullets,
+  isNonEmptyAwardItem,
+  isNonEmptyCertificationItem,
+  isNonEmptyCustomItem,
+  isNonEmptyEducationItem,
+  isNonEmptyExperienceItem,
+  isNonEmptyLanguageItem,
+  isNonEmptyProjectItem,
+  isNonEmptySkillItem,
+} from "@/lib/resume-item-utils";
 import { normalizeUrl, toMailtoHref } from "@/lib/url-utils";
 
 interface ContactEntry {
@@ -54,17 +65,20 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
     },
     name: {
       fontSize: density.nameSizePt + (isClassic ? 2 : 0),
+      lineHeight: 1.2,
       fontWeight: "bold",
       textTransform: isClassic ? "none" : "uppercase",
       marginBottom: 2,
     },
     headline: {
       fontSize: bodySize + 0.5,
+      lineHeight: 1.3,
       color: "#52525B",
       marginBottom: 2,
     },
     contact: {
       fontSize: bodySize - 0.5,
+      lineHeight: 1.3,
       color: "#18181B",
     },
     link: {
@@ -80,12 +94,16 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
     },
     sectionHeading: {
       fontSize: density.headingSizePt,
+      lineHeight: 1.3,
       fontWeight: isClassic ? "normal" : "bold",
       textTransform: "uppercase",
       borderBottomWidth: 0.75,
       borderBottomColor: isModern ? "#D4D4D8" : "#18181B",
       paddingBottom: 2,
       marginBottom: 5,
+    },
+    indentedList: {
+      paddingLeft: isClassic ? 11 : 0,
     },
     itemBlock: {
       marginBottom: density.itemGapPt,
@@ -162,8 +180,10 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
     if (key.startsWith("custom:")) {
       const id = key.replace("custom:", "");
       const custom = sections.customSections.find((cs) => cs.id === id);
-      if (!custom || !custom.isVisible) return null;
-      const items = custom.items.filter((i) => i.isVisible);
+      if (!custom || !custom.isVisible || !custom.title.trim()) return null;
+      const items = custom.items.filter(
+        (i) => i.isVisible && isNonEmptyCustomItem(i)
+      );
       if (items.length === 0) return null;
       return (
         <View key={key} style={styles.section}>
@@ -177,14 +197,12 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
               {item.subtitle ? (
                 <Text style={styles.italicSubText}>{item.subtitle}</Text>
               ) : null}
-              {item.bullets
-                .filter((b) => b.isVisible && b.text.trim())
-                .map((b) => (
-                  <View key={b.id} style={styles.bulletRow}>
-                    <Text style={styles.bulletDot}>•</Text>
-                    <Text style={styles.bulletText}>{b.text}</Text>
-                  </View>
-                ))}
+              {getVisibleNonEmptyBullets(item.bullets).map((b) => (
+                <View key={b.id} style={styles.bulletRow}>
+                  <Text style={styles.bulletDot}>•</Text>
+                  <Text style={styles.bulletText}>{b.text}</Text>
+                </View>
+              ))}
             </View>
           ))}
         </View>
@@ -195,7 +213,9 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
       case "experience":
       case "volunteering": {
         const g = sections[key];
-        const items = g.items.filter((i) => i.isVisible);
+        const items = g.items.filter(
+          (i) => i.isVisible && isNonEmptyExperienceItem(i)
+        );
         if (!g.isVisible || items.length === 0) return null;
         return (
           <View key={key} style={styles.section}>
@@ -219,14 +239,12 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
                       : item.location}
                   </Text>
                 ) : null}
-                {item.bullets
-                  .filter((b) => b.isVisible && b.text.trim())
-                  .map((b) => (
-                    <View key={b.id} style={styles.bulletRow}>
-                      <Text style={styles.bulletDot}>•</Text>
-                      <Text style={styles.bulletText}>{b.text}</Text>
-                    </View>
-                  ))}
+                {getVisibleNonEmptyBullets(item.bullets).map((b) => (
+                  <View key={b.id} style={styles.bulletRow}>
+                    <Text style={styles.bulletDot}>•</Text>
+                    <Text style={styles.bulletText}>{b.text}</Text>
+                  </View>
+                ))}
               </View>
             ))}
           </View>
@@ -235,7 +253,9 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
 
       case "education": {
         const g = sections.education;
-        const items = g.items.filter((i) => i.isVisible);
+        const items = g.items.filter(
+          (i) => i.isVisible && isNonEmptyEducationItem(i)
+        );
         if (!g.isVisible || items.length === 0) return null;
         return (
           <View key={key} style={styles.section}>
@@ -258,6 +278,12 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
                     {[item.startDate, item.endDate].filter(Boolean).join(" – ")}
                   </Text>
                 </View>
+                {getVisibleNonEmptyBullets(item.bullets).map((b) => (
+                  <View key={b.id} style={styles.bulletRow}>
+                    <Text style={styles.bulletDot}>•</Text>
+                    <Text style={styles.bulletText}>{b.text}</Text>
+                  </View>
+                ))}
               </View>
             ))}
           </View>
@@ -266,7 +292,9 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
 
       case "projects": {
         const g = sections.projects;
-        const items = g.items.filter((i) => i.isVisible);
+        const items = g.items.filter(
+          (i) => i.isVisible && isNonEmptyProjectItem(i)
+        );
         if (!g.isVisible || items.length === 0) return null;
         return (
           <View key={key} style={styles.section}>
@@ -292,14 +320,12 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
                       {item.url?.trim()}
                     </Link>
                   ) : null}
-                  {item.bullets
-                    .filter((b) => b.isVisible && b.text.trim())
-                    .map((b) => (
-                      <View key={b.id} style={styles.bulletRow}>
-                        <Text style={styles.bulletDot}>•</Text>
-                        <Text style={styles.bulletText}>{b.text}</Text>
-                      </View>
-                    ))}
+                  {getVisibleNonEmptyBullets(item.bullets).map((b) => (
+                    <View key={b.id} style={styles.bulletRow}>
+                      <Text style={styles.bulletDot}>•</Text>
+                      <Text style={styles.bulletText}>{b.text}</Text>
+                    </View>
+                  ))}
                 </View>
               );
             })}
@@ -309,93 +335,123 @@ export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
 
       case "skills": {
         const g = sections.skills;
-        const items = g.items.filter((i) => i.isVisible);
+        const items = g.items.filter(
+          (i) => i.isVisible && isNonEmptySkillItem(i)
+        );
         if (!g.isVisible || items.length === 0) return null;
         return (
           <View key={key} style={styles.section}>
             <Text style={styles.sectionHeading}>{g.title}</Text>
-            {items.map((item) => (
-              <View key={item.id} style={{ marginBottom: density.bulletGapPt }}>
-                <Text>
-                  {item.category ? (
-                    <Text style={styles.boldTitle}>{item.category}: </Text>
-                  ) : null}
-                  {item.skills}
-                </Text>
-              </View>
-            ))}
+            <View style={styles.indentedList}>
+              {items.map((item) => (
+                <View key={item.id} style={{ marginBottom: density.bulletGapPt }}>
+                  <Text>
+                    {item.category ? (
+                      <Text style={styles.boldTitle}>{item.category}: </Text>
+                    ) : null}
+                    {item.skills}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
         );
       }
 
       case "certifications": {
         const g = sections.certifications;
-        const items = g.items.filter((i) => i.isVisible);
+        const items = g.items.filter(
+          (i) => i.isVisible && isNonEmptyCertificationItem(i)
+        );
         if (!g.isVisible || items.length === 0) return null;
         return (
           <View key={key} style={styles.section}>
             <Text style={styles.sectionHeading}>{g.title}</Text>
-            {items.map((item) => {
-              const certHref = item.url ? normalizeUrl(item.url) : "";
-              return (
-                <View key={item.id} style={styles.rowBetween}>
-                  <Text>
-                    {certHref ? (
-                      <Link
-                        src={certHref}
-                        style={[styles.boldTitle, styles.inlineLink]}
-                      >
-                        {item.name}
-                      </Link>
-                    ) : (
-                      <Text style={styles.boldTitle}>{item.name}</Text>
-                    )}
-                    {item.issuer ? ` — ${item.issuer}` : ""}
-                  </Text>
-                  {item.date ? (
-                    <Text style={styles.dateText}>{item.date}</Text>
-                  ) : null}
-                </View>
-              );
-            })}
+            <View style={styles.indentedList}>
+              {items.map((item) => {
+                const certHref = item.url ? normalizeUrl(item.url) : "";
+                return (
+                  <View
+                    key={item.id}
+                    style={[
+                      styles.rowBetween,
+                      { marginBottom: density.bulletGapPt },
+                    ]}
+                  >
+                    <Text>
+                      {certHref ? (
+                        <Link
+                          src={certHref}
+                          style={[styles.boldTitle, styles.inlineLink]}
+                        >
+                          {item.name}
+                        </Link>
+                      ) : (
+                        <Text style={styles.boldTitle}>{item.name}</Text>
+                      )}
+                      {item.issuer ? ` — ${item.issuer}` : ""}
+                    </Text>
+                    {item.date ? (
+                      <Text style={styles.dateText}>{item.date}</Text>
+                    ) : null}
+                  </View>
+                );
+              })}
+            </View>
           </View>
         );
       }
 
       case "awards": {
         const g = sections.awards;
-        const items = g.items.filter((i) => i.isVisible);
+        const items = g.items.filter(
+          (i) => i.isVisible && isNonEmptyAwardItem(i)
+        );
         if (!g.isVisible || items.length === 0) return null;
         return (
           <View key={key} style={styles.section}>
             <Text style={styles.sectionHeading}>{g.title}</Text>
-            {items.map((item) => (
-              <View key={item.id} style={styles.rowBetween}>
-                <Text>
-                  <Text style={styles.boldTitle}>{item.title}</Text>
-                  {item.issuer ? ` — ${item.issuer}` : ""}
-                </Text>
-                {item.date ? <Text style={styles.dateText}>{item.date}</Text> : null}
-              </View>
-            ))}
+            <View style={styles.indentedList}>
+              {items.map((item) => (
+                <View
+                  key={item.id}
+                  style={[
+                    styles.rowBetween,
+                    { marginBottom: density.bulletGapPt },
+                  ]}
+                >
+                  <Text>
+                    <Text style={styles.boldTitle}>{item.title}</Text>
+                    {item.issuer ? ` — ${item.issuer}` : ""}
+                  </Text>
+                  {item.date ? (
+                    <Text style={styles.dateText}>{item.date}</Text>
+                  ) : null}
+                </View>
+              ))}
+            </View>
           </View>
         );
       }
 
       case "languages": {
         const g = sections.languages;
-        const items = g.items.filter((i) => i.isVisible);
+        const items = g.items.filter(
+          (i) => i.isVisible && isNonEmptyLanguageItem(i)
+        );
         if (!g.isVisible || items.length === 0) return null;
         return (
           <View key={key} style={styles.section}>
             <Text style={styles.sectionHeading}>{g.title}</Text>
-            <Text>
-              {items
-                .map((i) =>
-                  i.proficiency ? `${i.language} (${i.proficiency})` : i.language
-                )
-                .join(" · ")}
-            </Text>
+            <View style={styles.indentedList}>
+              <Text>
+                {items
+                  .map((i) =>
+                    i.proficiency ? `${i.language} (${i.proficiency})` : i.language
+                  )
+                  .join(" · ")}
+              </Text>
+            </View>
           </View>
         );
       }

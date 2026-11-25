@@ -8,6 +8,7 @@ import {
   ChevronDown,
   Cloud,
   Eraser,
+  FileCode2,
   FileJson,
   LayoutDashboard,
   LayoutGrid,
@@ -26,6 +27,7 @@ import { useStore } from "zustand";
 import { useResumeStore } from "@/store/use-resume-store";
 import { BrandLogo } from "@/components/BrandLogo";
 import { logOut } from "@/lib/firebase/auth";
+import { downloadResumeTex } from "@/lib/pdf-download";
 import type { AtsLintReport } from "@/lib/ats-linter";
 import type {
   DensityPreset,
@@ -427,7 +429,7 @@ export function EditorTopBar({
           </button>
 
           {openMenu === "more" && (
-            <div className="absolute right-0 mt-1.5 w-52 bg-white border border-[#E4E4E7] rounded-lg shadow-xl p-1.5 z-50 text-[12px]">
+            <div className="absolute right-0 mt-1.5 w-56 bg-white border border-[#E4E4E7] rounded-lg shadow-xl p-1.5 z-50 text-[12px]">
               <button
                 type="button"
                 disabled={pastStates.length === 0}
@@ -481,6 +483,17 @@ export function EditorTopBar({
                 <LayoutGrid className="w-3.5 h-3.5 text-[#52525B]" />
                 Galeri Template ATS
               </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  downloadResumeTex(doc);
+                  setOpenMenu(null);
+                }}
+                className="w-full text-left px-2.5 py-1.5 rounded hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
+              >
+                <FileCode2 className="w-3.5 h-3.5 text-[#52525B]" />
+                Export LaTeX (.tex)
+              </button>
               <button
                 type="button"
                 onClick={handleExportJson}

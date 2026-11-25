@@ -485,6 +485,7 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
 ---
 
 ## Checkpoint 3: After Tasks 9–10 (Phase 3 Complete)
-- [ ] Semua tes lulus (`npm test`), build production bersih (`npm run build`)
-- [ ] Aturan keamanan `firestore.rules` (`request.auth.uid == userId`) dan alur kelola CV dari `/dashboard` maupun `/editor` tersinkron mulus dengan Cloud Firestore
+- [x] Semua tes lulus (`npm test`), build production bersih (`npm run build`)
+- [x] Aturan keamanan `firestore.rules` (`request.auth.uid == userId`) dan alur kelola CV dari `/dashboard` maupun `/editor` tersinkron mulus dengan Cloud Firestore
+- [x] **Task 11 (Issue #16): Overleaf-Grade `.tex` Generator & `pdflatex` PDF Compiler Engine (`feat/overleaf-latex-pdf`)** selesai diimplementasikan (`src/lib/latex-generator.ts`, `src/app/api/pdf/latex/route.ts`, `Dockerfile` TeX Live, fallback otomatis `@react-pdf/renderer` bebas bug overlap/section kosong, serta aksi **Export LaTeX `.tex`** di Editor & Dashboard)
 - [ ] Siap untuk peluncuran penuh atau penambahan ekstensi opsional (`.docx` export, halaman `/settings` hapus akun permanen, public share link, job tracker)
