@@ -14,6 +14,46 @@ export function getVisibleNonEmptyBullets(bullets: BulletPoint[]): BulletPoint[]
   return bullets.filter((b) => b.isVisible && b.text.trim().length > 0);
 }
 
+/**
+ * Normalizes single hard line breaks (common when pasting text from a PDF)
+ * into single spaces so paragraphs reflow cleanly across the full page width,
+ * while preserving intentional double-newline (`\n\n`) paragraph breaks.
+ */
+export function normalizeParagraphText(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/\r\n/g, "\n")
+    .split(/\n\s*\n+/)
+    .map((paragraph) => paragraph.replace(/[\n\t ]+/g, " ").trim())
+    .filter((paragraph) => paragraph.length > 0)
+    .join("\n\n");
+}
+
+/**
+ * Normalizes all-uppercase headings (e.g. "EXPERIENCE" or "TECHNICAL SKILLS")
+ * into Title Case ("Experience", "Technical Skills") so Small Caps (`\scshape`
+ * and `<SmallCapsHeading />`) render initial capitals taller than inner letters,
+ * while preserving existing mixed-case acronyms such as "UI/UX Experience".
+ */
+export function normalizeSmallCapsTitle(title: string): string {
+  const trimmed = title.trim().replace(/\s+/g, " ");
+  if (!trimmed) return "";
+
+  const lettersOnly = trimmed.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, "");
+  const isAllUpper =
+    lettersOnly.length > 1 && lettersOnly === lettersOnly.toUpperCase();
+
+  if (!isAllUpper) {
+    return trimmed;
+  }
+
+  return trimmed
+    .toLowerCase()
+    .replace(/(^|[\s/-])([a-zà-öø-ÿ])/g, (_match, sep: string, ch: string) => {
+      return `${sep}${ch.toUpperCase()}`;
+    });
+}
+
 export function isNonEmptyExperienceItem(item: ExperienceItem): boolean {
   return Boolean(
     item.company.trim() ||

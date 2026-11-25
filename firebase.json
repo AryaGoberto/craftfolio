@@ -9,7 +9,7 @@
     "providers": {
       "emailPassword": true,
       "googleSignIn": {
-        "oAuthBrandDisplayName": "FormaCV",
+        "oAuthBrandDisplayName": "Craftfolio",
         "supportEmail": "arguna2019@gmail.com",
         "authorizedRedirectUris": [
           "https://formacv-f6e3c.firebaseapp.com/__/auth/handler",

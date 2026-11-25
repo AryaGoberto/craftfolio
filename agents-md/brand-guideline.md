@@ -1,4 +1,4 @@
-# FormaCV — Brand & Design System Guidelines
+# Craftfolio — Brand & Design System Guidelines
 
 - **Versi:** 1.0
 - **Status:** Approved & Living Document
@@ -9,22 +9,22 @@
 ## 1. Brand Identity & Karakter Visual
 
 ### 1.1 Brand Essence
-FormaCV adalah alat produktivitas berbasis web untuk membuat resume ramah *Applicant Tracking System* (ATS). Desain FormaCV sengaja menjauhi estetika *"AI generic / slop"* (gradien neon, sci-fi dark mode berlebihan, ornamen dekoratif palsu). Sebaliknya, FormaCV mengusung:
+Craftfolio adalah alat produktivitas berbasis web untuk membuat resume ramah *Applicant Tracking System* (ATS). Desain Craftfolio sengaja menjauhi estetika *"AI generic / slop"* (gradien neon, sci-fi dark mode berlebihan, ornamen dekoratif palsu). Sebaliknya, Craftfolio mengusung:
 
 - **Calm & Editorial:** Antarmuka tenang, bebas distraksi visual, berfokus pada konten teks pengguna.
 - **Utilitarian Elegance:** Setiap garis, jarak, dan tombol memiliki fungsi ergonomis yang jelas.
 - **High Craftsmanship:** Tipografi presisi, spasi berirama, dan *micro-interaction* yang halus.
 
 ### 1.2 Logo & Simbol Brand
-- **Monogram Wordmark:** Huruf **F** tebal bersudut tegas di dalam kotak hitam/charcoal bulat halus (`rounded-lg bg-neutral-900 text-white`).
-- **Brand Title:** Teks **FormaCV** menggunakan font sans-serif geometris semi-bold (`Inter` / tracking normal).
+- **Logo Wordmark:** Ikon dokumen & pesawat kertas tipis bernuansa monokromatis (`BrandLogo`).
+- **Brand Title:** Teks **Craftfolio** menggunakan font sans-serif geometris semi-bold (`Inter` / tracking normal).
 - **Aturan Penggunaan:** Logo selalu tampil monokromatik (hitam di atas putih atau sebaliknya), tanpa gradien warna-warni, tanpa efek *glow*/*drop-shadow* berlebihan.
 
 ---
 
 ## 2. Palet Warna (Color System)
 
-FormaCV mengadopsi palet monokromatis dan netral hangat (*Warm & Neutral Grays*) dengan aksen fungsional yang sangat hemat.
+Craftfolio mengadopsi palet monokromatis dan netral hangat (*Warm & Neutral Grays*) dengan aksen fungsional yang sangat hemat.
 
 ### 2.1 Neutral & Surface Colors
 
@@ -59,7 +59,7 @@ Warna aksen hanya dipakai untuk indikasi status riil, bukan dekorasi grafis:
 
 ## 3. Tipografi (Typography Hierarchy)
 
-FormaCV membedakan secara tegas tipografi **UI Editor** (bersih, sans-serif) dan tipografi **Dokumen Resume** (editorial, akademik/LaTeX-grade).
+Craftfolio membedakan secara tegas tipografi **UI Editor** (bersih, sans-serif) dan tipografi **Dokumen Resume** (editorial, akademik/LaTeX-grade).
 
 ### 3.1 Antarmuka Editor (UI Font: Inter / System Sans)
 - **Editor App Title:** `14px` · Medium · Tracking `-0.01em`

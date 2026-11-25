@@ -1,6 +1,6 @@
-# AGENTS.md — Panduan Kerja Agen & Pengembang (FormaCV)
+# AGENTS.md — Panduan Kerja Agen & Pengembang (Craftfolio)
 
-Dokumen ini menjadi panduan utama bagi AI coding agent dan pengembang dalam membangun **FormaCV**. Selalu rujuk dokumen spesifikasi berikut sebelum membuat perubahan besar:
+Dokumen ini menjadi panduan utama bagi AI coding agent dan pengembang dalam membangun **Craftfolio**. Selalu rujuk dokumen spesifikasi berikut sebelum membuat perubahan besar:
 - **Product Requirements:** `agents/PRD.md`
 - **Brand & Design System:** `agents/brand-guideline.md`
 - **Panduan Setup & Docker:** `SETUP.md`
@@ -9,7 +9,7 @@ Dokumen ini menjadi panduan utama bagi AI coding agent dan pengembang dalam memb
 
 ## 1. Ringkasan Proyek
 
-**FormaCV** adalah aplikasi web pembuat CV ramah *Applicant Tracking System* (ATS) dengan pendekatan *data-first* dan *zero-friction Guest Mode* pada MVP.
+**Craftfolio** adalah aplikasi web pembuat CV ramah *Applicant Tracking System* (ATS) dengan pendekatan *data-first* dan *zero-friction Guest Mode* pada MVP.
 - **Filosofi:** *"Kualitas tipografi sekelas LaTeX, semudah mengisi Google Form"* — antarmuka tenang ala Notion/iA Writer, bukan kanvas desain grafis.
 - **Tech Stack Utama:**
   - **Framework & Bahasa:** Next.js (App Router) + TypeScript

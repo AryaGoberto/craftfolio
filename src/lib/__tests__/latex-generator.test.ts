@@ -1,14 +1,43 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { createSampleResume } from "@/lib/default-resume";
+import { createEmptyResume, createSampleResume } from "@/lib/default-resume";
 import {
   escapeLatex,
   formatLatexHref,
   generateLatexDocument,
 } from "@/lib/latex-generator";
 import { handleLatexPdfPost } from "@/lib/latex-compiler";
+import {
+  normalizeParagraphText,
+  normalizeSmallCapsTitle,
+} from "@/lib/resume-item-utils";
 import { POST } from "@/app/api/pdf/latex/route";
+
+describe("resume typography & language helpers", () => {
+  it("normalizes single copy-paste newlines into spaces while preserving double-newline paragraphs", () => {
+    const pasted =
+      "Final-year Informatics Engineering student at Hasanuddin University,\nparticularly Natural Language Processing (NLP).\n\nSecond paragraph\ncontinues here.";
+    expect(normalizeParagraphText(pasted)).toBe(
+      "Final-year Informatics Engineering student at Hasanuddin University, particularly Natural Language Processing (NLP).\n\nSecond paragraph continues here."
+    );
+  });
+
+  it("converts all-uppercase headings to Title Case for Small Caps while preserving mixed-case acronyms", () => {
+    expect(normalizeSmallCapsTitle("EXPERIENCE")).toBe("Experience");
+    expect(normalizeSmallCapsTitle("TECHNICAL SKILLS")).toBe("Technical Skills");
+    expect(normalizeSmallCapsTitle("UI/UX Experience")).toBe("UI/UX Experience");
+  });
+
+  it("defaults newly created empty CVs to English section headings", () => {
+    const empty = createEmptyResume("cv-new", "New CV");
+    expect(empty.language).toBe("en");
+    expect(empty.sections.experience.title).toBe("Experience");
+    expect(empty.sections.education.title).toBe("Education");
+    expect(empty.sections.projects.title).toBe("Projects");
+    expect(empty.sections.skills.title).toBe("Technical Skills");
+  });
+});
 
 describe("escapeLatex", () => {
   it("escapes all 10 LaTeX special characters without double-escaping backslash braces", () => {
@@ -84,11 +113,22 @@ describe("generateLatexDocument", () => {
     expect(tex).toContain(String.raw`\titlerule`);
     expect(tex).toContain(String.raw`\textbf{\Huge Arya Gunavaro Goberto}`);
     expect(tex).toContain("$|$");
-    // Classic Academic prints justified summary paragraph without a Summary section heading
+    // Classic Academic prints full-size justified summary paragraph without a Summary section heading
     expect(tex).not.toContain(String.raw`\section{Summary}`);
     expect(tex).not.toContain(String.raw`\section{Ringkasan Profesional}`);
+    expect(tex).not.toContain(String.raw`\small{Frontend Engineer`);
     expect(tex).toContain("Frontend Engineer with 3+ years of experience");
     expect(tex).toContain(String.raw`\end{document}`);
+  });
+
+  it("converts ALL-CAPS section titles to Title Case so LaTeX \\scshape renders true Small Caps", () => {
+    const doc = createSampleResume("2026-01-01T00:00:00.000Z");
+    doc.sections.experience.title = "EXPERIENCE";
+    doc.sections.skills.title = "TECHNICAL SKILLS";
+
+    const tex = generateLatexDocument(doc);
+    expect(tex).toContain(String.raw`\section{Experience}`);
+    expect(tex).toContain(String.raw`\section{Technical Skills}`);
   });
 
   it("respects paperSize=A4, density=compact, sectionOrder, and omits hidden or empty sections/items/bullets", () => {
@@ -140,7 +180,7 @@ describe("generateLatexDocument", () => {
     expect(eduIdx).toBeGreaterThan(expIdx);
 
     expect(tex).not.toContain(String.raw`\section{Projects}`);
-    expect(tex).not.toContain("FormaCV Builder");
+    expect(tex).not.toContain("Craftfolio Builder");
     expect(tex).not.toContain("Startup Edukasi ID");
     expect(tex).not.toContain("Architected a modular design system");
     expect(tex).toContain("improving page render speed by 40\\%");

@@ -11,6 +11,8 @@ import {
   isNonEmptyLanguageItem,
   isNonEmptyProjectItem,
   isNonEmptySkillItem,
+  normalizeParagraphText,
+  normalizeSmallCapsTitle,
 } from "@/lib/resume-item-utils";
 import {
   DENSITY_TOKENS,
@@ -34,8 +36,9 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
   const isCompact = config.templateId === "compact";
 
   const effectiveBodyPt = isCompact
-    ? Math.max(9, density.bodySizePt - 0.5)
+    ? Math.max(9.5, Number((density.bodySizePt - 0.8).toFixed(2)))
     : density.bodySizePt;
+  const subBodyPt = Math.max(9, Number((effectiveBodyPt - 0.9).toFixed(2)));
 
   const visibleLinks = basics.links.filter(
     (l) => l.isVisible && l.url.trim().length > 0
@@ -51,18 +54,18 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
   const renderSectionHeading = (title: string) => (
     <h2
       style={{
-        fontSize: `${density.headingSizePt + (isClassic ? 1 : 0)}pt`,
+        fontSize: `${density.headingSizePt}pt`,
         fontVariant: isClassic ? "small-caps" : "normal",
         letterSpacing: isClassic ? "0.02em" : isModern ? "0.04em" : "0.06em",
-        borderBottom: isModern ? "1px solid #D4D4D8" : "0.75pt solid #000000",
-        paddingBottom: "1pt",
-        marginBottom: "4pt",
+        borderBottom: isModern ? "1px solid #D4D4D8" : "0.6pt solid #000000",
+        paddingBottom: "1.5pt",
+        marginBottom: "4.5pt",
       }}
       className={`${
-        isClassic ? "font-normal capitalize" : "font-bold uppercase"
+        isClassic ? "font-normal" : "font-bold uppercase"
       } text-[#000000]`}
     >
-      {isClassic ? title.toLowerCase() : title}
+      {isClassic ? normalizeSmallCapsTitle(title) : title}
     </h2>
   );
 
@@ -70,16 +73,22 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
 
   const renderSection = (key: SectionKey) => {
     if (key === "summary") {
-      if (!basics.summary.isVisible || !basics.summary.text.trim()) return null;
+      const normalizedSummary = normalizeParagraphText(basics.summary.text);
+      if (!basics.summary.isVisible || !normalizedSummary) return null;
+      const paragraphs = normalizedSummary.split("\n\n");
       return (
         <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
           {!isClassic &&
             renderSectionHeading(
               doc.language === "id" ? "Ringkasan Profesional" : "Summary"
             )}
-          <p className="text-[#18181B] whitespace-pre-line text-justify">
-            {basics.summary.text}
-          </p>
+          <div className="space-y-1.5 w-full">
+            {paragraphs.map((para, idx) => (
+              <p key={idx} className="w-full text-[#09090B] text-justify">
+                {para}
+              </p>
+            ))}
+          </div>
         </section>
       );
     }
@@ -109,7 +118,9 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                     {item.date ? (
                       <span
                         className="shrink-0 text-[#18181B]"
-                        style={{ fontSize: `${effectiveBodyPt - 0.5}pt` }}
+                        style={{
+                          fontSize: `${isClassic ? effectiveBodyPt : subBodyPt}pt`,
+                        }}
                       >
                         {item.date}
                       </span>
@@ -118,7 +129,7 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                   {item.subtitle ? (
                     <div
                       className="italic text-[#18181B]"
-                      style={{ fontSize: `${effectiveBodyPt - 0.5}pt` }}
+                      style={{ fontSize: `${subBodyPt}pt` }}
                     >
                       {item.subtitle}
                     </div>
@@ -126,11 +137,14 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                   {bullets.length > 0 && (
                     <ul
                       className="list-disc pl-5 mt-1 flex flex-col"
-                      style={{ gap: `${density.bulletGapPt}pt` }}
+                      style={{
+                        gap: `${density.bulletGapPt}pt`,
+                        fontSize: `${isClassic ? subBodyPt : effectiveBodyPt}pt`,
+                      }}
                     >
                       {bullets.map((b) => (
                         <li key={b.id} className="text-[#18181B]">
-                          {b.text}
+                          {normalizeParagraphText(b.text)}
                         </li>
                       ))}
                     </ul>
@@ -170,7 +184,9 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                     {(item.startDate || item.endDate) && (
                       <span
                         className="shrink-0 text-[#18181B]"
-                        style={{ fontSize: `${effectiveBodyPt - 0.5}pt` }}
+                        style={{
+                          fontSize: `${isClassic ? effectiveBodyPt : subBodyPt}pt`,
+                        }}
                       >
                         {[item.startDate, item.endDate].filter(Boolean).join(" – ")}
                       </span>
@@ -180,7 +196,7 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                   {(isClassic ? item.company || item.location : item.location) && (
                     <div
                       className="text-[#18181B] italic"
-                      style={{ fontSize: `${effectiveBodyPt - 0.5}pt` }}
+                      style={{ fontSize: `${subBodyPt}pt` }}
                     >
                       {isClassic
                         ? [item.company, item.location].filter(Boolean).join(" - ")
@@ -190,13 +206,16 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                   {item.bullets.filter((b) => b.isVisible && b.text.trim()).length > 0 && (
                     <ul
                       className="list-disc pl-5 mt-1 flex flex-col"
-                      style={{ gap: `${density.bulletGapPt}pt` }}
+                      style={{
+                        gap: `${density.bulletGapPt}pt`,
+                        fontSize: `${isClassic ? subBodyPt : effectiveBodyPt}pt`,
+                      }}
                     >
                       {item.bullets
                         .filter((b) => b.isVisible && b.text.trim())
                         .map((b) => (
                           <li key={b.id} className="text-[#18181B]">
-                            {b.text}
+                            {normalizeParagraphText(b.text)}
                           </li>
                         ))}
                     </ul>
@@ -231,7 +250,9 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                     {item.location && (
                       <span
                         className="shrink-0 text-[#18181B]"
-                        style={{ fontSize: `${effectiveBodyPt - 0.5}pt` }}
+                        style={{
+                          fontSize: `${isClassic ? effectiveBodyPt : subBodyPt}pt`,
+                        }}
                       >
                         {item.location}
                       </span>
@@ -240,7 +261,7 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                   {/* Line 2: Italic Degree + GPA (left) + Italic Dates (right) */}
                   <div
                     className="flex items-baseline justify-between gap-4 italic text-[#18181B]"
-                    style={{ fontSize: `${effectiveBodyPt - 0.5}pt` }}
+                    style={{ fontSize: `${subBodyPt}pt` }}
                   >
                     <div>
                       {[item.degree, item.gpa ? `GPA: ${item.gpa}` : null]
@@ -288,7 +309,9 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                     {item.date && (
                       <span
                         className="shrink-0 text-[#18181B]"
-                        style={{ fontSize: `${effectiveBodyPt - 0.5}pt` }}
+                        style={{
+                          fontSize: `${isClassic ? effectiveBodyPt : subBodyPt}pt`,
+                        }}
                       >
                         {item.date}
                       </span>
@@ -296,8 +319,8 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                   </div>
                   {item.url && (
                     <div
-                      className="text-[#3F3F46] italic"
-                      style={{ fontSize: `${effectiveBodyPt - 0.5}pt` }}
+                      className="text-[#3F3F46] italic underline underline-offset-[3px] decoration-[0.75px]"
+                      style={{ fontSize: `${subBodyPt}pt` }}
                     >
                       {item.url}
                     </div>
@@ -305,13 +328,16 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                   {item.bullets.filter((b) => b.isVisible && b.text.trim()).length > 0 && (
                     <ul
                       className="list-disc pl-5 mt-1 flex flex-col"
-                      style={{ gap: `${density.bulletGapPt}pt` }}
+                      style={{
+                        gap: `${density.bulletGapPt}pt`,
+                        fontSize: `${isClassic ? subBodyPt : effectiveBodyPt}pt`,
+                      }}
                     >
                       {item.bullets
                         .filter((b) => b.isVisible && b.text.trim())
                         .map((b) => (
                           <li key={b.id} className="text-[#18181B]">
-                            {b.text}
+                            {normalizeParagraphText(b.text)}
                           </li>
                         ))}
                     </ul>
@@ -451,7 +477,9 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
         fontSize: `${effectiveBodyPt}pt`,
         lineHeight: density.lineHeight,
       }}
-      className="bg-white text-[#09090B] box-border"
+      className={`bg-white box-border ${
+        isClassic ? "text-[#000000] subpixel-antialiased" : "text-[#09090B]"
+      }`}
     >
       {/* Header */}
       <header
@@ -461,8 +489,7 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
         <h1
           style={{
             fontSize: `${density.nameSizePt + (isClassic ? 2 : 0)}pt`,
-            fontVariant: isClassic ? "small-caps" : "normal",
-            lineHeight: 1.15,
+            lineHeight: 1.18,
           }}
           className={`font-bold text-[#000000] ${
             isClassic ? "tracking-normal" : "tracking-wide uppercase"
@@ -472,7 +499,7 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
         </h1>
         {basics.headline?.trim() && isExecutive && (
           <p
-            style={{ fontSize: `${effectiveBodyPt + 0.5}pt` }}
+            style={{ fontSize: `${subBodyPt + 0.5}pt` }}
             className="text-[#52525B] mt-0.5 font-medium"
           >
             {basics.headline}
@@ -480,8 +507,8 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
         )}
         {contactItems.length > 0 && (
           <p
-            style={{ fontSize: `${effectiveBodyPt - 0.5}pt` }}
-            className="text-[#18181B] mt-1"
+            style={{ fontSize: `${subBodyPt}pt` }}
+            className="text-[#18181B] mt-1 leading-relaxed"
           >
             {contactItems.map((part, idx) => (
               <span key={idx}>
@@ -489,7 +516,7 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                 <span
                   className={
                     isClassic && (part.includes("@") || part.includes("."))
-                      ? "underline underline-offset-2"
+                      ? "underline underline-offset-[3px] decoration-[0.75px]"
                       : ""
                   }
                 >

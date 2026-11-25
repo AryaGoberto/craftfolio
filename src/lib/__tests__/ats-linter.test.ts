@@ -302,7 +302,7 @@ describe("extractLinearResumeText", () => {
     expect(text).not.toContain("SUMMARY");
     expect(text).not.toContain("Frontend Engineer with 3+ years");
     expect(text).not.toContain("PROJECTS");
-    expect(text).not.toContain("FormaCV Builder");
+    expect(text).not.toContain("Craftfolio Builder");
     expect(text).not.toContain("Startup Edukasi ID");
     expect(text).not.toContain("Architected a modular design system");
     expect(text).toContain("Developed real-time analytics dashboards");

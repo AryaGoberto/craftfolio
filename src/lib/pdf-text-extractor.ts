@@ -30,7 +30,7 @@ export async function extractTextFromPdfBuffer(
 
       const rows: Array<{
         y: number;
-        items: Array<{ x: number; str: string }>;
+        items: Array<{ x: number; width: number; str: string }>;
       }> = [];
       const Y_TOLERANCE = 3;
 
@@ -38,24 +38,33 @@ export async function extractTextFromPdfBuffer(
         if (!("str" in rawItem) || !rawItem.str.trim()) continue;
         const x = Number(rawItem.transform?.[4] ?? 0);
         const y = Number(rawItem.transform?.[5] ?? 0);
+        const width = Number(rawItem.width ?? 0);
 
         let row = rows.find((r) => Math.abs(r.y - y) <= Y_TOLERANCE);
         if (!row) {
           row = { y, items: [] };
           rows.push(row);
         }
-        row.items.push({ x, str: rawItem.str });
+        row.items.push({ x, width, str: rawItem.str });
       }
 
       rows.sort((a, b) => b.y - a.y);
-      const pageLines = rows.map((row) =>
-        row.items
-          .sort((a, b) => a.x - b.x)
-          .map((i) => i.str)
-          .join(" ")
-          .replace(/\s+/g, " ")
-          .trim()
-      );
+      const pageLines = rows.map((row) => {
+        const sorted = row.items.sort((a, b) => a.x - b.x);
+        let line = "";
+        for (let idx = 0; idx < sorted.length; idx++) {
+          const curr = sorted[idx];
+          if (idx === 0) {
+            line = curr.str;
+            continue;
+          }
+          const prev = sorted[idx - 1];
+          const gap = curr.x - (prev.x + prev.width);
+          const needsSpace = prev.width <= 0 || gap > 1.5;
+          line += (needsSpace ? " " : "") + curr.str;
+        }
+        return line.replace(/\s+/g, " ").trim();
+      });
 
       pages.push(pageLines.join("\n"));
     }

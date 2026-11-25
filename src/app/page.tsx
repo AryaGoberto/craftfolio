@@ -24,7 +24,7 @@ export default function HomePage() {
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <BrandLogo className="h-7 w-auto shrink-0" />
             <span className="text-[14px] font-semibold tracking-[-0.01em] text-[#09090B]">
-              FormaCV
+              Craftfolio
             </span>
           </Link>
 

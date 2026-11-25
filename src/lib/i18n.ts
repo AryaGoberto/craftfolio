@@ -11,7 +11,7 @@ export const DEFAULT_SECTION_TITLES: Record<
     experience: "Experience",
     education: "Education",
     projects: "Projects",
-    skills: "Skills",
+    skills: "Technical Skills",
     certifications: "Certifications",
     awards: "Awards",
     volunteering: "Volunteering",

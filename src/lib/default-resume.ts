@@ -138,10 +138,10 @@ export function createSampleResume(timestamp?: string): ResumeDocument {
           {
             id: "proj-1",
             isVisible: true,
-            name: "FormaCV Builder",
+            name: "Craftfolio Builder",
             techStack: "Next.js, TypeScript, Tailwind CSS",
             date: "2025",
-            url: "github.com/rakapratama/formacv",
+            url: "github.com/rakapratama/craftfolio",
             bullets: [
               {
                 id: "proj-1-b1",
@@ -206,7 +206,7 @@ export function createEmptyResume(id: string, title = "CV Baru"): ResumeDocument
     id,
     schemaVersion: 1,
     title,
-    language: "id",
+    language: "en",
     createdAt: now,
     updatedAt: now,
     config: {
@@ -227,14 +227,14 @@ export function createEmptyResume(id: string, title = "CV Baru"): ResumeDocument
       summary: { isVisible: true, text: "" },
     },
     sections: {
-      experience: { title: "Pengalaman Kerja", isVisible: true, items: [] },
-      education: { title: "Pendidikan", isVisible: true, items: [] },
-      projects: { title: "Proyek", isVisible: true, items: [] },
-      skills: { title: "Keahlian", isVisible: true, items: [] },
-      certifications: { title: "Sertifikasi", isVisible: false, items: [] },
-      awards: { title: "Penghargaan", isVisible: false, items: [] },
-      volunteering: { title: "Pengalaman Relawan", isVisible: false, items: [] },
-      languages: { title: "Bahasa", isVisible: false, items: [] },
+      experience: { title: "Experience", isVisible: true, items: [] },
+      education: { title: "Education", isVisible: true, items: [] },
+      projects: { title: "Projects", isVisible: true, items: [] },
+      skills: { title: "Technical Skills", isVisible: true, items: [] },
+      certifications: { title: "Certifications", isVisible: false, items: [] },
+      awards: { title: "Awards", isVisible: false, items: [] },
+      volunteering: { title: "Volunteering", isVisible: false, items: [] },
+      languages: { title: "Languages", isVisible: false, items: [] },
       customSections: [],
     },
   };

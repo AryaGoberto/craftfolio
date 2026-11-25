@@ -3,7 +3,7 @@ import { CheckCircle2, Eye, EyeOff, FileText, GripVertical, Target } from "lucid
 export function HeroWorkspacePreview() {
   return (
     <div
-      aria-label="Pratinjau antarmuka Split-Screen Editor dan hasil CV LaTeX FormaCV"
+      aria-label="Pratinjau antarmuka Split-Screen Editor dan hasil CV LaTeX Craftfolio"
       className="w-full max-w-5xl mx-auto rounded-lg border border-[#E4E4E7] bg-white shadow-xl overflow-hidden text-left"
     >
       {/* Window Top Chrome */}
@@ -13,7 +13,7 @@ export function HeroWorkspacePreview() {
           <span className="w-2.5 h-2.5 rounded-full bg-[#E4E4E7]" aria-hidden="true" />
           <span className="w-2.5 h-2.5 rounded-full bg-[#E4E4E7]" aria-hidden="true" />
           <span className="ml-2 text-[11px] font-medium text-[#52525B] font-mono">
-            formacv / editor
+            craftfolio / editor
           </span>
         </div>
 
@@ -132,7 +132,7 @@ export function HeroWorkspacePreview() {
 
         {/* Right: Authentic LaTeX-Grade A4 Paper Preview */}
         <div className="lg:col-span-7 bg-[#F8F9FA] p-5 sm:p-6 flex flex-col justify-between">
-          <div className="bg-white border border-[#E4E4E7] shadow-sm rounded-sm p-6 sm:p-7 font-[family-name:var(--font-garamond)] text-[#09090B]">
+          <div className="bg-white border border-[#E4E4E7] shadow-sm rounded-sm p-6 sm:p-7 font-[family-name:var(--font-serif-academic)] text-[#09090B]">
             <div className="text-center pb-3 border-b border-[#09090B]/20">
               <p className="text-xl sm:text-2xl font-bold tracking-wide uppercase leading-none">
                 Raka Pratama

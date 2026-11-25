@@ -64,7 +64,7 @@ export function ComparisonAndCtaSection() {
                     Kriteria
                   </th>
                   <th scope="col" className="py-3.5 px-4 font-semibold text-[#09090B]">
-                    FormaCV
+                    Craftfolio
                   </th>
                   <th scope="col" className="py-3.5 px-4 font-medium">
                     Overleaf (LaTeX)
@@ -149,7 +149,7 @@ export function ComparisonAndCtaSection() {
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-[#09090B] font-semibold">
               <BrandLogo className="h-5 w-auto shrink-0" />
-              <span>FormaCV</span>
+              <span>Craftfolio</span>
             </div>
             <p className="text-[11.5px] text-[#52525B] max-w-md">
               Berfokus pada struktur CV satu kolom konvensional dan PDF selectable text — bukan klaim instan &ldquo;100% lolos semua ATS&rdquo;.

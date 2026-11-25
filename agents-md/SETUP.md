@@ -1,6 +1,6 @@
 # Panduan Setup Project: Next.js, Tailwind CSS, & Docker
 
-Dokumen ini berisi panduan langkah demi langkah untuk menyiapkan project **FormaCV** menggunakan **Next.js (App Router)**, **TypeScript**, **Tailwind CSS**, dan **Docker** (untuk *development* maupun *production*), selaras dengan spesifikasi di [PRD.md](file:///Users/aryagunavarogoberto/projects/online-cv-ats-maker/PRD.md) dan [brand-guideline.md](file:///Users/aryagunavarogoberto/projects/online-cv-ats-maker/brand-guideline.md).
+Dokumen ini berisi panduan langkah demi langkah untuk menyiapkan project **Craftfolio** menggunakan **Next.js (App Router)**, **TypeScript**, **Tailwind CSS**, dan **Docker** (untuk *development* maupun *production*), selaras dengan spesifikasi di [PRD.md](file:///Users/aryagunavarogoberto/projects/online-cv-ats-maker/agents-md/PRD.md) dan [brand-guideline.md](file:///Users/aryagunavarogoberto/projects/online-cv-ats-maker/agents-md/brand-guideline.md).
 
 ---
 

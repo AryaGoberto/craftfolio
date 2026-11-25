@@ -4,11 +4,11 @@ import { ArrowRight } from "lucide-react";
 const TEMPLATES = [
   {
     name: "Classic Academic",
-    fontLabel: "EB Garamond",
+    fontLabel: "Computer Modern (LaTeX)",
     audience: "Tech, Mahasiswa & Akademisi",
     description:
       "Terinspirasi Jake's Resume (LaTeX) dengan header small-caps dan garis bawah hairline penuh.",
-    fontClass: "font-[family-name:var(--font-garamond)]",
+    fontClass: "font-[family-name:var(--font-serif-academic)]",
     alignClass: "text-center",
   },
   {

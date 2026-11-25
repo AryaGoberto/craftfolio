@@ -60,7 +60,7 @@ const TEMPLATE_LABELS: Record<TemplateId, string> = {
 const FONT_LABELS: Record<FontFamilyPreset, string> = {
   inter: "Inter",
   roboto: "Roboto",
-  serif: "EB Garamond",
+  serif: "Computer Modern (LaTeX)",
   georgia: "Merriweather",
 };
 
@@ -204,7 +204,7 @@ export function EditorTopBar({
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <BrandLogo className="h-6 w-auto shrink-0" />
           <span className="text-[14px] font-semibold tracking-[-0.01em] text-[#09090B] hidden sm:inline">
-            FormaCV
+            Craftfolio
           </span>
         </Link>
 
@@ -570,7 +570,7 @@ export function EditorTopBar({
               <div className="absolute right-0 mt-1.5 w-60 bg-white border border-[#E4E4E7] rounded-lg shadow-xl p-2 z-50 text-[12px]">
                 <div className="px-2 py-1.5 border-b border-[#F4F4F5]">
                   <p className="font-medium text-[#09090B] truncate">
-                    {authUser.displayName || "Pengguna FormaCV"}
+                    {authUser.displayName || "Pengguna Craftfolio"}
                   </p>
                   <p className="text-[11px] text-[#52525B] truncate">
                     {authUser.email}

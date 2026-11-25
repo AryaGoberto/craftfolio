@@ -1,10 +1,10 @@
-# FormaCV — ATS-Friendly CV Builder
+# Craftfolio — ATS-Friendly CV Builder
 
 > **"Kualitas tipografi sekelas LaTeX, semudah mengisi Google Form."**
 
-**FormaCV** adalah aplikasi web pembuat CV berbasis *split-screen editor* yang memungkinkan siapa saja membuat resume bersih, terstruktur satu kolom, dan ramah *Applicant Tracking System* (ATS) tanpa perlu menulis kode LaTeX atau mengatur margin dan garis secara manual.
+**Craftfolio** adalah aplikasi web pembuat CV berbasis *split-screen editor* yang memungkinkan siapa saja membuat resume bersih, terstruktur satu kolom, dan ramah *Applicant Tracking System* (ATS) tanpa perlu menulis kode LaTeX atau mengatur margin dan garis secara manual.
 
-> **Catatan:** Kompatibilitas ATS tidak memiliki standar tunggal. FormaCV berfokus pada struktur dokumen konvensional, urutan baca linear, dan teks PDF yang dapat diseleksi (*selectable text*), disertai pengecekan berbasis aturan—bukan mengklaim jaminan mutlak lolos semua sistem ATS.
+> **Catatan:** Kompatibilitas ATS tidak memiliki standar tunggal. Craftfolio berfokus pada struktur dokumen konvensional, urutan baca linear, dan teks PDF yang dapat diseleksi (*selectable text*), disertai pengecekan berbasis aturan—bukan mengklaim jaminan mutlak lolos semua sistem ATS.
 
 ---
 

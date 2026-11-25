@@ -1,6 +1,6 @@
-# GIT_RULES.md — Aturan & Alur Kerja Git (FormaCV)
+# GIT_RULES.md — Aturan & Alur Kerja Git (Craftfolio)
 
-Dokumen ini mengatur standar penamaan *branch*, format *commit*, serta pemeriksaan wajib sebelum kode masuk ke repositori **FormaCV**.
+Dokumen ini mengatur standar penamaan *branch*, format *commit*, serta pemeriksaan wajib sebelum kode masuk ke repositori **Craftfolio**.
 
 ---
 
