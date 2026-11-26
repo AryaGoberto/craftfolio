@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import type { BulletPoint, BuiltinSectionKey } from "@/lib/schemas/resume";
+import { postAuthenticatedAiJson } from "@/lib/ai/client-fetch";
 import { useResumeStore } from "@/store/use-resume-store";
 
 interface BulletListEditorProps {
@@ -44,6 +45,7 @@ export function BulletListEditor({
   const documents = useResumeStore((s) => s.documents);
   const activeDocumentId = useResumeStore((s) => s.activeDocumentId);
   const authUser = useResumeStore((s) => s.authUser);
+  const aiQuota = useResumeStore((s) => s.aiQuota);
   const openAuthModal = useResumeStore((s) => s.openAuthModal);
   const addBullet = useResumeStore((s) => s.addBullet);
   const updateBullet = useResumeStore((s) => s.updateBullet);
@@ -84,29 +86,30 @@ export function BulletListEditor({
     setAiError(null);
 
     try {
-      const res = await fetch("/api/ai/enhance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bulletText: trimmed,
-          language: activeLanguage,
-          tone: "impact",
-          roleContext: {
-            ...roleContext,
-            sectionKey,
-          },
-        }),
-      });
-
-      const data = (await res.json()) as {
+      const { ok, status, data } = await postAuthenticatedAiJson<{
         improvedText?: string;
         reasoning?: string;
         missingMetricsHint?: string | null;
         inventedMetricsDetected?: string[];
-        error?: string;
-      };
+      }>("/api/ai/enhance", {
+        bulletText: trimmed,
+        language: activeLanguage,
+        tone: "impact",
+        roleContext: {
+          ...roleContext,
+          sectionKey,
+        },
+      });
 
-      if (!res.ok || !data.improvedText) {
+      if (status === 401) {
+        openAuthModal(
+          data.error ||
+            "Masuk ke akun Craftfolio terlebih dahulu untuk menggunakan fitur AI."
+        );
+        return;
+      }
+
+      if (!ok || !data.improvedText) {
         setAiError({
           bulletId: bullet.id,
           message:
@@ -178,11 +181,19 @@ export function BulletListEditor({
               <button
                 type="button"
                 onClick={() => handleEnhance(b)}
-                disabled={isLoading || loadingBulletId !== null}
+                disabled={
+                  isLoading ||
+                  loadingBulletId !== null ||
+                  Boolean(authUser && aiQuota && aiQuota.enhance.remaining <= 0)
+                }
                 title={
-                  authUser
-                    ? "Perbaiki dengan AI (Gemini)"
-                    : "Masuk untuk perbaiki dengan AI (Gemini)"
+                  !authUser
+                    ? "Masuk untuk perbaiki dengan AI (Gemini)"
+                    : aiQuota && aiQuota.enhance.remaining <= 0
+                      ? "Kuota AI harian habis (reset 00.00 WIB)"
+                      : aiQuota
+                        ? `Perbaiki dengan AI · Sisa ${aiQuota.enhance.remaining}/${aiQuota.enhance.limit} hari ini`
+                        : "Perbaiki dengan AI (Gemini)"
                 }
                 aria-label="Perbaiki poin ini dengan AI"
                 className="p-1 text-[#52525B] hover:text-[#09090B] rounded hover:bg-[#F4F4F5] disabled:opacity-50 transition-colors relative group/ai"

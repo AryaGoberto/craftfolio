@@ -9,6 +9,7 @@ import type {
 import { useResumeStore } from "@/store/use-resume-store";
 import { BulletListEditor } from "@/components/editor/BulletListEditor";
 import { ItemCardWrapper } from "@/components/editor/ItemCardWrapper";
+import { SummaryEditor } from "@/components/editor/SummaryEditor";
 
 const inputClass =
   "w-full h-[34px] px-2.5 text-[13px] text-[#09090B] bg-white border border-[#E4E4E7] rounded-md focus:outline-none focus:ring-1 focus:ring-[#18181B] placeholder:text-[#A1A1AA]";
@@ -39,8 +40,16 @@ const EXPERIENCE_CONFIG: SectionFormConfig = {
   getSubtitle: (it) =>
     [it.startDate, it.endDate].filter(Boolean).join(" – ") as string,
   fields: [
-    { key: "company", label: "Perusahaan / Organisasi" },
-    { key: "position", label: "Posisi / Peran" },
+    {
+      key: "company",
+      label: "Perusahaan / Organisasi",
+      placeholder: "Contoh: PT Teknologi Nusantara",
+    },
+    {
+      key: "position",
+      label: "Posisi / Peran",
+      placeholder: "Contoh: Software Engineer",
+    },
     { key: "startDate", label: "Tanggal Mulai", placeholder: "Jan 2023" },
     { key: "endDate", label: "Tanggal Selesai", placeholder: "Present" },
     {
@@ -65,12 +74,24 @@ const SECTION_CONFIGS: Record<
     getSubtitle: (it) =>
       [it.startDate, it.endDate].filter(Boolean).join(" – ") as string,
     fields: [
-      { key: "institution", label: "Institusi / Universitas" },
-      { key: "degree", label: "Gelar & Jurusan" },
-      { key: "startDate", label: "Tahun Masuk" },
-      { key: "endDate", label: "Tahun Lulus" },
+      {
+        key: "institution",
+        label: "Institusi / Universitas",
+        placeholder: "Contoh: Institut Teknologi Bandung",
+      },
+      {
+        key: "degree",
+        label: "Gelar & Jurusan",
+        placeholder: "Contoh: S1 Teknik Informatika",
+      },
+      { key: "startDate", label: "Tahun Masuk", placeholder: "2019" },
+      { key: "endDate", label: "Tahun Lulus", placeholder: "2023" },
       { key: "gpa", label: "IPK / GPA (opsional)", placeholder: "3.78 / 4.00" },
-      { key: "location", label: "Lokasi (opsional)" },
+      {
+        key: "location",
+        label: "Lokasi (opsional)",
+        placeholder: "Bandung, Indonesia",
+      },
     ],
   },
   projects: {
@@ -79,10 +100,22 @@ const SECTION_CONFIGS: Record<
     getTitle: (it) => String(it.name ?? ""),
     getSubtitle: (it) => String(it.techStack ?? ""),
     fields: [
-      { key: "name", label: "Nama Proyek" },
-      { key: "techStack", label: "Tech Stack" },
-      { key: "date", label: "Tahun / Tanggal" },
-      { key: "url", label: "Tautan (opsional)" },
+      {
+        key: "name",
+        label: "Nama Proyek",
+        placeholder: "Contoh: Craftfolio CV Builder",
+      },
+      {
+        key: "techStack",
+        label: "Tech Stack",
+        placeholder: "Next.js, TypeScript, Tailwind CSS",
+      },
+      { key: "date", label: "Tahun / Tanggal", placeholder: "2025" },
+      {
+        key: "url",
+        label: "Tautan (opsional)",
+        placeholder: "github.com/username/proyek",
+      },
     ],
   },
   skills: {
@@ -161,7 +194,6 @@ type GenericItem = {
 export function SectionBodyForm({ sectionKey }: { sectionKey: SectionKey }) {
   const documents = useResumeStore((s) => s.documents);
   const activeDocumentId = useResumeStore((s) => s.activeDocumentId);
-  const updateSummary = useResumeStore((s) => s.updateSummary);
   const addSectionItem = useResumeStore((s) => s.addSectionItem);
   const updateSectionItem = useResumeStore((s) => s.updateSectionItem);
   const removeSectionItem = useResumeStore((s) => s.removeSectionItem);
@@ -172,20 +204,7 @@ export function SectionBodyForm({ sectionKey }: { sectionKey: SectionKey }) {
   if (!doc) return null;
 
   if (sectionKey === "summary") {
-    return (
-      <div>
-        <label className={labelClass}>
-          Ringkasan Profil (rekomendasi 30–60 kata)
-        </label>
-        <textarea
-          rows={4}
-          value={doc.basics.summary.text}
-          onChange={(e) => updateSummary({ text: e.target.value })}
-          placeholder="Tulis ringkasan singkat mengenai keahlian inti, pengalaman, dan fokus karier Anda..."
-          className="w-full p-2.5 text-[13px] text-[#09090B] bg-white border border-[#E4E4E7] rounded-md focus:outline-none focus:ring-1 focus:ring-[#18181B] placeholder:text-[#A1A1AA]"
-        />
-      </div>
-    );
+    return <SummaryEditor />;
   }
 
   const isCustom = sectionKey.startsWith("custom:");
