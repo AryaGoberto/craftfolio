@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase/config";
 import { toAuthUserProfile } from "@/lib/firebase/auth";
+import { refreshAiQuotaFromServer } from "@/lib/ai/client-fetch";
 import {
   buildMergedWorkspaceState,
   deleteResumeFromCloud,
@@ -71,6 +72,7 @@ export function CloudSyncManager() {
       setAuthUser(profile);
       setAuthLoading(false);
       setCloudSyncStatus("syncing");
+      void refreshAiQuotaFromServer();
 
       try {
         const cloudSnapshot = await fetchUserCloudWorkspace(profile.uid);

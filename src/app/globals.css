@@ -55,3 +55,52 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/* Native top-layer modal dialog backdrop, scroll containment & fade-in / fade-out */
+dialog.auth-dialog {
+  opacity: 0;
+  transition-property: opacity, display, overlay;
+  transition-duration: 0.2s;
+  transition-timing-function: ease-out;
+  transition-behavior: allow-discrete;
+}
+
+dialog.auth-dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog.auth-dialog::backdrop {
+  background-color: rgba(9, 9, 11, 0);
+  backdrop-filter: blur(0px);
+  overflow: hidden;
+  overscroll-behavior: contain;
+  transition-property: background-color, backdrop-filter, display, overlay;
+  transition-duration: 0.2s;
+  transition-timing-function: ease-out;
+  transition-behavior: allow-discrete;
+}
+
+dialog.auth-dialog[open]:where(:not([data-closing])) {
+  opacity: 1;
+
+  @starting-style {
+    opacity: 0;
+  }
+
+  &::backdrop {
+    background-color: rgba(9, 9, 11, 0.48);
+    backdrop-filter: blur(2px);
+
+    @starting-style {
+      background-color: rgba(9, 9, 11, 0);
+      backdrop-filter: blur(0px);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog.auth-dialog,
+  dialog.auth-dialog::backdrop {
+    transition-duration: 0.1s;
+  }
+}

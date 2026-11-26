@@ -644,14 +644,24 @@ export function EditorTopBar({
             )}
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={onOpenAuthModal}
-            title="Masuk untuk simpan ke Cloud"
-            className="inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium text-[#52525B] hover:text-[#09090B] hover:bg-[#F4F4F5] transition-colors"
-          >
-            Masuk
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={onOpenAuthModal}
+              title="Masuk untuk simpan ke Cloud"
+              className="inline-flex items-center h-8 px-2.5 sm:px-3 rounded-md text-[12px] font-medium text-[#52525B] hover:text-[#09090B] hover:bg-[#F4F4F5] transition-colors"
+            >
+              Masuk
+            </button>
+            <button
+              type="button"
+              onClick={() => openAuthModal(undefined, "signup")}
+              title="Buat akun gratis untuk simpan ke Cloud & fitur AI"
+              className="hidden sm:inline-flex items-center h-8 px-2.5 rounded-md bg-white border border-[#E4E4E7] text-[12px] font-medium text-[#09090B] hover:bg-[#F4F4F5] transition-colors"
+            >
+              Daftar
+            </button>
+          </div>
         )}
 
         {/* Primary CTA */}

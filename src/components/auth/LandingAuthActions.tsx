@@ -88,15 +88,12 @@ export function LandingAuthActions() {
         </Link>
       </div>
 
-      {authModalMode !== null && (
-        <AuthModal
-          key={authModalMode}
-          open={true}
-          initialMode={authModalMode}
-          onClose={() => setAuthModalMode(null)}
-          onAuthSuccess={() => router.push("/dashboard")}
-        />
-      )}
+      <AuthModal
+        open={authModalMode !== null}
+        initialMode={authModalMode ?? "signin"}
+        onClose={() => setAuthModalMode(null)}
+        onAuthSuccess={() => router.push("/dashboard")}
+      />
     </>
   );
 }

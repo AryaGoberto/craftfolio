@@ -27,6 +27,7 @@ export default function EditorPage() {
   const authLoading = useResumeStore((s) => s.authLoading);
   const cloudSyncStatus = useResumeStore((s) => s.cloudSyncStatus);
   const authModalOpen = useResumeStore((s) => s.authModalOpen);
+  const authModalMode = useResumeStore((s) => s.authModalMode);
   const authModalReason = useResumeStore((s) => s.authModalReason);
   const openAuthModal = useResumeStore((s) => s.openAuthModal);
   const closeAuthModal = useResumeStore((s) => s.closeAuthModal);
@@ -235,6 +236,7 @@ export default function EditorPage() {
 
       <AuthModal
         open={authModalOpen}
+        initialMode={authModalMode}
         onClose={closeAuthModal}
         reason={authModalReason ?? undefined}
       />
