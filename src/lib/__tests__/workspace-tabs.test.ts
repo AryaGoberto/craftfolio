@@ -300,8 +300,9 @@ describe("Workspace Tabs & File Tree Store", () => {
 
     useResumeStore
       .getState()
-      .openAuthModal("Masuk untuk menggunakan asisten AI Gemini.");
+      .openAuthModal("Masuk untuk menggunakan asisten AI Gemini.", "signup");
     expect(useResumeStore.getState().authModalOpen).toBe(true);
+    expect(useResumeStore.getState().authModalMode).toBe("signup");
     expect(useResumeStore.getState().authModalReason).toBe(
       "Masuk untuk menggunakan asisten AI Gemini."
     );

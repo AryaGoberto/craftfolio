@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, Eye, FileSearch, Minus, Plus } from "lucide-react";
+import { AlertTriangle, Eye, FileSearch, Minus, Plus, Sparkles } from "lucide-react";
 import { useResumeStore } from "@/store/use-resume-store";
 import { PAPER_DIMENSIONS } from "@/lib/template-tokens";
 import { ResumeHtmlRenderer } from "@/components/preview/ResumeHtmlRenderer";
@@ -16,8 +16,10 @@ export function PreviewPanel({ onPageStatsChange }: PreviewPanelProps) {
   const activeDocumentId = useResumeStore((s) => s.activeDocumentId);
   const previewZoom = useResumeStore((s) => s.previewZoom);
   const previewMode = useResumeStore((s) => s.previewMode);
+  const showGhostPreview = useResumeStore((s) => s.showGhostPreview);
   const setPreviewZoom = useResumeStore((s) => s.setPreviewZoom);
   const setPreviewMode = useResumeStore((s) => s.setPreviewMode);
+  const toggleGhostPreview = useResumeStore((s) => s.toggleGhostPreview);
   const updateConfig = useResumeStore((s) => s.updateConfig);
 
   const doc = documents[activeDocumentId];
@@ -95,8 +97,24 @@ export function PreviewPanel({ onPageStatsChange }: PreviewPanelProps) {
           </button>
         </div>
 
-        {/* Right Controls: Paper, Zoom, Page Counter */}
-        <div className="flex items-center gap-2.5 text-[12px]">
+        {/* Right Controls: Ghost Guide, Paper, Zoom, Page Counter */}
+        <div className="flex items-center gap-2 text-[12px]">
+          {previewMode === "visual" && (
+            <button
+              type="button"
+              onClick={() => toggleGhostPreview()}
+              aria-pressed={showGhostPreview}
+              title="Tampilkan/sembunyikan teks contoh panduan (abu-abu) pada bagian kosong. Teks panduan tidak pernah ikut terekspor ke PDF."
+              className={`hidden md:inline-flex items-center gap-1 px-2 py-1 rounded border text-[11px] font-medium transition-colors ${
+                showGhostPreview
+                  ? "bg-white border-[#18181B] text-[#09090B]"
+                  : "bg-[#F4F4F5] border-[#E4E4E7] text-[#52525B] hover:text-[#09090B]"
+              }`}
+            >
+              <Sparkles className="w-3 h-3" />
+              <span>Panduan: {showGhostPreview ? "ON" : "OFF"}</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() =>
@@ -191,7 +209,10 @@ export function PreviewPanel({ onPageStatsChange }: PreviewPanelProps) {
               }}
               className="relative shadow-xl border border-[#E4E4E7] bg-white"
             >
-              <ResumeHtmlRenderer doc={doc} />
+              <ResumeHtmlRenderer
+                doc={doc}
+                showGhostPlaceholders={showGhostPreview}
+              />
 
               {/* Page Break Indicators */}
               {Array.from({ length: Math.max(0, pageCount - 1) }).map((_, idx) => (

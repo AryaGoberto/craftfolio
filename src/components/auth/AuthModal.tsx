@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -55,6 +55,51 @@ function GoogleIcon() {
   );
 }
 
+let supportsDisplayTransitionCache: boolean | undefined;
+
+function canTransitionDisplay(): boolean {
+  if (supportsDisplayTransitionCache !== undefined) {
+    return supportsDisplayTransitionCache;
+  }
+  if (
+    typeof window === "undefined" ||
+    !window.CSS?.supports?.("transition-behavior", "allow-discrete") ||
+    !document.body
+  ) {
+    return false;
+  }
+  const probe = document.createElement("div");
+  probe.style.cssText =
+    "transition: display 1s allow-discrete !important; display: block;";
+  document.body.appendChild(probe);
+  void getComputedStyle(probe).display;
+  probe.style.display = "none";
+  supportsDisplayTransitionCache = getComputedStyle(probe).display === "block";
+  probe.remove();
+  return supportsDisplayTransitionCache;
+}
+
+function supportsTopLayerExit(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    Boolean(window.CSS?.supports?.("overlay", "auto")) &&
+    canTransitionDisplay()
+  );
+}
+
+function isPointerOutsideDialog(
+  e: React.PointerEvent<HTMLDialogElement>,
+  dialog: HTMLDialogElement
+): boolean {
+  const rect = dialog.getBoundingClientRect();
+  return (
+    e.clientX < rect.left ||
+    e.clientX > rect.right ||
+    e.clientY < rect.top ||
+    e.clientY > rect.bottom
+  );
+}
+
 export function AuthModal({
   open,
   onClose,
@@ -62,7 +107,12 @@ export function AuthModal({
   reason,
   onAuthSuccess,
 }: AuthModalProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const pressedOutsideRef = useRef(false);
+
   const [mode, setMode] = useState<AuthMode>(initialMode);
+  const [prevOpen, setPrevOpen] = useState(open);
+  const [prevInitialMode, setPrevInitialMode] = useState(initialMode);
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -72,18 +122,95 @@ export function AuthModal({
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
+  if (open !== prevOpen || initialMode !== prevInitialMode) {
+    setPrevOpen(open);
+    setPrevInitialMode(initialMode);
+    if (open) {
+      setMode(initialMode);
+      setError(null);
+      setInfo(null);
+    }
+  }
+
   const firebaseReady = isFirebaseConfigured();
 
-  useEffect(() => {
-    if (!open) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
+  const requestClose = useCallback(async () => {
+    const dialog = dialogRef.current;
+    if (!dialog) {
+      onClose();
+      return;
+    }
+    if (!dialog.open) {
+      dialog.removeAttribute("data-closing");
+      onClose();
+      return;
+    }
+    if (!supportsTopLayerExit()) {
+      if (dialog.hasAttribute("data-closing")) return;
+      dialog.setAttribute("data-closing", "");
+      const animations = dialog.getAnimations({ subtree: true });
+      if (animations.length > 0) {
+        await Promise.race([
+          Promise.allSettled(animations.map((a) => a.finished)),
+          new Promise((resolve) => setTimeout(resolve, 400)),
+        ]);
+      }
+      if (!dialog.hasAttribute("data-closing")) return;
+      dialog.removeAttribute("data-closing");
+    }
+    if (dialog.open) {
+      dialog.close();
+    }
+  }, [onClose]);
 
-  if (!open) return null;
+  // Sync open prop with native top-layer <dialog>.showModal() / animated close
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    if (open) {
+      dialog.removeAttribute("data-closing");
+      if (!dialog.open) {
+        dialog.showModal();
+      }
+    } else if (dialog.open) {
+      void requestClose();
+    }
+  }, [open, requestClose]);
+
+  const handleNativeClose = () => {
+    const dialog = dialogRef.current;
+    if (dialog) {
+      dialog.removeAttribute("data-closing");
+      dialog.returnValue = "";
+    }
+    onClose();
+  };
+
+  const handleCancel = (e: React.SyntheticEvent<HTMLDialogElement>) => {
+    e.preventDefault();
+    void requestClose();
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDialogElement>) => {
+    const dialog = dialogRef.current;
+    if (!dialog || "closedBy" in HTMLDialogElement.prototype) return;
+    pressedOutsideRef.current =
+      e.target === dialog && isPointerOutsideDialog(e, dialog);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDialogElement>) => {
+    const dialog = dialogRef.current;
+    if (!dialog || "closedBy" in HTMLDialogElement.prototype) return;
+    const shouldDismiss =
+      pressedOutsideRef.current &&
+      e.target === dialog &&
+      isPointerOutsideDialog(e, dialog);
+    pressedOutsideRef.current = false;
+    if (shouldDismiss) {
+      void requestClose();
+    }
+  };
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
@@ -98,7 +225,7 @@ export function AuthModal({
     try {
       await signInWithGoogle();
       onAuthSuccess?.();
-      onClose();
+      requestClose();
     } catch (err) {
       setError(mapFirebaseAuthError(err));
     } finally {
@@ -145,7 +272,7 @@ export function AuthModal({
         await signInWithEmail(trimmedEmail, password);
       }
       onAuthSuccess?.();
-      onClose();
+      requestClose();
     } catch (err) {
       setError(mapFirebaseAuthError(err));
     } finally {
@@ -156,23 +283,23 @@ export function AuthModal({
   const isBusy = submitting || googleSubmitting;
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px] flex items-center justify-center p-4"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      ref={dialogRef}
       aria-labelledby="auth-modal-title"
+      onCancel={handleCancel}
+      onClose={handleNativeClose}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      {...({ closedby: "any" } as Record<string, string>)}
+      className="auth-dialog m-auto w-[calc(100%-2rem)] max-w-md max-h-[90dvh] overflow-y-auto p-0 bg-white border border-[#E4E4E7] rounded-xl shadow-2xl text-[#09090B]"
     >
-      <div
-        className="w-full max-w-md bg-white border border-[#E4E4E7] rounded-xl shadow-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="w-full">
         {/* Header */}
         <div className="px-5 py-4 border-b border-[#E4E4E7] flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <BrandLogo className="h-6 w-auto shrink-0" />
             <div>
-              <h2
+              <h1
                 id="auth-modal-title"
                 className="text-[14px] font-semibold text-[#09090B]"
               >
@@ -181,7 +308,7 @@ export function AuthModal({
                   : mode === "signup"
                     ? "Buat Akun Craftfolio"
                     : "Reset Kata Sandi"}
-              </h2>
+              </h1>
               <p className="text-[11px] text-[#52525B]">
                 Sinkronkan CV lintas perangkat via Firebase Firestore
               </p>
@@ -189,8 +316,9 @@ export function AuthModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => void requestClose()}
             aria-label="Tutup modal autentikasi"
+            title="Tutup (Esc)"
             className="p-1.5 rounded-md text-[#52525B] hover:text-[#09090B] hover:bg-[#F4F4F5] transition-colors"
           >
             <X className="w-4 h-4" />
@@ -432,8 +560,19 @@ export function AuthModal({
               </button>
             )}
           </form>
+
+          <div className="pt-2 border-t border-[#F4F4F5] flex items-center justify-between text-[11px] text-[#71717A]">
+            <span>Tetap lanjut tanpa login?</span>
+            <button
+              type="button"
+              onClick={() => void requestClose()}
+              className="px-2.5 py-1 rounded-md text-[11.5px] font-medium text-[#52525B] hover:text-[#09090B] hover:bg-[#F4F4F5] transition-colors"
+            >
+              Tutup
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ResumeDocument, SectionKey } from "@/lib/schemas/resume";
+import { getGhostPreviewData } from "@/lib/ghost-preview-data";
 import {
   getVisibleNonEmptyBullets,
   isNonEmptyAwardItem,
@@ -22,10 +23,16 @@ import {
 
 interface ResumeHtmlRendererProps {
   doc: ResumeDocument;
+  /** When true, displays muted display-only placeholder examples for empty fields/sections. Never exported to PDF/LaTeX. */
+  showGhostPlaceholders?: boolean;
 }
 
-export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
+export function ResumeHtmlRenderer({
+  doc,
+  showGhostPlaceholders = false,
+}: ResumeHtmlRendererProps) {
   const { basics, sections, config } = doc;
+  const ghost = showGhostPlaceholders ? getGhostPreviewData(doc.language) : null;
   const density = DENSITY_TOKENS[config.density];
   const paper = PAPER_DIMENSIONS[config.paperSize];
   const fontFamily = HTML_FONT_FAMILIES[config.fontFamily];
@@ -51,19 +58,23 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
     ...(isClassic ? [] : [basics.location?.trim()]),
   ].filter((v): v is string => Boolean(v));
 
-  const renderSectionHeading = (title: string) => (
+  const renderSectionHeading = (title: string, isGhost = false) => (
     <h2
       style={{
         fontSize: `${density.headingSizePt}pt`,
         fontVariant: isClassic ? "small-caps" : "normal",
         letterSpacing: isClassic ? "0.02em" : isModern ? "0.04em" : "0.06em",
-        borderBottom: isModern ? "1px solid #D4D4D8" : "0.6pt solid #000000",
+        borderBottom: isGhost
+          ? "0.6pt solid #D4D4D8"
+          : isModern
+            ? "1px solid #D4D4D8"
+            : "0.6pt solid #000000",
         paddingBottom: "1.5pt",
         marginBottom: "4.5pt",
       }}
-      className={`${
-        isClassic ? "font-normal" : "font-bold uppercase"
-      } text-[#000000]`}
+      className={`${isClassic ? "font-normal" : "font-bold uppercase"} ${
+        isGhost ? "text-[#A1A1AA] select-none" : "text-[#000000]"
+      }`}
     >
       {isClassic ? normalizeSmallCapsTitle(title) : title}
     </h2>
@@ -74,17 +85,30 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
   const renderSection = (key: SectionKey) => {
     if (key === "summary") {
       const normalizedSummary = normalizeParagraphText(basics.summary.text);
-      if (!basics.summary.isVisible || !normalizedSummary) return null;
-      const paragraphs = normalizedSummary.split("\n\n");
+      if (!basics.summary.isVisible) return null;
+      const isGhostSummary = !normalizedSummary && Boolean(ghost);
+      const textToRender = normalizedSummary || (ghost ? ghost.summary : "");
+      if (!textToRender) return null;
+      const paragraphs = textToRender.split("\n\n");
       return (
-        <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
+        <section
+          key={key}
+          style={{ marginBottom: `${density.sectionGapPt}pt` }}
+          className={isGhostSummary ? "select-none" : undefined}
+        >
           {!isClassic &&
             renderSectionHeading(
-              doc.language === "id" ? "Ringkasan Profesional" : "Summary"
+              doc.language === "id" ? "Ringkasan Profesional" : "Summary",
+              isGhostSummary
             )}
           <div className="space-y-1.5 w-full">
             {paragraphs.map((para, idx) => (
-              <p key={idx} className="w-full text-[#09090B] text-justify">
+              <p
+                key={idx}
+                className={`w-full text-justify ${
+                  isGhostSummary ? "text-[#A1A1AA]" : "text-[#09090B]"
+                }`}
+              >
                 {para}
               </p>
             ))}
@@ -161,13 +185,22 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
       case "experience":
       case "volunteering": {
         const group = sections[key];
-        const visibleItems = group.items.filter(
+        const realItems = group.items.filter(
           (it) => it.isVisible && isNonEmptyExperienceItem(it)
         );
+        const isGhostSection =
+          key === "experience" && realItems.length === 0 && Boolean(ghost);
+        const visibleItems = isGhostSection && ghost ? ghost.experience : realItems;
         if (!group.isVisible || visibleItems.length === 0) return null;
+        const primaryText = isGhostSection ? "text-[#A1A1AA]" : "text-[#09090B]";
+        const secondaryText = isGhostSection ? "text-[#A1A1AA]" : "text-[#18181B]";
         return (
-          <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
-            {renderSectionHeading(group.title)}
+          <section
+            key={key}
+            style={{ marginBottom: `${density.sectionGapPt}pt` }}
+            className={isGhostSection ? "select-none" : undefined}
+          >
+            {renderSectionHeading(group.title, isGhostSection)}
             <div
               className={`flex flex-col ${listIndentClass}`}
               style={{ gap: `${density.itemGapPt}pt` }}
@@ -176,14 +209,14 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                 <div key={item.id}>
                   {/* Line 1: Bold Role/Position (left) + Dates (right) */}
                   <div className="flex items-baseline justify-between gap-4">
-                    <div className="font-bold text-[#09090B]">
+                    <div className={`font-bold ${primaryText}`}>
                       {isClassic
                         ? item.position || item.company
                         : [item.company, item.position].filter(Boolean).join(" — ")}
                     </div>
                     {(item.startDate || item.endDate) && (
                       <span
-                        className="shrink-0 text-[#18181B]"
+                        className={`shrink-0 ${secondaryText}`}
                         style={{
                           fontSize: `${isClassic ? effectiveBodyPt : subBodyPt}pt`,
                         }}
@@ -195,7 +228,7 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                   {/* Line 2: Italic Company - Location */}
                   {(isClassic ? item.company || item.location : item.location) && (
                     <div
-                      className="text-[#18181B] italic"
+                      className={`${secondaryText} italic`}
                       style={{ fontSize: `${subBodyPt}pt` }}
                     >
                       {isClassic
@@ -214,7 +247,7 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                       {item.bullets
                         .filter((b) => b.isVisible && b.text.trim())
                         .map((b) => (
-                          <li key={b.id} className="text-[#18181B]">
+                          <li key={b.id} className={secondaryText}>
                             {normalizeParagraphText(b.text)}
                           </li>
                         ))}
@@ -229,13 +262,21 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
 
       case "education": {
         const group = sections.education;
-        const visibleItems = group.items.filter(
+        const realItems = group.items.filter(
           (it) => it.isVisible && isNonEmptyEducationItem(it)
         );
+        const isGhostSection = realItems.length === 0 && Boolean(ghost);
+        const visibleItems = isGhostSection && ghost ? ghost.education : realItems;
         if (!group.isVisible || visibleItems.length === 0) return null;
+        const primaryText = isGhostSection ? "text-[#A1A1AA]" : "text-[#09090B]";
+        const secondaryText = isGhostSection ? "text-[#A1A1AA]" : "text-[#18181B]";
         return (
-          <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
-            {renderSectionHeading(group.title)}
+          <section
+            key={key}
+            style={{ marginBottom: `${density.sectionGapPt}pt` }}
+            className={isGhostSection ? "select-none" : undefined}
+          >
+            {renderSectionHeading(group.title, isGhostSection)}
             <div
               className={`flex flex-col ${listIndentClass}`}
               style={{ gap: `${density.itemGapPt}pt` }}
@@ -244,12 +285,12 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                 <div key={item.id}>
                   {/* Line 1: Bold Institution (left) + Location (right) */}
                   <div className="flex items-baseline justify-between gap-4">
-                    <div className="font-bold text-[#09090B]">
+                    <div className={`font-bold ${primaryText}`}>
                       {item.institution}
                     </div>
                     {item.location && (
                       <span
-                        className="shrink-0 text-[#18181B]"
+                        className={`shrink-0 ${secondaryText}`}
                         style={{
                           fontSize: `${isClassic ? effectiveBodyPt : subBodyPt}pt`,
                         }}
@@ -260,7 +301,7 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                   </div>
                   {/* Line 2: Italic Degree + GPA (left) + Italic Dates (right) */}
                   <div
-                    className="flex items-baseline justify-between gap-4 italic text-[#18181B]"
+                    className={`flex items-baseline justify-between gap-4 italic ${secondaryText}`}
                     style={{ fontSize: `${subBodyPt}pt` }}
                   >
                     <div>
@@ -283,13 +324,21 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
 
       case "projects": {
         const group = sections.projects;
-        const visibleItems = group.items.filter(
+        const realItems = group.items.filter(
           (it) => it.isVisible && isNonEmptyProjectItem(it)
         );
+        const isGhostSection = realItems.length === 0 && Boolean(ghost);
+        const visibleItems = isGhostSection && ghost ? ghost.projects : realItems;
         if (!group.isVisible || visibleItems.length === 0) return null;
+        const primaryText = isGhostSection ? "text-[#A1A1AA]" : "text-[#09090B]";
+        const secondaryText = isGhostSection ? "text-[#A1A1AA]" : "text-[#18181B]";
         return (
-          <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
-            {renderSectionHeading(group.title)}
+          <section
+            key={key}
+            style={{ marginBottom: `${density.sectionGapPt}pt` }}
+            className={isGhostSection ? "select-none" : undefined}
+          >
+            {renderSectionHeading(group.title, isGhostSection)}
             <div
               className={`flex flex-col ${listIndentClass}`}
               style={{ gap: `${density.itemGapPt}pt` }}
@@ -297,10 +346,10 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
               {visibleItems.map((item) => (
                 <div key={item.id}>
                   <div className="flex items-baseline justify-between gap-4">
-                    <div className="text-[#09090B]">
+                    <div className={primaryText}>
                       <span className="font-bold">{item.name}</span>
                       {item.techStack ? (
-                        <span className="italic text-[#18181B]">
+                        <span className={`italic ${secondaryText}`}>
                           {" "}
                           | {item.techStack}
                         </span>
@@ -308,7 +357,7 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                     </div>
                     {item.date && (
                       <span
-                        className="shrink-0 text-[#18181B]"
+                        className={`shrink-0 ${secondaryText}`}
                         style={{
                           fontSize: `${isClassic ? effectiveBodyPt : subBodyPt}pt`,
                         }}
@@ -319,7 +368,7 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                   </div>
                   {item.url && (
                     <div
-                      className="text-[#3F3F46] italic underline underline-offset-[3px] decoration-[0.75px]"
+                      className={`${isGhostSection ? "text-[#A1A1AA]" : "text-[#3F3F46]"} italic underline underline-offset-[3px] decoration-[0.75px]`}
                       style={{ fontSize: `${subBodyPt}pt` }}
                     >
                       {item.url}
@@ -336,7 +385,7 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
                       {item.bullets
                         .filter((b) => b.isVisible && b.text.trim())
                         .map((b) => (
-                          <li key={b.id} className="text-[#18181B]">
+                          <li key={b.id} className={secondaryText}>
                             {normalizeParagraphText(b.text)}
                           </li>
                         ))}
@@ -351,19 +400,28 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
 
       case "skills": {
         const group = sections.skills;
-        const visibleItems = group.items.filter(
+        const realItems = group.items.filter(
           (it) => it.isVisible && isNonEmptySkillItem(it)
         );
+        const isGhostSection = realItems.length === 0 && Boolean(ghost);
+        const visibleItems = isGhostSection && ghost ? ghost.skills : realItems;
         if (!group.isVisible || visibleItems.length === 0) return null;
         return (
-          <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
-            {renderSectionHeading(group.title)}
+          <section
+            key={key}
+            style={{ marginBottom: `${density.sectionGapPt}pt` }}
+            className={isGhostSection ? "select-none" : undefined}
+          >
+            {renderSectionHeading(group.title, isGhostSection)}
             <div
               className={`flex flex-col ${listIndentClass}`}
               style={{ gap: `${density.bulletGapPt}pt` }}
             >
               {visibleItems.map((item) => (
-                <div key={item.id} className="text-[#18181B]">
+                <div
+                  key={item.id}
+                  className={isGhostSection ? "text-[#A1A1AA]" : "text-[#18181B]"}
+                >
                   {item.category ? (
                     <span className="font-bold">{item.category}: </span>
                   ) : null}
@@ -491,26 +549,39 @@ export function ResumeHtmlRenderer({ doc }: ResumeHtmlRendererProps) {
             fontSize: `${density.nameSizePt + (isClassic ? 2 : 0)}pt`,
             lineHeight: 1.18,
           }}
-          className={`font-bold text-[#000000] ${
-            isClassic ? "tracking-normal" : "tracking-wide uppercase"
-          }`}
+          className={`font-bold ${
+            basics.fullName.trim()
+              ? "text-[#000000]"
+              : "text-[#A1A1AA] select-none"
+          } ${isClassic ? "tracking-normal" : "tracking-wide uppercase"}`}
         >
-          {basics.fullName.trim() || "Nama Lengkap"}
+          {basics.fullName.trim() || ghost?.fullName || "Nama Lengkap"}
         </h1>
-        {basics.headline?.trim() && isExecutive && (
+        {isExecutive && (basics.headline?.trim() || ghost?.headline) && (
           <p
             style={{ fontSize: `${subBodyPt + 0.5}pt` }}
-            className="text-[#52525B] mt-0.5 font-medium"
+            className={`mt-0.5 font-medium ${
+              basics.headline?.trim()
+                ? "text-[#52525B]"
+                : "text-[#A1A1AA] select-none"
+            }`}
           >
-            {basics.headline}
+            {basics.headline?.trim() || ghost?.headline}
           </p>
         )}
-        {contactItems.length > 0 && (
+        {(contactItems.length > 0 || Boolean(ghost)) && (
           <p
             style={{ fontSize: `${subBodyPt}pt` }}
-            className="text-[#18181B] mt-1 leading-relaxed"
+            className={`mt-1 leading-relaxed ${
+              contactItems.length > 0
+                ? "text-[#18181B]"
+                : "text-[#A1A1AA] select-none"
+            }`}
           >
-            {contactItems.map((part, idx) => (
+            {(contactItems.length > 0
+              ? contactItems
+              : ghost?.contactItems ?? []
+            ).map((part, idx) => (
               <span key={idx}>
                 {idx > 0 ? (isClassic ? "  |  " : "  •  ") : ""}
                 <span

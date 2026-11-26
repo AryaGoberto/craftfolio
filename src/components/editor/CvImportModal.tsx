@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { extractResumeFileText } from "@/lib/cv-file-extractor";
+import { postAuthenticatedAiJson } from "@/lib/ai/client-fetch";
 import type { ResumeDocument } from "@/lib/schemas/resume";
 import { useResumeStore } from "@/store/use-resume-store";
 
@@ -24,6 +25,7 @@ export function CvImportModal({ open, onClose }: CvImportModalProps) {
   const documents = useResumeStore((s) => s.documents);
   const activeDocumentId = useResumeStore((s) => s.activeDocumentId);
   const authUser = useResumeStore((s) => s.authUser);
+  const aiQuota = useResumeStore((s) => s.aiQuota);
   const openAuthModal = useResumeStore((s) => s.openAuthModal);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -98,22 +100,23 @@ export function CvImportModal({ open, onClose }: CvImportModalProps) {
     setIsParsingAi(true);
 
     try {
-      const res = await fetch("/api/ai/parse-cv", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          rawText: trimmed,
-          preferredLanguage,
-        }),
-      });
-
-      const data = (await res.json()) as {
+      const { ok, status, data } = await postAuthenticatedAiJson<{
         document?: ResumeDocument;
         warnings?: string[];
-        error?: string;
-      };
+      }>("/api/ai/parse-cv", {
+        rawText: trimmed,
+        preferredLanguage,
+      });
 
-      if (!res.ok || !data.document) {
+      if (status === 401) {
+        openAuthModal(
+          data.error ||
+            "Masuk ke akun Craftfolio terlebih dahulu untuk menggunakan fitur Import CV."
+        );
+        return;
+      }
+
+      if (!ok || !data.document) {
         setErrorMessage(
           data.error ||
             "Gagal memetakan teks CV ke format Craftfolio. Silakan coba lagi."
@@ -387,7 +390,9 @@ export function CvImportModal({ open, onClose }: CvImportModalProps) {
           {!parsedDoc ? (
             <>
               <span className="text-[11px] text-[#71717A]">
-                Dokumen yang sudah ada tidak akan tertimpa.
+                {authUser && aiQuota
+                  ? `Sisa Import CV: ${aiQuota.import.remaining}/${aiQuota.import.limit} hari ini · Reset 00.00 WIB`
+                  : "Dokumen yang sudah ada tidak akan tertimpa."}
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -401,7 +406,10 @@ export function CvImportModal({ open, onClose }: CvImportModalProps) {
                   type="button"
                   onClick={handleParseWithGemini}
                   disabled={
-                    isReadingFile || isParsingAi || rawText.trim().length < 30
+                    isReadingFile ||
+                    isParsingAi ||
+                    rawText.trim().length < 30 ||
+                    Boolean(authUser && aiQuota && aiQuota.import.remaining <= 0)
                   }
                   className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-md bg-[#18181B] hover:bg-[#27272A] disabled:opacity-50 text-white text-[12px] font-medium"
                 >

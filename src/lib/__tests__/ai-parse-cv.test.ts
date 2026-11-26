@@ -1,12 +1,18 @@
 import zlib from "node:zlib";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { extractTextFromDocxBuffer } from "@/lib/cv-file-extractor";
 import {
   buildResumeDocumentFromParsed,
   handleParseCvPost,
   type ParsedCvPayload,
 } from "@/lib/ai/cv-importer";
+import { resetAiQuotaStoreForTests } from "@/lib/ai/quota";
 import { ResumeDocumentSchema } from "@/lib/schemas/resume";
+
+const mockAuthOk = async () => ({
+  uid: "uid-test-parse",
+  email: "user@example.com",
+});
 
 /** Builds a minimal valid uncompressed/deflated DOCX ZIP container containing `word/document.xml`. */
 function createSyntheticDocxBuffer(xmlText: string, compress = true): Uint8Array {
@@ -84,8 +90,13 @@ describe("extractTextFromDocxBuffer", () => {
 });
 
 describe("buildResumeDocumentFromParsed & POST /api/ai/parse-cv", () => {
+  beforeEach(() => {
+    resetAiQuotaStoreForTests();
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
+    resetAiQuotaStoreForTests();
   });
 
   it("hydrates parsed payload into a valid ResumeDocument, blocks unsafe URLs, and surfaces review warnings", () => {
@@ -145,14 +156,31 @@ describe("buildResumeDocumentFromParsed & POST /api/ai/parse-cv", () => {
     expect(warnings.some((w) => w.toLowerCase().includes("tanggal"))).toBe(true);
   });
 
-  it("returns 400 when rawText is too short", async () => {
+  it("returns 401 AI_AUTH_REQUIRED when Authorization header is missing", async () => {
     const req = new Request("http://localhost:3000/api/ai/parse-cv", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rawText: "too short" }),
+      body: JSON.stringify({
+        rawText:
+          "Budi Santoso\nBackend Engineer\nExperience: PT Solusi Digital (2022 - Present)",
+      }),
     });
 
     const res = await handleParseCvPost(req);
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 when rawText is too short", async () => {
+    const req = new Request("http://localhost:3000/api/ai/parse-cv", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer valid-token",
+      },
+      body: JSON.stringify({ rawText: "too short" }),
+    });
+
+    const res = await handleParseCvPost(req, { verifyIdToken: mockAuthOk });
     expect(res.status).toBe(400);
   });
 
@@ -161,14 +189,17 @@ describe("buildResumeDocumentFromParsed & POST /api/ai/parse-cv", () => {
 
     const req = new Request("http://localhost:3000/api/ai/parse-cv", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer valid-token",
+      },
       body: JSON.stringify({
         rawText:
           "Budi Santoso\nBackend Engineer\nExperience: PT Solusi Digital (2022 - Present)\nEducation: Universitas Indonesia",
       }),
     });
 
-    const res = await handleParseCvPost(req);
+    const res = await handleParseCvPost(req, { verifyIdToken: mockAuthOk });
     expect(res.status).toBe(503);
     const body = (await res.json()) as { code: string };
     expect(body.code).toBe("AI_UNAVAILABLE");

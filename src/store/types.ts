@@ -6,6 +6,7 @@ import type {
 } from "@/lib/schemas/resume";
 import type { AppLanguage } from "@/lib/i18n";
 import type { AuthUserProfile } from "@/lib/firebase/auth";
+import type { AiQuotaSnapshot } from "@/lib/ai/quota";
 
 export type SaveStatus = "saved" | "saving" | "unsaved";
 export type CloudSyncStatus = "idle" | "syncing" | "synced" | "error" | "offline";
@@ -107,13 +108,16 @@ export interface UiSliceState {
   mobileTab: "edit" | "preview";
   previewZoom: number;
   previewMode: "visual" | "xray";
+  showGhostPreview: boolean;
   isFileTreeOpen: boolean;
   hasHydrated: boolean;
 
   authUser: AuthUserProfile | null;
   authLoading: boolean;
   authModalOpen: boolean;
+  authModalMode: "signin" | "signup";
   authModalReason: string | null;
+  aiQuota: AiQuotaSnapshot | null;
   cloudSyncStatus: CloudSyncStatus;
   cloudSyncError: string | null;
   lastSyncedAt: string | null;
@@ -126,12 +130,14 @@ export interface UiSliceActions {
   setMobileTab: (tab: "edit" | "preview") => void;
   setPreviewZoom: (zoom: number) => void;
   setPreviewMode: (mode: "visual" | "xray") => void;
+  toggleGhostPreview: (show?: boolean) => void;
   toggleFileTree: (open?: boolean) => void;
 
-  openAuthModal: (reason?: string) => void;
+  openAuthModal: (reason?: string, mode?: "signin" | "signup") => void;
   closeAuthModal: () => void;
   setAuthUser: (user: AuthUserProfile | null) => void;
   setAuthLoading: (loading: boolean) => void;
+  setAiQuota: (quota: AiQuotaSnapshot | null) => void;
   setCloudSyncStatus: (status: CloudSyncStatus, error?: string | null) => void;
   triggerManualSync: () => void;
   applyCloudWorkspace: (payload: PersistedResumeState) => void;

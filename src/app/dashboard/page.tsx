@@ -311,14 +311,11 @@ export default function DashboardPage() {
         )}
       </main>
 
-      {authModalMode !== null && (
-        <AuthModal
-          key={authModalMode}
-          open={true}
-          initialMode={authModalMode}
-          onClose={() => setAuthModalMode(null)}
-        />
-      )}
+      <AuthModal
+        open={authModalMode !== null}
+        initialMode={authModalMode ?? "signin"}
+        onClose={() => setAuthModalMode(null)}
+      />
     </div>
   );
 }

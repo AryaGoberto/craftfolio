@@ -87,6 +87,13 @@ export async function logOut(): Promise<void> {
   await signOut(auth);
 }
 
+export async function getCurrentUserIdToken(): Promise<string | null> {
+  const auth = getFirebaseAuth();
+  const user = auth?.currentUser;
+  if (!user) return null;
+  return user.getIdToken();
+}
+
 export function mapFirebaseAuthError(error: unknown): string {
   const code =
     typeof error === "object" &&
