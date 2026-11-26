@@ -13,8 +13,12 @@ import {
   buildAiUnavailableResponse,
   getGeminiLanguageModel,
   isGeminiConfigured,
-  mapAiErrorResponse,
 } from "@/lib/ai/gemini";
+import {
+  authenticateAiRequest,
+  type VerifyFirebaseIdTokenFn,
+} from "@/lib/ai/auth-guard";
+import { executeWithAiQuota } from "@/lib/ai/quota";
 
 const MAX_PARSE_BODY_BYTES = 128 * 1024;
 
@@ -130,6 +134,7 @@ export type ParsedCvPayload = z.infer<typeof ParsedCvPayloadSchema>;
 export type ParseCvRequest = z.infer<typeof ParseCvRequestSchema>;
 
 export interface ParseCvDeps {
+  verifyIdToken?: VerifyFirebaseIdTokenFn;
   extractStructuredCv?: (input: ParseCvRequest) => Promise<ParsedCvPayload>;
 }
 
@@ -436,6 +441,11 @@ export async function handleParseCvPost(
   request: Request,
   deps?: ParseCvDeps
 ): Promise<NextResponse> {
+  const auth = await authenticateAiRequest(request, deps?.verifyIdToken);
+  if (!auth.ok) {
+    return auth.response;
+  }
+
   let rawText: string;
   try {
     rawText = await request.text();
@@ -478,21 +488,25 @@ export async function handleParseCvPost(
     return buildAiUnavailableResponse();
   }
 
-  try {
-    const extractStructuredCv =
-      deps?.extractStructuredCv ?? defaultExtractStructuredCv;
-    const rawStructured = await extractStructuredCv(parsed.data);
-    const { document, warnings } = buildResumeDocumentFromParsed(rawStructured);
+  const extractStructuredCv =
+    deps?.extractStructuredCv ?? defaultExtractStructuredCv;
 
-    return NextResponse.json(
-      {
-        document,
-        warnings,
-        aiGenerated: true,
-      },
-      { status: 200 }
-    );
-  } catch (err) {
-    return mapAiErrorResponse(err);
-  }
+  return executeWithAiQuota(
+    auth.user.uid,
+    "import",
+    () => extractStructuredCv(parsed.data),
+    (rawStructured, quota) => {
+      const { document, warnings } = buildResumeDocumentFromParsed(rawStructured);
+
+      return NextResponse.json(
+        {
+          document,
+          warnings,
+          aiGenerated: true,
+          quota,
+        },
+        { status: 200 }
+      );
+    }
+  );
 }

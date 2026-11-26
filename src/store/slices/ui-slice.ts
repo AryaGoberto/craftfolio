@@ -1,4 +1,4 @@
-import { createSampleResume } from "@/lib/default-resume";
+import { createEmptyResume } from "@/lib/default-resume";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { syncFileOrder, syncOpenTabs } from "../store-helpers";
 import type {
@@ -63,13 +63,16 @@ export function createUiSlice(
     mobileTab: "edit",
     previewZoom: 0.9,
     previewMode: "visual",
+    showGhostPreview: true,
     isFileTreeOpen: true,
     hasHydrated: false,
 
     authUser: null,
     authLoading: isFirebaseConfigured(),
     authModalOpen: false,
+    authModalMode: "signin",
     authModalReason: null,
+    aiQuota: null,
     cloudSyncStatus: "idle",
     cloudSyncError: null,
     lastSyncedAt: null,
@@ -81,13 +84,21 @@ export function createUiSlice(
     setPreviewZoom: (zoom) =>
       set({ previewZoom: Math.min(1.5, Math.max(0.45, zoom)) }),
     setPreviewMode: (mode) => set({ previewMode: mode }),
+    toggleGhostPreview: (show) =>
+      set((state) => ({
+        showGhostPreview: show ?? !state.showGhostPreview,
+      })),
     toggleFileTree: (open) =>
       set((state) => ({
         isFileTreeOpen: open ?? !state.isFileTreeOpen,
       })),
 
-    openAuthModal: (reason) =>
-      set({ authModalOpen: true, authModalReason: reason ?? null }),
+    openAuthModal: (reason, mode = "signin") =>
+      set({
+        authModalOpen: true,
+        authModalMode: mode,
+        authModalReason: reason ?? null,
+      }),
     closeAuthModal: () =>
       set({ authModalOpen: false, authModalReason: null }),
 
@@ -95,12 +106,14 @@ export function createUiSlice(
       syncStorageAuthFlag(Boolean(user), user ? get() : undefined);
       set({
         authUser: user,
+        aiQuota: user ? get().aiQuota : null,
         cloudSyncStatus: user ? "syncing" : "idle",
         cloudSyncError: null,
         lastSyncedAt: user ? get().lastSyncedAt : null,
       });
     },
     setAuthLoading: (loading) => set({ authLoading: loading }),
+    setAiQuota: (quota) => set({ aiQuota: quota }),
     setCloudSyncStatus: (status, error = null) =>
       set((state) => ({
         cloudSyncStatus: status,
@@ -139,12 +152,12 @@ export function createUiSlice(
       } catch {
         // Ignore storage errors
       }
-      const freshSample = createSampleResume();
+      const freshEmpty = createEmptyResume("resume-default-1", "CV Saya");
       set({
-        documents: { [freshSample.id]: freshSample },
-        activeDocumentId: freshSample.id,
-        openTabIds: [freshSample.id],
-        fileOrder: [freshSample.id],
+        documents: { [freshEmpty.id]: freshEmpty },
+        activeDocumentId: freshEmpty.id,
+        openTabIds: [freshEmpty.id],
+        fileOrder: [freshEmpty.id],
         activeSection: "basics",
         saveStatus: "saved",
       });

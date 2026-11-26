@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   findInventedNumericTokens,
   handleEnhanceBulletPost,
@@ -9,10 +9,21 @@ import {
   getGeminiLanguageModel,
   mapAiErrorResponse,
 } from "@/lib/ai/gemini";
+import { resetAiQuotaStoreForTests } from "@/lib/ai/quota";
+
+const mockAuthOk = async () => ({
+  uid: "uid-test-enhance",
+  email: "user@example.com",
+});
 
 describe("AI Bullet-Point Enhancer guardrails & route handler", () => {
+  beforeEach(() => {
+    resetAiQuotaStoreForTests();
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
+    resetAiQuotaStoreForTests();
   });
 
   it("detects fabricated numeric metrics absent from original bullet input", () => {
@@ -39,20 +50,7 @@ describe("AI Bullet-Point Enhancer guardrails & route handler", () => {
     ).toBe("Mengembangkan fitur analitik real-time");
   });
 
-  it("returns 400 when bulletText is empty or invalid", async () => {
-    const req = new Request("http://localhost:3000/api/ai/enhance", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bulletText: "  ", language: "id" }),
-    });
-
-    const res = await handleEnhanceBulletPost(req);
-    expect(res.status).toBe(400);
-  });
-
-  it("returns 503 AI_UNAVAILABLE cleanly without crashing when GOOGLE_GENERATIVE_AI_API_KEY is missing", async () => {
-    vi.stubEnv("GOOGLE_GENERATIVE_AI_API_KEY", "");
-
+  it("returns 401 AI_AUTH_REQUIRED when Authorization header is missing", async () => {
     const req = new Request("http://localhost:3000/api/ai/enhance", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -63,6 +61,44 @@ describe("AI Bullet-Point Enhancer guardrails & route handler", () => {
     });
 
     const res = await handleEnhanceBulletPost(req);
+    expect(res.status).toBe(401);
+    expect(((await res.json()) as { code: string }).code).toBe("AI_AUTH_REQUIRED");
+  });
+
+  it("returns 400 when bulletText is empty or invalid", async () => {
+    const req = new Request("http://localhost:3000/api/ai/enhance", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer valid-token",
+      },
+      body: JSON.stringify({ bulletText: "  ", language: "id" }),
+    });
+
+    const res = await handleEnhanceBulletPost(req, {
+      verifyIdToken: mockAuthOk,
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 503 AI_UNAVAILABLE cleanly without crashing when GOOGLE_GENERATIVE_AI_API_KEY is missing", async () => {
+    vi.stubEnv("GOOGLE_GENERATIVE_AI_API_KEY", "");
+
+    const req = new Request("http://localhost:3000/api/ai/enhance", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer valid-token",
+      },
+      body: JSON.stringify({
+        bulletText: "Membuat halaman dashboard admin untuk klien.",
+        language: "id",
+      }),
+    });
+
+    const res = await handleEnhanceBulletPost(req, {
+      verifyIdToken: mockAuthOk,
+    });
     expect(res.status).toBe(503);
     const body = (await res.json()) as { code: string };
     expect(body.code).toBe("AI_UNAVAILABLE");
@@ -73,7 +109,10 @@ describe("AI Bullet-Point Enhancer guardrails & route handler", () => {
 
     const req = new Request("http://localhost:3000/api/ai/enhance", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer valid-token",
+      },
       body: JSON.stringify({
         bulletText: "Membuat halaman dashboard admin untuk tim operasional.",
         language: "id",
@@ -85,6 +124,7 @@ describe("AI Bullet-Point Enhancer guardrails & route handler", () => {
     });
 
     const res = await handleEnhanceBulletPost(req, {
+      verifyIdToken: mockAuthOk,
       generateEnhancement: async () => ({
         improvedText:
           "- Mengembangkan dashboard admin operasional untuk menyajikan metrik harian secara terstruktur.",
@@ -101,6 +141,7 @@ describe("AI Bullet-Point Enhancer guardrails & route handler", () => {
       reasoning: string;
       missingMetricsHint: string | null;
       inventedMetricsDetected: string[];
+      quota: { enhance: { used: number; remaining: number } };
     };
 
     expect(data.improvedText).toBe(
@@ -108,6 +149,8 @@ describe("AI Bullet-Point Enhancer guardrails & route handler", () => {
     );
     expect(data.inventedMetricsDetected).toEqual([]);
     expect(data.missingMetricsHint).toContain("angka");
+    expect(data.quota.enhance.used).toBe(1);
+    expect(data.quota.enhance.remaining).toBe(9);
   });
 
   it("surfaces inventedMetricsDetected warning when mocked model hallucinates numbers", async () => {
@@ -115,7 +158,10 @@ describe("AI Bullet-Point Enhancer guardrails & route handler", () => {
 
     const req = new Request("http://localhost:3000/api/ai/enhance", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer valid-token",
+      },
       body: JSON.stringify({
         bulletText: "Membuat halaman dashboard admin.",
         language: "id",
@@ -123,6 +169,7 @@ describe("AI Bullet-Point Enhancer guardrails & route handler", () => {
     });
 
     const res = await handleEnhanceBulletPost(req, {
+      verifyIdToken: mockAuthOk,
       generateEnhancement: async () => ({
         improvedText:
           "Membangun dashboard admin yang meningkatkan efisiensi sebesar 35%.",

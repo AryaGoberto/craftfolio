@@ -5,8 +5,12 @@ import {
   buildAiUnavailableResponse,
   getGeminiLanguageModel,
   isGeminiConfigured,
-  mapAiErrorResponse,
 } from "@/lib/ai/gemini";
+import {
+  authenticateAiRequest,
+  type VerifyFirebaseIdTokenFn,
+} from "@/lib/ai/auth-guard";
+import { executeWithAiQuota } from "@/lib/ai/quota";
 
 const MAX_ENHANCE_BODY_BYTES = 16 * 1024;
 
@@ -46,6 +50,7 @@ export type EnhanceBulletRequest = z.infer<typeof EnhanceBulletRequestSchema>;
 export type EnhanceBulletOutput = z.infer<typeof EnhanceBulletOutputSchema>;
 
 export interface EnhanceBulletDeps {
+  verifyIdToken?: VerifyFirebaseIdTokenFn;
   generateEnhancement?: (
     input: EnhanceBulletRequest
   ) => Promise<EnhanceBulletOutput>;
@@ -133,6 +138,11 @@ export async function handleEnhanceBulletPost(
   request: Request,
   deps?: EnhanceBulletDeps
 ): Promise<NextResponse> {
+  const auth = await authenticateAiRequest(request, deps?.verifyIdToken);
+  if (!auth.ok) {
+    return auth.response;
+  }
+
   let rawText: string;
   try {
     rawText = await request.text();
@@ -175,33 +185,36 @@ export async function handleEnhanceBulletPost(
     return buildAiUnavailableResponse();
   }
 
-  try {
-    const generateEnhancement =
-      deps?.generateEnhancement ?? defaultGenerateEnhancement;
-    const rawOutput = await generateEnhancement(parsed.data);
+  const generateEnhancement =
+    deps?.generateEnhancement ?? defaultGenerateEnhancement;
 
-    const improvedText = sanitizeImprovedBullet(rawOutput.improvedText);
-    const inventedMetricsDetected = findInventedNumericTokens(
-      parsed.data.bulletText,
-      improvedText
-    );
+  return executeWithAiQuota(
+    auth.user.uid,
+    "enhance",
+    () => generateEnhancement(parsed.data),
+    (rawOutput, quota) => {
+      const improvedText = sanitizeImprovedBullet(rawOutput.improvedText);
+      const inventedMetricsDetected = findInventedNumericTokens(
+        parsed.data.bulletText,
+        improvedText
+      );
 
-    const missingMetricsHint =
-      inventedMetricsDetected.length > 0
-        ? `Peringatan verifikasi: saran AI memunculkan angka (${inventedMetricsDetected.join(", ")}) yang tidak ada di teks asli Anda. Pastikan kebenarannya atau hapus sebelum menerapkan.`
-        : rawOutput.missingMetricsHint?.trim() || null;
+      const missingMetricsHint =
+        inventedMetricsDetected.length > 0
+          ? `Peringatan verifikasi: saran AI memunculkan angka (${inventedMetricsDetected.join(", ")}) yang tidak ada di teks asli Anda. Pastikan kebenarannya atau hapus sebelum menerapkan.`
+          : rawOutput.missingMetricsHint?.trim() || null;
 
-    return NextResponse.json(
-      {
-        improvedText,
-        reasoning: rawOutput.reasoning.trim(),
-        missingMetricsHint,
-        inventedMetricsDetected,
-        aiGenerated: true,
-      },
-      { status: 200 }
-    );
-  } catch (err) {
-    return mapAiErrorResponse(err);
-  }
+      return NextResponse.json(
+        {
+          improvedText,
+          reasoning: rawOutput.reasoning.trim(),
+          missingMetricsHint,
+          inventedMetricsDetected,
+          aiGenerated: true,
+          quota,
+        },
+        { status: 200 }
+      );
+    }
+  );
 }

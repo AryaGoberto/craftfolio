@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { temporal } from "zundo";
 import type { ResumeDocument } from "@/lib/schemas/resume";
-import { createSampleResume } from "@/lib/default-resume";
+import { createEmptyResume } from "@/lib/default-resume";
 import { migratePersistedResumeState } from "./store-helpers";
 import { createDocumentSlice } from "./slices/document-slice";
 import { createSectionSlice } from "./slices/section-slice";
@@ -141,10 +141,10 @@ export const useResumeStore = create<ResumeStoreState>()(
           mutateActiveDoc,
         };
 
-        const initialSample = createSampleResume();
+        const initialResume = createEmptyResume("resume-default-1", "CV Saya");
 
         return {
-          ...createDocumentSlice(set, get, mutators, initialSample),
+          ...createDocumentSlice(set, get, mutators, initialResume),
           ...createSectionSlice(set, get, mutators),
           ...createUiSlice(set, get),
         };
