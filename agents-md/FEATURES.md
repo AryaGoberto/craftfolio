@@ -89,12 +89,12 @@ Dokumen ini merangkum seluruh fitur **Craftfolio** berdasarkan [PRD.md](./PRD.md
 - [x] **Collapsible File Tree Sidebar & Reorderable Workspace Tabs** — *Branch: `feat/workspace-tabs-filetree`*
   - **Penjelasan:** Sidebar *File Tree* di sisi luar editor (terinspirasi Overleaf/VS Code) untuk mengelola seluruh dokumen CV (*New File, Rename, Duplicate, Download `.json`, Upload/Import `.json`, Reorder, Delete*), dipadukan dengan *Workspace Tab Bar* bergaya tab browser di atas area kerja yang dapat diurutkan dengan *drag-and-drop* (`@dnd-kit/sortable`) dan ditutup (`×`) tanpa menghapus file CV.
   - **File:** `src/components/editor/FileTreeSidebar.tsx`, `src/components/editor/WorkspaceTabBar.tsx`, `src/store/use-resume-store.ts`, `src/components/editor/EditorTopBar.tsx`, `src/app/editor/page.tsx`, `src/lib/__tests__/workspace-tabs.test.ts`
-- [ ] **AI Bullet-Point Enhancer (dengan Factuality Guardrails)** — *Branch: `feat/ai-bullet-enhancer`*
-  - **Penjelasan:** Tombol *"Perbaiki dengan AI"* di tiap bullet untuk mengubah kalimat pasif menjadi format **Action → Context → Result (XYZ / STAR)** dalam ID/EN via Vercel AI SDK. Wajib disertai *guardrails* (dilarang mengarang angka/pengalaman, label teks AI, dan wajib konfirmasi user).
-  - **Target:** `src/app/api/ai/enhance/route.ts`
-- [ ] **Import CV Lama (PDF / DOCX → Form JSON)** — *Branch: `feat/cv-import`*
-  - **Penjelasan:** Unggah PDF atau DOCX lama, ekstrak teks (`pdfjs-dist` / `unpdf`), lalu petakan ke skema `ResumeDocument` menggunakan LLM *Structured Output* (`generateObject`) dengan langkah review/konfirmasi sebelum disimpan.
-  - **Target:** `src/app/api/ai/parse-cv/route.ts`
+- [x] **AI Bullet-Point Enhancer (dengan Factuality Guardrails)** — *Branch: `feat/gemini-ai-enhancer-import`*
+  - **Penjelasan:** Tombol *"Perbaiki dengan AI"* di tiap bullet untuk mengubah kalimat pasif menjadi format **Action → Context → Result (XYZ / STAR)** dalam ID/EN via Google Gemini (`@ai-sdk/google`). Dilengkapi *factuality guardrails* (dilarang mengarang angka/pengalaman + deteksi angka baru otomatis), label saran AI, dan wajib konfirmasi user sebelum diterapkan.
+  - **File:** `src/lib/ai/gemini.ts`, `src/lib/ai/bullet-enhancer.ts`, `src/app/api/ai/enhance/route.ts`, `src/components/editor/BulletListEditor.tsx`
+- [x] **Import CV Lama (PDF / DOCX → Form JSON)** — *Branch: `feat/gemini-ai-enhancer-import`*
+  - **Penjelasan:** Unggah PDF, DOCX, atau teks CV lama, ekstrak teks di browser (`pdfjs-dist` & parser ZIP/XML DOCX), lalu petakan ke skema `ResumeDocument` menggunakan Gemini *Structured Output* (`Output.object`) dengan modal review peringatan & konfirmasi sebelum dibuat menjadi dokumen baru.
+  - **File:** `src/lib/cv-file-extractor.ts`, `src/lib/ai/cv-importer.ts`, `src/app/api/ai/parse-cv/route.ts`, `src/components/editor/CvImportModal.tsx`
 
 ---
 

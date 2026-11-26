@@ -1,6 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createEmptyResume, createSampleResume } from "@/lib/default-resume";
 import {
+  CRAFTFOLIO_CLOUD_SESSION_FLAG,
+  CRAFTFOLIO_STORAGE_KEY,
+  isCloudSessionPersisted,
   migratePersistedResumeState,
   syncFileOrder,
   syncOpenTabs,
@@ -48,6 +51,7 @@ function resetStore() {
 describe("Workspace Tabs & File Tree Store", () => {
   beforeAll(() => {
     vi.stubGlobal("localStorage", createMemoryStorage());
+    vi.stubGlobal("sessionStorage", createMemoryStorage());
   });
 
   afterAll(() => {
@@ -288,5 +292,62 @@ describe("Workspace Tabs & File Tree Store", () => {
     expect(
       syncOpenTabs(["stale-id"], migrated.documents, "cv-a")
     ).toEqual(["cv-a"]);
+  });
+
+  it("controls auth modal open state and contextual reason without polluting undo history", () => {
+    expect(useResumeStore.getState().authModalOpen).toBe(false);
+    expect(useResumeStore.getState().authModalReason).toBeNull();
+
+    useResumeStore
+      .getState()
+      .openAuthModal("Masuk untuk menggunakan asisten AI Gemini.");
+    expect(useResumeStore.getState().authModalOpen).toBe(true);
+    expect(useResumeStore.getState().authModalReason).toBe(
+      "Masuk untuk menggunakan asisten AI Gemini."
+    );
+
+    useResumeStore.getState().closeAuthModal();
+    expect(useResumeStore.getState().authModalOpen).toBe(false);
+    expect(useResumeStore.getState().authModalReason).toBeNull();
+
+    expect(useResumeStore.temporal.getState().pastStates).toHaveLength(0);
+  });
+
+  it("keeps Guest edits strictly in sessionStorage and clears all storages on resetGuestWorkspace", () => {
+    globalThis.localStorage.clear();
+    globalThis.sessionStorage.clear();
+
+    // Guest edit should write to sessionStorage, never localStorage
+    useResumeStore.getState().setAuthUser(null);
+    const activeId = useResumeStore.getState().activeDocumentId;
+    useResumeStore.getState().renameDocument(activeId, "Guest Temp CV");
+
+    expect(isCloudSessionPersisted()).toBe(false);
+    expect(globalThis.localStorage.getItem(CRAFTFOLIO_STORAGE_KEY)).toBeNull();
+    expect(globalThis.sessionStorage.getItem(CRAFTFOLIO_STORAGE_KEY)).toContain(
+      "Guest Temp CV"
+    );
+
+    // Authenticated session enables localStorage cloud cache
+    useResumeStore.getState().setAuthUser({
+      uid: "user-1",
+      email: "user@example.com",
+      displayName: "User",
+      photoURL: null,
+    });
+    expect(isCloudSessionPersisted()).toBe(true);
+    expect(globalThis.localStorage.getItem(CRAFTFOLIO_STORAGE_KEY)).toContain(
+      "Guest Temp CV"
+    );
+
+    // Sign-out / reset wipes both localStorage and sessionStorage
+    useResumeStore.getState().setAuthUser(null);
+    useResumeStore.getState().resetGuestWorkspace();
+    expect(isCloudSessionPersisted()).toBe(false);
+    expect(globalThis.localStorage.getItem(CRAFTFOLIO_STORAGE_KEY)).toBeNull();
+    expect(globalThis.localStorage.getItem(CRAFTFOLIO_CLOUD_SESSION_FLAG)).toBeNull();
+    expect(
+      globalThis.sessionStorage.getItem(CRAFTFOLIO_STORAGE_KEY)
+    ).not.toContain("Guest Temp CV");
   });
 });

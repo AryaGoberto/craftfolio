@@ -23,6 +23,8 @@ export function DocumentSwitcher() {
   const renameDocument = useResumeStore((s) => s.renameDocument);
   const loadSampleResume = useResumeStore((s) => s.loadSampleResume);
   const clearActiveResume = useResumeStore((s) => s.clearActiveResume);
+  const authUser = useResumeStore((s) => s.authUser);
+  const openAuthModal = useResumeStore((s) => s.openAuthModal);
 
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -78,6 +80,12 @@ export function DocumentSwitcher() {
             <button
               type="button"
               onClick={() => {
+                if (!authUser && docList.length >= 1) {
+                  openAuthModal(
+                    "Mode Guest dibatasi maksimal 1 file CV. Masuk atau buat akun gratis untuk membuat file CV tanpa batas dan tersimpan di cloud."
+                  );
+                  return;
+                }
                 createDocument(`CV Baru ${docList.length + 1}`);
                 setOpen(false);
               }}

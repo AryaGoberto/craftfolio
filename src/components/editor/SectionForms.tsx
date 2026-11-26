@@ -246,6 +246,14 @@ export function SectionBodyForm({ sectionKey }: { sectionKey: SectionKey }) {
                 sectionKey={targetKey}
                 itemId={item.id}
                 bullets={item.bullets}
+                roleContext={{
+                  companyOrProject: String(
+                    item.company ?? item.name ?? item.title ?? ""
+                  ),
+                  roleOrPosition: String(
+                    item.position ?? item.subtitle ?? ""
+                  ),
+                }}
               />
             ) : null}
           </ItemCardWrapper>

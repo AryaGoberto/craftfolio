@@ -24,6 +24,7 @@ import {
   Download,
   FilePlus,
   FileText,
+  FileUp,
   GripVertical,
   MoreVertical,
   Pencil,
@@ -210,7 +211,11 @@ function SortableFileRow({
   );
 }
 
-export function FileTreeSidebar() {
+export function FileTreeSidebar({
+  onOpenImportCvModal,
+}: {
+  onOpenImportCvModal?: () => void;
+}) {
   const isFileTreeOpen = useResumeStore((s) => s.isFileTreeOpen);
   const toggleFileTree = useResumeStore((s) => s.toggleFileTree);
   const documents = useResumeStore((s) => s.documents);
@@ -226,6 +231,8 @@ export function FileTreeSidebar() {
   const sortFiles = useResumeStore((s) => s.sortFiles);
   const exportResumeJson = useResumeStore((s) => s.exportResumeJson);
   const importResumeJson = useResumeStore((s) => s.importResumeJson);
+  const authUser = useResumeStore((s) => s.authUser);
+  const openAuthModal = useResumeStore((s) => s.openAuthModal);
 
   const [sortBy, setSortBy] = useState<FileSortBy>("updatedAt");
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -406,8 +413,20 @@ export function FileTreeSidebar() {
           <div className="flex items-center gap-0.5 shrink-0">
             <button
               type="button"
-              onClick={() => createDocument(`CV Baru ${totalDocs + 1}`)}
-              title="Buat file CV baru"
+              onClick={() => {
+                if (!authUser && totalDocs >= 1) {
+                  openAuthModal(
+                    "Mode Guest dibatasi maksimal 1 file CV. Masuk atau buat akun gratis untuk membuat file CV tanpa batas dan tersinkron ke cloud."
+                  );
+                  return;
+                }
+                createDocument(`CV Baru ${totalDocs + 1}`);
+              }}
+              title={
+                !authUser && totalDocs >= 1
+                  ? "Masuk untuk membuat lebih dari 1 CV"
+                  : "Buat file CV baru"
+              }
               aria-label="Buat file CV baru"
               className="w-6 h-6 inline-flex items-center justify-center rounded text-[#52525B] hover:text-[#09090B] hover:bg-[#E4E4E7]/70 transition-colors"
             >
@@ -426,6 +445,29 @@ export function FileTreeSidebar() {
             >
               <ArrowUpDown className="w-3.5 h-3.5" />
             </button>
+            {onOpenImportCvModal && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!authUser) {
+                    openAuthModal(
+                      "Masuk atau buat akun gratis untuk menggunakan fitur Import CV lama (PDF / DOCX) dengan asisten AI Gemini."
+                    );
+                    return;
+                  }
+                  onOpenImportCvModal();
+                }}
+                title={
+                  !authUser
+                    ? "Masuk untuk Import CV dengan AI"
+                    : "Import CV lama (PDF / DOCX)"
+                }
+                aria-label="Import CV lama dari PDF atau DOCX"
+                className="w-6 h-6 inline-flex items-center justify-center rounded text-[#52525B] hover:text-[#09090B] hover:bg-[#E4E4E7]/70 transition-colors"
+              >
+                <FileUp className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -533,6 +575,13 @@ export function FileTreeSidebar() {
             type="button"
             role="menuitem"
             onClick={() => {
+              if (!authUser && totalDocs >= 1) {
+                setContextMenu(null);
+                openAuthModal(
+                  "Mode Guest dibatasi maksimal 1 file CV. Masuk atau buat akun gratis untuk menduplikasi file CV tanpa batas dan tersinkron ke cloud."
+                );
+                return;
+              }
               duplicateDocument(menuTargetDoc.id);
               setContextMenu(null);
             }}
@@ -570,6 +619,13 @@ export function FileTreeSidebar() {
             type="button"
             role="menuitem"
             onClick={() => {
+              if (!authUser && totalDocs >= 1) {
+                setContextMenu(null);
+                openAuthModal(
+                  "Mode Guest dibatasi maksimal 1 file CV. Masuk atau buat akun gratis untuk membuat file CV baru tanpa batas dan tersinkron ke cloud."
+                );
+                return;
+              }
               createDocument(`CV Baru ${totalDocs + 1}`);
               setContextMenu(null);
             }}

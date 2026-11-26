@@ -183,18 +183,18 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
 
 ---
 
-### Task 7: AI Bullet-Point Enhancer dengan Factuality Guardrails (`/api/ai/enhance`)
+### Task 7: AI Bullet-Point Enhancer dengan Factuality Guardrails (`/api/ai/enhance`) ✅
 
-**Description:** Mengimplementasikan fitur *"Perbaiki dengan AI"* pada `BulletListEditor.tsx` menggunakan Vercel AI SDK (branch `feat/ai-bullet-enhancer`). Mengubah kalimat pasif atau catatan kasar menjadi pola **Action → Context → Result (XYZ / STAR)** sesuai bahasa dokumen (`id` / `en`) dengan *factuality guardrails* ketat: dilarang mengarang angka/metrik yang tidak ada di input pengguna, ditandai badge AI, dan wajib dikonfirmasi pengguna sebelum menggantikan teks asli.
+**Description:** Mengimplementasikan fitur *"Perbaiki dengan AI"* pada `BulletListEditor.tsx` menggunakan Gemini API (`@ai-sdk/google` + `ai`) (branch `feat/gemini-ai-enhancer-import`). Mengubah kalimat pasif atau catatan kasar menjadi pola **Action → Context → Result (XYZ / STAR)** sesuai bahasa dokumen (`id` / `en`) dengan *factuality guardrails* ketat: dilarang mengarang angka/metrik yang tidak ada di input pengguna, ditandai badge AI, dan wajib dikonfirmasi pengguna sebelum menggantikan teks asli.
 
 **Acceptance criteria:**
-- [ ] Endpoint `src/app/api/ai/enhance/route.ts` memvalidasi input dengan Zod dan memanggil model AI dengan aturan sistem yang melarang penambahan metrik/pengalaman fiktif.
-- [ ] `BulletListEditor.tsx` menampilkan tombol aksi AI per bullet yang membuka pratinjau perbandingan (*Teks Asli* vs *Saran AI*) dengan label penanda AI yang jelas.
-- [ ] Teks bullet di `useResumeStore` hanya berubah setelah pengguna mengklik tombol **"Terapkan"**, dan dapat dibatalkan dengan Undo (`Ctrl+Z`).
+- [x] Endpoint `src/app/api/ai/enhance/route.ts` memvalidasi input dengan Zod dan memanggil model AI dengan aturan sistem yang melarang penambahan metrik/pengalaman fiktif.
+- [x] `BulletListEditor.tsx` menampilkan tombol aksi AI per bullet yang membuka pratinjau perbandingan (*Teks Asli* vs *Saran AI*) dengan label penanda AI yang jelas.
+- [x] Teks bullet di `useResumeStore` hanya berubah setelah pengguna mengklik tombol **"Terapkan"**, dan dapat dibatalkan dengan Undo (`Ctrl+Z`).
 
 **Verification:**
-- [ ] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
-- [ ] Build succeeds: `npm run build`
+- [x] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
+- [x] Build succeeds: `npm run build`
 - [ ] Manual check: Masukkan bullet tanpa angka (misal *"Membuat halaman dashboard admin"*), jalankan AI Enhancer, dan pastikan saran AI menggunakan kata kerja aktif tanpa mengarang persentase palsu.
 
 **Dependencies:** Task 3
@@ -208,18 +208,18 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
 
 ---
 
-### Task 8: Import CV Lama (PDF / DOCX → Form JSON) dengan Langkah Review (`/api/ai/parse-cv`)
+### Task 8: Import CV Lama (PDF / DOCX → Form JSON) dengan Langkah Review (`/api/ai/parse-cv`) ✅
 
-**Description:** Membangun fitur impor CV lama dari file PDF atau teks/DOCX ke struktur `ResumeDocument` (branch `feat/cv-import`). Mengekstrak teks mentah dari file yang diunggah, memetakannya ke skema Zod `ResumeDocumentSchema` menggunakan LLM *Structured Output*, dan menampilkan modal pratinjau & konfirmasi kepada pengguna sebelum menyimpannya sebagai dokumen baru di `useResumeStore` (otomatis muncul di File Tree dan dibuka di tab baru).
+**Description:** Membangun fitur impor CV lama dari file PDF atau teks/DOCX ke struktur `ResumeDocument` (branch `feat/gemini-ai-enhancer-import`). Mengekstrak teks mentah dari file yang diunggah, memetakannya ke skema Zod `ResumeDocumentSchema` menggunakan LLM *Structured Output*, dan menampilkan modal pratinjau & konfirmasi kepada pengguna sebelum menyimpannya sebagai dokumen baru di `useResumeStore` (otomatis muncul di File Tree dan dibuka di tab baru).
 
 **Acceptance criteria:**
-- [ ] Endpoint `src/app/api/ai/parse-cv/route.ts` menerima teks hasil ekstraksi CV dan mengembalikan objek JSON yang valid sesuai `ResumeDocumentSchema`.
-- [ ] `src/components/editor/CvImportModal.tsx` memungkinkan unggah file PDF/DOCX, menampilkan ringkasan hasil ekstraksi (Nama, Jumlah Pengalaman, Pendidikan, Keahlian) beserta peringatan field yang perlu ditinjau pengguna.
-- [ ] Pengguna harus mengklik **"Konfirmasi & Buat CV"** sebelum data hasil ekstraksi dimasukkan sebagai dokumen baru di File Tree & tab kerja.
+- [x] Endpoint `src/app/api/ai/parse-cv/route.ts` menerima teks hasil ekstraksi CV dan mengembalikan objek JSON yang valid sesuai `ResumeDocumentSchema`.
+- [x] `src/components/editor/CvImportModal.tsx` memungkinkan unggah file PDF/DOCX, menampilkan ringkasan hasil ekstraksi (Nama, Jumlah Pengalaman, Pendidikan, Keahlian) beserta peringatan field yang perlu ditinjau pengguna.
+- [x] Pengguna harus mengklik **"Konfirmasi & Buat CV"** sebelum data hasil ekstraksi dimasukkan sebagai dokumen baru di File Tree & tab kerja.
 
 **Verification:**
-- [ ] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
-- [ ] Build succeeds: `npm run build`
+- [x] Tests pass: `npm test && npx tsc --noEmit && npm run lint`
+- [x] Build succeeds: `npm run build`
 - [ ] Manual check: Unggah file PDF CV contoh melalui modal Import, tinjau ringkasan hasil ekstraksi, klik konfirmasi, dan pastikan seluruh section terisi di editor tanpa merusak dokumen yang sudah ada.
 
 **Dependencies:** Task 4, Task 6, Task 7
@@ -234,10 +234,10 @@ Dokumen ini adalah satu-satunya daftar tugas (*single source of truth* task list
 ---
 
 ## Checkpoint 2: After Tasks 4–8 (Phase 2 Complete)
-- [ ] Seluruh unit test lulus (`npm test`), tipe & lint bersih (`npx tsc --noEmit && npm run lint`), dan build sukses (`npm run build`)
-- [ ] Manajemen multi-CV via File Tree Sidebar & Reorderable Tabs berjalan mulus tanpa merusak state Undo/Redo dokumen
-- [ ] Guardrails AI terverifikasi: tidak ada perubahan teks otomatis tanpa konfirmasi pengguna dan tidak ada klaim metrik fiktif
-- [ ] Mode Guest tetap berfungsi penuh meskipun env API AI belum diisi (fitur AI menampilkan pesan konfigurasi yang sopan tanpa membuat aplikasi crash)
+- [x] Seluruh unit test lulus (`npm test`), tipe & lint bersih (`npx tsc --noEmit && npm run lint`), dan build sukses (`npm run build`)
+- [x] Manajemen multi-CV via File Tree Sidebar & Reorderable Tabs berjalan mulus tanpa merusak state Undo/Redo dokumen
+- [x] Guardrails AI terverifikasi: tidak ada perubahan teks otomatis tanpa konfirmasi pengguna dan tidak ada klaim metrik fiktif
+- [x] Mode Guest tetap berfungsi penuh meskipun env API AI belum diisi (fitur AI menampilkan pesan konfigurasi yang sopan tanpa membuat aplikasi crash)
 - [ ] Review dengan human sebelum lanjut ke Fase 3
 
 ---

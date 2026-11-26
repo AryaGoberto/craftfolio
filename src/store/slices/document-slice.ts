@@ -265,6 +265,36 @@ export function createDocumentSlice(
       mutators.mutateActiveDoc((doc) => createEmptyResume(doc.id, doc.title));
     },
 
+    addParsedDocument: (parsedDoc) => {
+      const newId = generateId("cv");
+      const now = new Date().toISOString();
+      const doc: ResumeDocument = {
+        ...structuredClone(parsedDoc),
+        id: newId,
+        schemaVersion: 1,
+        createdAt: now,
+        updatedAt: now,
+      };
+      set((state) => ({
+        documents: { ...state.documents, [newId]: doc },
+        activeDocumentId: newId,
+        fileOrder: [
+          ...syncFileOrder(state.fileOrder, state.documents),
+          newId,
+        ],
+        openTabIds: [
+          ...syncOpenTabs(
+            state.openTabIds,
+            state.documents,
+            state.activeDocumentId
+          ),
+          newId,
+        ],
+        activeSection: "basics",
+      }));
+      mutators.scheduleSaved();
+    },
+
     importResumeJson: (rawJson) => {
       try {
         const result = ResumeDocumentSchema.safeParse(JSON.parse(rawJson));
