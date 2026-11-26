@@ -9,6 +9,7 @@ import {
   EyeOff,
   Loader2,
   Mail,
+  Sparkles,
   X,
 } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -27,6 +28,7 @@ interface AuthModalProps {
   open: boolean;
   onClose: () => void;
   initialMode?: "signin" | "signup";
+  reason?: string;
   onAuthSuccess?: () => void;
 }
 
@@ -57,6 +59,7 @@ export function AuthModal({
   open,
   onClose,
   initialMode = "signin",
+  reason,
   onAuthSuccess,
 }: AuthModalProps) {
   const [mode, setMode] = useState<AuthMode>(initialMode);
@@ -196,17 +199,27 @@ export function AuthModal({
 
         {/* Body */}
         <div className="p-5 space-y-4">
+          {/* Contextual Feature Gate Banner */}
+          {reason && (
+            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[#F4F4F5] border border-[#E4E4E7] text-[12px] text-[#09090B] font-medium leading-relaxed">
+              <Sparkles className="w-4 h-4 text-[#18181B] shrink-0 mt-0.5" />
+              <span>{reason}</span>
+            </div>
+          )}
+
           {/* Guest-to-Cloud Reassurance Banner */}
-          <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[#FAFAFA] border border-[#E4E4E7] text-[11.5px] text-[#52525B] leading-relaxed">
-            <Cloud className="w-4 h-4 text-[#18181B] shrink-0 mt-0.5" />
-            <span>
-              Draf CV yang sedang Anda buat di browser ini akan{" "}
-              <strong className="text-[#09090B] font-medium">
-                otomatis digabungkan
-              </strong>{" "}
-              ke akun Cloud tanpa menghapus data lokal.
-            </span>
-          </div>
+          {!reason && (
+            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[#FAFAFA] border border-[#E4E4E7] text-[11.5px] text-[#52525B] leading-relaxed">
+              <Cloud className="w-4 h-4 text-[#18181B] shrink-0 mt-0.5" />
+              <span>
+                Draf CV yang sedang Anda buat di browser ini akan{" "}
+                <strong className="text-[#09090B] font-medium">
+                  otomatis digabungkan
+                </strong>{" "}
+                ke akun Cloud tanpa menghapus data lokal.
+              </span>
+            </div>
+          )}
 
           {!firebaseReady && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-[#FFFBEB] border border-[#FDE68A] text-[11.5px] text-[#92400E] leading-relaxed">

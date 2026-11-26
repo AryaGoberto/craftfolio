@@ -22,7 +22,7 @@ const merriweather = Merriweather({
 });
 
 export const metadata: Metadata = {
-  title: "Craftfolio — ATS-Friendly CV Builder",
+  title: "Craftfolio — ATS CV Builder",
   description:
     "Kualitas tipografi sekelas LaTeX, semudah mengisi Google Form.",
   icons: {

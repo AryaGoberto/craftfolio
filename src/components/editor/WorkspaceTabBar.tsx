@@ -182,6 +182,8 @@ export function WorkspaceTabBar() {
   const reorderTabs = useResumeStore((s) => s.reorderTabs);
   const createDocument = useResumeStore((s) => s.createDocument);
   const renameDocument = useResumeStore((s) => s.renameDocument);
+  const authUser = useResumeStore((s) => s.authUser);
+  const openAuthModal = useResumeStore((s) => s.openAuthModal);
 
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
@@ -276,8 +278,20 @@ export function WorkspaceTabBar() {
 
       <button
         type="button"
-        onClick={() => createDocument(`CV Baru ${totalDocs + 1}`)}
-        title="Buat & buka tab CV baru"
+        onClick={() => {
+          if (!authUser && totalDocs >= 1) {
+            openAuthModal(
+              "Mode Guest dibatasi maksimal 1 file CV. Masuk atau buat akun gratis untuk membuat file CV tanpa batas dan tersimpan di cloud."
+            );
+            return;
+          }
+          createDocument(`CV Baru ${totalDocs + 1}`);
+        }}
+        title={
+          !authUser && totalDocs >= 1
+            ? "Masuk untuk membuat lebih dari 1 CV"
+            : "Buat & buka tab CV baru"
+        }
         aria-label="Buat dan buka tab CV baru"
         className="h-7 w-7 mb-1 ml-0.5 inline-flex items-center justify-center rounded-md text-[#52525B] hover:text-[#09090B] hover:bg-[#E4E4E7]/80 shrink-0 transition-colors"
       >

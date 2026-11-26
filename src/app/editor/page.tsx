@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, X } from "lucide-react";
 import { useResumeStore } from "@/store/use-resume-store";
 import { runAtsLint } from "@/lib/ats-linter";
 import { EditorTopBar } from "@/components/editor/EditorTopBar";
@@ -9,6 +10,7 @@ import { FileTreeSidebar } from "@/components/editor/FileTreeSidebar";
 import { WorkspaceTabBar } from "@/components/editor/WorkspaceTabBar";
 import { PreviewPanel } from "@/components/preview/PreviewPanel";
 import { AtsCheckerModal } from "@/components/editor/AtsCheckerModal";
+import { CvImportModal } from "@/components/editor/CvImportModal";
 import { JdMatcherModal } from "@/components/editor/JdMatcherModal";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { CloudSyncManager } from "@/components/auth/CloudSyncManager";
@@ -21,12 +23,37 @@ export default function EditorPage() {
   const setMobileTab = useResumeStore((s) => s.setMobileTab);
   const setActiveSection = useResumeStore((s) => s.setActiveSection);
   const toggleFileTree = useResumeStore((s) => s.toggleFileTree);
+  const authUser = useResumeStore((s) => s.authUser);
+  const authLoading = useResumeStore((s) => s.authLoading);
+  const cloudSyncStatus = useResumeStore((s) => s.cloudSyncStatus);
+  const authModalOpen = useResumeStore((s) => s.authModalOpen);
+  const authModalReason = useResumeStore((s) => s.authModalReason);
+  const openAuthModal = useResumeStore((s) => s.openAuthModal);
+  const closeAuthModal = useResumeStore((s) => s.closeAuthModal);
 
   const [pageCount, setPageCount] = useState(1);
   const [lastPageFillRatio, setLastPageFillRatio] = useState(1);
   const [atsModalOpen, setAtsModalOpen] = useState(false);
   const [jdModalOpen, setJdModalOpen] = useState(false);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [importCvModalOpen, setImportCvModalOpen] = useState(false);
+  const [guestBannerDismissed, setGuestBannerDismissed] = useState(false);
+
+  // Warn unauthenticated guests (or syncing cloud sessions) before closing/reloading tab
+  useEffect(() => {
+    if (authLoading) return;
+    const shouldWarnGuest = !authUser;
+    const shouldWarnMidSync = Boolean(authUser && cloudSyncStatus === "syncing");
+    if (!shouldWarnGuest && !shouldWarnMidSync) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue =
+        "Data CV Anda tidak tersimpan permanen dan akan terhapus saat tab ditutup.";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [authLoading, authUser, cloudSyncStatus]);
 
   useEffect(() => {
     if (window.innerWidth < 1024) {
@@ -88,12 +115,50 @@ export default function EditorPage() {
         lintReport={lintReport}
         onOpenAtsModal={() => setAtsModalOpen(true)}
         onOpenJdModal={() => setJdModalOpen(true)}
-        onOpenAuthModal={() => setAuthModalOpen(true)}
+        onOpenAuthModal={() => openAuthModal()}
+        onOpenImportCvModal={() => setImportCvModalOpen(true)}
       />
+
+      {!authLoading && !authUser && !guestBannerDismissed && (
+        <div
+          role="status"
+          className="px-3 sm:px-4 py-1.5 bg-[#FFFBEB] border-b border-[#FDE68A] text-[#92400E] text-[11.5px] flex items-center justify-between gap-2 shrink-0"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <AlertTriangle className="w-3.5 h-3.5 text-[#D97706] shrink-0" />
+            <p className="truncate sm:whitespace-normal">
+              <span className="font-semibold">Mode Guest:</span> Data CV ini tidak tersimpan permanen dan akan terhapus saat tab ditutup.
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() =>
+                openAuthModal(
+                  "Masuk atau buat akun gratis agar CV Anda tersimpan permanen di Cloud dan tidak terhapus saat tab ditutup."
+                )
+              }
+              className="px-2.5 py-0.5 rounded bg-[#18181B] hover:bg-[#27272A] text-white text-[11px] font-medium transition-colors"
+            >
+              Masuk &amp; Simpan
+            </button>
+            <button
+              type="button"
+              onClick={() => setGuestBannerDismissed(true)}
+              aria-label="Tutup peringatan mode guest"
+              className="p-0.5 rounded text-[#92400E]/70 hover:text-[#92400E] hover:bg-[#FDE68A]/50 transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Outer Workspace: File Tree Sidebar + Tabbed Split-Screen Editor */}
       <div className="flex-1 flex overflow-hidden relative">
-        <FileTreeSidebar />
+        <FileTreeSidebar
+          onOpenImportCvModal={() => setImportCvModalOpen(true)}
+        />
 
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <WorkspaceTabBar />
@@ -170,7 +235,13 @@ export default function EditorPage() {
 
       <AuthModal
         open={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
+        onClose={closeAuthModal}
+        reason={authModalReason ?? undefined}
+      />
+
+      <CvImportModal
+        open={importCvModalOpen}
+        onClose={() => setImportCvModalOpen(false)}
       />
     </div>
   );

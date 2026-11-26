@@ -1,3 +1,4 @@
+import { createSampleResume } from "@/lib/default-resume";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { syncFileOrder, syncOpenTabs } from "../store-helpers";
 import type {
@@ -5,6 +6,47 @@ import type {
   UiSliceActions,
   UiSliceState,
 } from "../types";
+
+const CLOUD_SESSION_FLAG = "craftfolio-cloud-session";
+const STORAGE_KEY = "craftfolio-storage";
+
+function syncStorageAuthFlag(
+  isAuthenticated: boolean,
+  state?: ResumeStoreState
+) {
+  if (typeof globalThis === "undefined") return;
+  try {
+    const ls =
+      typeof globalThis.localStorage !== "undefined"
+        ? globalThis.localStorage
+        : null;
+    if (!ls) return;
+
+    if (isAuthenticated) {
+      ls.setItem(CLOUD_SESSION_FLAG, "1");
+      if (state) {
+        ls.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            state: {
+              documents: state.documents,
+              activeDocumentId: state.activeDocumentId,
+              openTabIds: state.openTabIds,
+              fileOrder: state.fileOrder,
+            },
+            version: 3,
+          })
+        );
+      }
+    } else {
+      ls.removeItem(CLOUD_SESSION_FLAG);
+      ls.removeItem(STORAGE_KEY);
+      ls.removeItem("formacv-storage");
+    }
+  } catch {
+    // Ignore storage access errors in restricted contexts
+  }
+}
 
 export function createUiSlice(
   set: (
@@ -26,6 +68,8 @@ export function createUiSlice(
 
     authUser: null,
     authLoading: isFirebaseConfigured(),
+    authModalOpen: false,
+    authModalReason: null,
     cloudSyncStatus: "idle",
     cloudSyncError: null,
     lastSyncedAt: null,
@@ -42,13 +86,20 @@ export function createUiSlice(
         isFileTreeOpen: open ?? !state.isFileTreeOpen,
       })),
 
-    setAuthUser: (user) =>
+    openAuthModal: (reason) =>
+      set({ authModalOpen: true, authModalReason: reason ?? null }),
+    closeAuthModal: () =>
+      set({ authModalOpen: false, authModalReason: null }),
+
+    setAuthUser: (user) => {
+      syncStorageAuthFlag(Boolean(user), user ? get() : undefined);
       set({
         authUser: user,
         cloudSyncStatus: user ? "syncing" : "idle",
         cloudSyncError: null,
         lastSyncedAt: user ? get().lastSyncedAt : null,
-      }),
+      });
+    },
     setAuthLoading: (loading) => set({ authLoading: loading }),
     setCloudSyncStatus: (status, error = null) =>
       set((state) => ({
@@ -77,6 +128,25 @@ export function createUiSlice(
         activeDocumentId: nextActive,
         openTabIds: nextTabs,
         fileOrder: nextOrder,
+      });
+    },
+    resetGuestWorkspace: () => {
+      syncStorageAuthFlag(false);
+      try {
+        if (typeof globalThis.sessionStorage !== "undefined") {
+          globalThis.sessionStorage.removeItem(STORAGE_KEY);
+        }
+      } catch {
+        // Ignore storage errors
+      }
+      const freshSample = createSampleResume();
+      set({
+        documents: { [freshSample.id]: freshSample },
+        activeDocumentId: freshSample.id,
+        openTabIds: [freshSample.id],
+        fileOrder: [freshSample.id],
+        activeSection: "basics",
+        saveStatus: "saved",
       });
     },
   };

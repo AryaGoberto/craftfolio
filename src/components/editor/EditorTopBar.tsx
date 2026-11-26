@@ -10,6 +10,7 @@ import {
   Eraser,
   FileCode2,
   FileJson,
+  FileUp,
   LayoutDashboard,
   LayoutGrid,
   LogOut,
@@ -77,6 +78,7 @@ interface EditorTopBarProps {
   onOpenAtsModal: () => void;
   onOpenJdModal: () => void;
   onOpenAuthModal: () => void;
+  onOpenImportCvModal?: () => void;
 }
 
 export function EditorTopBar({
@@ -84,11 +86,13 @@ export function EditorTopBar({
   onOpenAtsModal,
   onOpenJdModal,
   onOpenAuthModal,
+  onOpenImportCvModal,
 }: EditorTopBarProps) {
   const documents = useResumeStore((s) => s.documents);
   const activeDocumentId = useResumeStore((s) => s.activeDocumentId);
   const saveStatus = useResumeStore((s) => s.saveStatus);
   const authUser = useResumeStore((s) => s.authUser);
+  const openAuthModal = useResumeStore((s) => s.openAuthModal);
   const cloudSyncStatus = useResumeStore((s) => s.cloudSyncStatus);
   const cloudSyncError = useResumeStore((s) => s.cloudSyncError);
   const triggerManualSync = useResumeStore((s) => s.triggerManualSync);
@@ -213,7 +217,7 @@ export function EditorTopBar({
           title={
             authUser
               ? cloudSyncError || "Tersinkron otomatis ke Cloud Firestore"
-              : "Tersimpan otomatis di browser (Guest Mode)"
+              : "Mode Guest: data hanya sementara di tab ini dan akan terhapus saat tab ditutup"
           }
         >
           <span
@@ -224,9 +228,7 @@ export function EditorTopBar({
                   : cloudSyncStatus === "syncing"
                     ? "bg-[#F59E0B]"
                     : "bg-[#10B981]"
-                : saveStatus === "saving"
-                  ? "bg-[#F59E0B]"
-                  : "bg-[#10B981]"
+                : "bg-[#F59E0B]"
             }`}
           />
           {authUser
@@ -236,8 +238,8 @@ export function EditorTopBar({
                 ? "Menyinkronkan..."
                 : "Cloud"
             : saveStatus === "saving"
-              ? "Menyimpan..."
-              : "Disimpan"}
+              ? "Memproses..."
+              : "Sesi Sementara"}
         </span>
       </div>
 
@@ -510,6 +512,25 @@ export function EditorTopBar({
                 <Upload className="w-3.5 h-3.5 text-[#52525B]" />
                 Import File .json
               </button>
+              {onOpenImportCvModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenMenu(null);
+                    if (!authUser) {
+                      openAuthModal(
+                        "Masuk atau buat akun gratis untuk menggunakan fitur Import CV (PDF / DOCX) dengan asisten AI Gemini."
+                      );
+                      return;
+                    }
+                    onOpenImportCvModal();
+                  }}
+                  className="w-full text-left px-2.5 py-1.5 rounded hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
+                >
+                  <FileUp className="w-3.5 h-3.5 text-[#52525B]" />
+                  Import CV (PDF / DOCX)
+                </button>
+              )}
 
               <div className="my-1 border-t border-[#F4F4F5]" />
 

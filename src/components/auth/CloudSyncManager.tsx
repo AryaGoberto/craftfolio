@@ -10,7 +10,10 @@ import {
   fetchUserCloudWorkspace,
   saveUserWorkspaceToCloud,
 } from "@/lib/firebase/firestore-sync";
-import { useResumeStore } from "@/store/use-resume-store";
+import {
+  isCloudSessionPersisted,
+  useResumeStore,
+} from "@/store/use-resume-store";
 
 const CLOUD_SYNC_DEBOUNCE_MS = 1500;
 
@@ -22,6 +25,7 @@ export function CloudSyncManager() {
   const setAuthLoading = useResumeStore((s) => s.setAuthLoading);
   const setCloudSyncStatus = useResumeStore((s) => s.setCloudSyncStatus);
   const applyCloudWorkspace = useResumeStore((s) => s.applyCloudWorkspace);
+  const resetGuestWorkspace = useResumeStore((s) => s.resetGuestWorkspace);
 
   const hydratedUidRef = useRef<string | null>(null);
   const isApplyingCloudRef = useRef(false);
@@ -51,8 +55,14 @@ export function CloudSyncManager() {
       metaDirtyRef.current = false;
 
       if (!fbUser) {
+        const wasCloudSession =
+          hydratedUidRef.current !== null || isCloudSessionPersisted();
         hydratedUidRef.current = null;
         setAuthUser(null);
+        if (wasCloudSession) {
+          useResumeStore.temporal.getState().clear();
+          resetGuestWorkspace();
+        }
         setAuthLoading(false);
         return;
       }
@@ -121,6 +131,7 @@ export function CloudSyncManager() {
     setAuthLoading,
     setCloudSyncStatus,
     applyCloudWorkspace,
+    resetGuestWorkspace,
   ]);
 
   // 2. Debounced Firestore auto-sync on local workspace changes while authenticated

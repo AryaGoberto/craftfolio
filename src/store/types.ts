@@ -39,6 +39,7 @@ export interface DocumentSliceActions {
   sortFiles: (by: FileSortBy) => void;
   loadSampleResume: () => void;
   clearActiveResume: () => void;
+  addParsedDocument: (doc: ResumeDocument) => void;
   importResumeJson: (rawJson: string) => { ok: boolean; error?: string };
   exportResumeJson: (id?: string) => string;
 }
@@ -111,6 +112,8 @@ export interface UiSliceState {
 
   authUser: AuthUserProfile | null;
   authLoading: boolean;
+  authModalOpen: boolean;
+  authModalReason: string | null;
   cloudSyncStatus: CloudSyncStatus;
   cloudSyncError: string | null;
   lastSyncedAt: string | null;
@@ -125,11 +128,14 @@ export interface UiSliceActions {
   setPreviewMode: (mode: "visual" | "xray") => void;
   toggleFileTree: (open?: boolean) => void;
 
+  openAuthModal: (reason?: string) => void;
+  closeAuthModal: () => void;
   setAuthUser: (user: AuthUserProfile | null) => void;
   setAuthLoading: (loading: boolean) => void;
   setCloudSyncStatus: (status: CloudSyncStatus, error?: string | null) => void;
   triggerManualSync: () => void;
   applyCloudWorkspace: (payload: PersistedResumeState) => void;
+  resetGuestWorkspace: () => void;
 }
 
 export interface ResumeStoreState
