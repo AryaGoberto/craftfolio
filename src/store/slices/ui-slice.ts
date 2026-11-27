@@ -126,7 +126,15 @@ export function createUiSlice(
     triggerManualSync: () =>
       set((state) => ({ manualSyncNonce: state.manualSyncNonce + 1 })),
     applyCloudWorkspace: (payload) => {
-      if (Object.keys(payload.documents).length === 0) return;
+      if (Object.keys(payload.documents).length === 0) {
+        set({
+          documents: {},
+          activeDocumentId: "",
+          openTabIds: [],
+          fileOrder: [],
+        });
+        return;
+      }
       const nextOrder = syncFileOrder(payload.fileOrder, payload.documents);
       const nextActive = payload.documents[payload.activeDocumentId]
         ? payload.activeDocumentId

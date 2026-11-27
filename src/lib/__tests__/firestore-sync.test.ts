@@ -89,6 +89,49 @@ describe("Firestore Two-Way Timestamp Merge & Helpers", () => {
     expect(result.toUploadIds).toEqual([]);
   });
 
+  it("ignores untouched empty default template on new user sign-up so Dashboard stays empty", () => {
+    const emptyDefault = createEmptyResume("resume-default-1", "CV Saya");
+    expect(isUntouchedDefaultSample(emptyDefault)).toBe(true);
+
+    const merged = mergeLocalAndCloudDocuments(
+      { [emptyDefault.id]: emptyDefault },
+      {}
+    );
+    expect(merged.mergedDocs).toEqual({});
+    expect(merged.toUploadIds).toEqual([]);
+
+    const { workspace, toUploadIds } = buildMergedWorkspaceState(
+      {
+        documents: { [emptyDefault.id]: emptyDefault },
+        activeDocumentId: emptyDefault.id,
+        openTabIds: [emptyDefault.id],
+        fileOrder: [emptyDefault.id],
+      },
+      { meta: null, documents: {} }
+    );
+
+    expect(toUploadIds).toEqual([]);
+    expect(workspace.documents).toEqual({});
+    expect(workspace.activeDocumentId).toBe("");
+    expect(workspace.openTabIds).toEqual([]);
+    expect(workspace.fileOrder).toEqual([]);
+  });
+
+  it("keeps and uploads resume-default-1 if Guest already typed CV content before Sign Up", () => {
+    const editedDefault = createEmptyResume("resume-default-1", "CV Saya");
+    editedDefault.updatedAt = new Date(Date.now() + 5000).toISOString();
+    editedDefault.basics.fullName = "Arya Goberto";
+
+    expect(isUntouchedDefaultSample(editedDefault)).toBe(false);
+
+    const result = mergeLocalAndCloudDocuments(
+      { [editedDefault.id]: editedDefault },
+      {}
+    );
+    expect(Object.keys(result.mergedDocs)).toEqual(["resume-default-1"]);
+    expect(result.toUploadIds).toEqual(["resume-default-1"]);
+  });
+
   it("uploads default sample if the user edited it in Guest Mode", () => {
     const editedSample = {
       ...createSampleResume("2026-01-01T00:00:00.000Z"),

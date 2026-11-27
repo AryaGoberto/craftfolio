@@ -52,15 +52,49 @@ export function stripUndefined<T>(value: T): T {
   return value;
 }
 
-/** Detects untouched default sample resume so signing in on a fresh device doesn't duplicate it into Cloud. */
-export function isUntouchedDefaultSample(doc: ResumeDocument): boolean {
+function hasAnyResumeContent(doc: ResumeDocument): boolean {
+  if (
+    doc.basics.fullName.trim() ||
+    doc.basics.email.trim() ||
+    (doc.basics.phone ?? "").trim() ||
+    (doc.basics.headline ?? "").trim() ||
+    (doc.basics.location ?? "").trim() ||
+    doc.basics.links.length > 0 ||
+    doc.basics.summary.text.trim()
+  ) {
+    return true;
+  }
+
   return (
-    doc.id === "resume-default-1" &&
-    doc.createdAt === doc.updatedAt &&
-    doc.basics.fullName === "Raka Pratama" &&
-    doc.basics.email === "raka.pratama@email.com"
+    doc.sections.experience.items.length > 0 ||
+    doc.sections.education.items.length > 0 ||
+    doc.sections.projects.items.length > 0 ||
+    doc.sections.skills.items.length > 0 ||
+    doc.sections.certifications.items.length > 0 ||
+    doc.sections.awards.items.length > 0 ||
+    doc.sections.volunteering.items.length > 0 ||
+    doc.sections.languages.items.length > 0 ||
+    doc.sections.customSections.length > 0
   );
 }
+
+/**
+ * Detects untouched default local draft/sample (`resume-default-1`) so signing in or signing up
+ * never uploads a blank starter template to Cloud Firestore.
+ */
+export function isUntouchedDefaultSample(doc: ResumeDocument): boolean {
+  if (doc.id !== "resume-default-1" || doc.createdAt !== doc.updatedAt) {
+    return false;
+  }
+
+  const isLegacySample =
+    doc.basics.fullName === "Raka Pratama" &&
+    doc.basics.email === "raka.pratama@email.com";
+
+  return isLegacySample || !hasAnyResumeContent(doc);
+}
+
+export const isUntouchedDefaultDraft = isUntouchedDefaultSample;
 
 function toTimestampMs(iso: string | undefined): number {
   if (!iso) return 0;
@@ -80,7 +114,6 @@ export function mergeLocalAndCloudDocuments(
   const mergedDocs: Record<string, ResumeDocument> = {};
   const toUploadIds: string[] = [];
 
-  const hasCloudDocs = Object.keys(cloudDocs).length > 0;
   const allIds = new Set([...Object.keys(localDocs), ...Object.keys(cloudDocs)]);
 
   for (const id of allIds) {
@@ -88,7 +121,8 @@ export function mergeLocalAndCloudDocuments(
     const cloudDoc = cloudDocs[id];
 
     if (localDoc && !cloudDoc) {
-      if (hasCloudDocs && isUntouchedDefaultSample(localDoc)) {
+      // Never auto-upload an untouched default template, even when the account has 0 cloud CVs.
+      if (isUntouchedDefaultSample(localDoc)) {
         continue;
       }
       mergedDocs[id] = localDoc;
@@ -138,7 +172,7 @@ export function buildMergedWorkspaceState(
       ? cloudMeta.activeDocumentId
       : mergedDocs[localState.activeDocumentId]
         ? localState.activeDocumentId
-        : fileOrder[0];
+        : (fileOrder[0] ?? "");
 
   const preferredTabs =
     cloudMeta?.openTabIds && cloudMeta.openTabIds.length > 0

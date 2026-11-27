@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Cloud, LogIn, SearchX } from "lucide-react";
+import { ArrowRight, Cloud, FilePlus2, LogIn, Plus, SearchX, Upload } from "lucide-react";
 
 export function DashboardSkeletonGrid() {
   return (
@@ -94,6 +94,51 @@ export function DashboardEmptyFilterState({
       >
         Reset Filter
       </button>
+    </div>
+  );
+}
+
+export function DashboardEmptyState({
+  onCreateNew,
+  onOpenImport,
+}: {
+  onCreateNew: () => void;
+  onOpenImport: () => void;
+}) {
+  return (
+    <div
+      role="status"
+      className="bg-white border border-dashed border-[#D4D4D8] rounded-lg py-16 px-6 text-center space-y-4"
+    >
+      <div className="w-11 h-11 mx-auto rounded-lg bg-[#F4F4F5] border border-[#E4E4E7] text-[#18181B] flex items-center justify-center">
+        <FilePlus2 className="w-5 h-5" aria-hidden="true" />
+      </div>
+      <div className="max-w-md mx-auto space-y-1.5">
+        <h2 className="text-[16px] font-semibold text-[#09090B]">
+          Belum ada dokumen CV
+        </h2>
+        <p className="text-[13px] text-[#52525B] leading-relaxed">
+          Mulai buat CV ATS pertamamu dari nol atau impor CV lama (PDF, Word, Teks, atau Backup JSON).
+        </p>
+      </div>
+      <div className="pt-1 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+        <button
+          type="button"
+          onClick={onCreateNew}
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md bg-[#18181B] hover:bg-[#27272A] text-white text-[12.5px] font-medium transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Buat CV Baru
+        </button>
+        <button
+          type="button"
+          onClick={onOpenImport}
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md bg-white border border-[#E4E4E7] hover:bg-[#F4F4F5] text-[12.5px] font-medium text-[#09090B] transition-colors"
+        >
+          <Upload className="w-3.5 h-3.5 text-[#52525B]" />
+          Import File
+        </button>
+      </div>
     </div>
   );
 }

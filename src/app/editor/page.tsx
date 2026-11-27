@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
 import { useResumeStore } from "@/store/use-resume-store";
 import { runAtsLint } from "@/lib/ats-linter";
@@ -9,16 +10,45 @@ import { EditorPanel } from "@/components/editor/EditorPanel";
 import { FileTreeSidebar } from "@/components/editor/FileTreeSidebar";
 import { WorkspaceTabBar } from "@/components/editor/WorkspaceTabBar";
 import { PreviewPanel } from "@/components/preview/PreviewPanel";
-import { AtsCheckerModal } from "@/components/editor/AtsCheckerModal";
-import { CvImportModal } from "@/components/editor/CvImportModal";
-import { JdMatcherModal } from "@/components/editor/JdMatcherModal";
-import { AuthModal } from "@/components/auth/AuthModal";
 import { CloudSyncManager } from "@/components/auth/CloudSyncManager";
+
+const AtsCheckerModal = dynamic(
+  () =>
+    import("@/components/editor/AtsCheckerModal").then(
+      (mod) => mod.AtsCheckerModal
+    ),
+  { ssr: false }
+);
+
+const CvImportModal = dynamic(
+  () =>
+    import("@/components/editor/CvImportModal").then(
+      (mod) => mod.CvImportModal
+    ),
+  { ssr: false }
+);
+
+const JdMatcherModal = dynamic(
+  () =>
+    import("@/components/editor/JdMatcherModal").then(
+      (mod) => mod.JdMatcherModal
+    ),
+  { ssr: false }
+);
+
+const AuthModal = dynamic(
+  () =>
+    import("@/components/auth/AuthModal").then((mod) => mod.AuthModal),
+  { ssr: false }
+);
 
 export default function EditorPage() {
   const hasHydrated = useResumeStore((s) => s.hasHydrated);
   const documents = useResumeStore((s) => s.documents);
   const activeDocumentId = useResumeStore((s) => s.activeDocumentId);
+  const doc = documents[activeDocumentId];
+  const createDocument = useResumeStore((s) => s.createDocument);
+  const setActiveDocument = useResumeStore((s) => s.setActiveDocument);
   const mobileTab = useResumeStore((s) => s.mobileTab);
   const setMobileTab = useResumeStore((s) => s.setMobileTab);
   const setActiveSection = useResumeStore((s) => s.setActiveSection);
@@ -38,6 +68,28 @@ export default function EditorPage() {
   const [jdModalOpen, setJdModalOpen] = useState(false);
   const [importCvModalOpen, setImportCvModalOpen] = useState(false);
   const [guestBannerDismissed, setGuestBannerDismissed] = useState(false);
+
+  // Auto-create a clean starter resume when opening /editor from an empty (0-CV) Dashboard
+  useEffect(() => {
+    if (!hasHydrated || authLoading) return;
+    if (authUser && cloudSyncStatus === "syncing") return;
+
+    const ids = Object.keys(documents);
+    if (ids.length === 0) {
+      createDocument("CV Saya");
+    } else if (!documents[activeDocumentId]) {
+      setActiveDocument(ids[0]);
+    }
+  }, [
+    hasHydrated,
+    authLoading,
+    authUser,
+    cloudSyncStatus,
+    documents,
+    activeDocumentId,
+    createDocument,
+    setActiveDocument,
+  ]);
 
   // Warn unauthenticated guests (or syncing cloud sessions) before closing/reloading tab
   useEffect(() => {
@@ -78,14 +130,22 @@ export default function EditorPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [toggleFileTree]);
 
-  const doc = documents[activeDocumentId];
+  const deferredDoc = useDeferredValue(doc);
+
+  const handlePageStatsChange = useCallback(
+    (count: number, fill: number) => {
+      setPageCount(count);
+      setLastPageFillRatio(fill);
+    },
+    []
+  );
 
   const lintReport = useMemo(() => {
-    if (!doc) {
+    if (!deferredDoc) {
       return { summary: { good: 0, review: 0, fix: 0 }, items: [] };
     }
-    return runAtsLint(doc, pageCount, lastPageFillRatio);
-  }, [doc, pageCount, lastPageFillRatio]);
+    return runAtsLint(deferredDoc, pageCount, lastPageFillRatio);
+  }, [deferredDoc, pageCount, lastPageFillRatio]);
 
   if (!hasHydrated || !doc) {
     return (
@@ -207,32 +267,31 @@ export default function EditorPage() {
                 mobileTab === "preview" ? "flex" : "hidden"
               } lg:flex flex-1 h-full overflow-hidden`}
             >
-              <PreviewPanel
-                onPageStatsChange={(count, fill) => {
-                  setPageCount(count);
-                  setLastPageFillRatio(fill);
-                }}
-              />
+              <PreviewPanel onPageStatsChange={handlePageStatsChange} />
             </div>
           </main>
         </div>
       </div>
 
-      <AtsCheckerModal
-        open={atsModalOpen}
-        onClose={() => setAtsModalOpen(false)}
-        report={lintReport}
-        onJumpToSection={(section) => {
-          setActiveSection(section);
-          setMobileTab("edit");
-        }}
-      />
+      {atsModalOpen && (
+        <AtsCheckerModal
+          open={atsModalOpen}
+          onClose={() => setAtsModalOpen(false)}
+          report={lintReport}
+          onJumpToSection={(section) => {
+            setActiveSection(section);
+            setMobileTab("edit");
+          }}
+        />
+      )}
 
-      <JdMatcherModal
-        open={jdModalOpen}
-        onClose={() => setJdModalOpen(false)}
-        doc={doc}
-      />
+      {jdModalOpen && (
+        <JdMatcherModal
+          open={jdModalOpen}
+          onClose={() => setJdModalOpen(false)}
+          doc={doc}
+        />
+      )}
 
       <AuthModal
         open={authModalOpen}
@@ -241,10 +300,12 @@ export default function EditorPage() {
         reason={authModalReason ?? undefined}
       />
 
-      <CvImportModal
-        open={importCvModalOpen}
-        onClose={() => setImportCvModalOpen(false)}
-      />
+      {importCvModalOpen && (
+        <CvImportModal
+          open={importCvModalOpen}
+          onClose={() => setImportCvModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

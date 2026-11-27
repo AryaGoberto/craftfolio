@@ -4,10 +4,11 @@ import { extractTextFromDocxBuffer } from "@/lib/cv-file-extractor";
 import {
   buildResumeDocumentFromParsed,
   handleParseCvPost,
+  ParsedCvPayloadSchema,
   type ParsedCvPayload,
 } from "@/lib/ai/cv-importer";
 import { resetAiQuotaStoreForTests } from "@/lib/ai/quota";
-import { ResumeDocumentSchema } from "@/lib/schemas/resume";
+import { RESUME_LIMITS, ResumeDocumentSchema } from "@/lib/schemas/resume";
 
 const mockAuthOk = async () => ({
   uid: "uid-test-parse",
@@ -140,6 +141,7 @@ describe("buildResumeDocumentFromParsed & POST /api/ai/parse-cv", () => {
       awards: [],
       volunteering: [],
       languages: [{ language: "English", proficiency: "Fluent" }],
+      customSections: [],
     };
 
     const { document, warnings } = buildResumeDocumentFromParsed(parsed);
@@ -203,5 +205,163 @@ describe("buildResumeDocumentFromParsed & POST /api/ai/parse-cv", () => {
     expect(res.status).toBe(503);
     const body = (await res.json()) as { code: string };
     expect(body.code).toBe("AI_UNAVAILABLE");
+  });
+
+  it("extracts custom sections such as Organization and Course and registers them in sectionOrder", () => {
+    const rawPayload = {
+      documentTitle: "CV Arya Goberto",
+      language: "en",
+      fullName: "Arya Goberto",
+      headline: "Software Engineering Student",
+      email: "arya@example.com",
+      phone: "+62 812-0000-1111",
+      location: "Makassar, Indonesia",
+      links: [],
+      summary: "CS student building full-stack web applications.",
+      experience: [
+        {
+          company: "Tech Corp",
+          position: "Software Engineer Intern",
+          startDate: "Jun 2025",
+          endDate: "Sep 2025",
+          bullets: ["Shipped React dashboard components."],
+        },
+      ],
+      education: [
+        {
+          institution: "Universitas Hasanuddin",
+          degree: "B.Sc. Informatics",
+          startDate: "2022",
+          endDate: "Present",
+        },
+      ],
+      projects: [
+        {
+          name: "Craftfolio",
+          techStack: "Next.js, TypeScript",
+          bullets: ["Built ATS resume editor."],
+        },
+      ],
+      skills: [{ category: "Languages", skills: "TypeScript, Python, Go" }],
+      certifications: [],
+      awards: [{ title: "Best Hackathon Project", issuer: "Compfest", date: "2024" }],
+      volunteering: [],
+      languages: [],
+      customSections: [
+        {
+          title: "Organization",
+          items: [
+            {
+              title: "Himpunan Mahasiswa Informatika",
+              subtitle: "Head of Technology Division",
+              date: "2023 - 2024",
+              bullets: ["Led weekly web development workshops for 60 members."],
+            },
+          ],
+        },
+        {
+          title: "Course",
+          items: [
+            {
+              title: "Full-Stack Web Development Bootcamp",
+              subtitle: "Dicoding Indonesia",
+              date: "2024",
+              bullets: [],
+            },
+            {
+              title: "Machine Learning Specialization",
+              subtitle: "Coursera",
+              bullets: ["Completed Supervised & Unsupervised Learning tracks."],
+            },
+          ],
+        },
+        {
+          title: "",
+          items: [{ title: "Should be dropped", bullets: [] }],
+        },
+        {
+          title: "EmptySection",
+          items: [],
+        },
+      ],
+      sectionTitles: {
+        skills: "Technical Skills",
+        awards: "Achievements",
+      },
+    };
+
+    const schemaResult = ParsedCvPayloadSchema.safeParse(rawPayload);
+    expect(schemaResult.success).toBe(true);
+    if (!schemaResult.success) return;
+
+    const { document, warnings } = buildResumeDocumentFromParsed(schemaResult.data);
+    const docValidation = ResumeDocumentSchema.safeParse(document);
+
+    expect(docValidation.success).toBe(true);
+    expect(document.sections.skills.title).toBe("Technical Skills");
+    expect(document.sections.awards.title).toBe("Achievements");
+    expect(document.sections.customSections).toHaveLength(2);
+
+    const orgSection = document.sections.customSections[0];
+    const courseSection = document.sections.customSections[1];
+    expect(orgSection.title).toBe("Organization");
+    expect(orgSection.items[0].subtitle).toBe("Head of Technology Division");
+    expect(orgSection.items[0].bullets).toHaveLength(1);
+
+    expect(courseSection.title).toBe("Course");
+    expect(courseSection.items).toHaveLength(2);
+    expect(courseSection.items[1].date).toBeUndefined();
+
+    expect(document.config.sectionOrder).toContain(`custom:${orgSection.id}`);
+    expect(document.config.sectionOrder).toContain(`custom:${courseSection.id}`);
+    expect(
+      warnings.some((w) => w.includes("belum terdeteksi"))
+    ).toBe(false);
+  });
+
+  it("defensively clamps oversized AI output fields to RESUME_LIMITS so Zod never throws", () => {
+    const giantText = "X".repeat(10_000);
+    const manyItems = Array.from({ length: 60 }, (_, idx) => ({
+      title: `Course ${idx} ${giantText}`,
+      subtitle: giantText,
+      date: giantText,
+      bullets: Array.from({ length: 40 }, () => giantText),
+    }));
+
+    const parsed = ParsedCvPayloadSchema.parse({
+      documentTitle: giantText,
+      language: "en",
+      fullName: giantText,
+      headline: giantText,
+      email: giantText,
+      phone: giantText,
+      location: giantText,
+      links: Array.from({ length: 30 }, (_, idx) => ({
+        label: giantText,
+        url: `https://example.com/${idx}`,
+      })),
+      summary: giantText,
+      customSections: Array.from({ length: 30 }, (_, idx) => ({
+        title: `Custom ${idx} ${giantText}`,
+        items: idx === 0 ? manyItems : [{ title: "Item", bullets: [] }],
+      })),
+    });
+
+    const { document } = buildResumeDocumentFromParsed(parsed);
+    const docValidation = ResumeDocumentSchema.safeParse(document);
+
+    expect(docValidation.success).toBe(true);
+    expect(document.sections.customSections.length).toBeLessThanOrEqual(
+      RESUME_LIMITS.MAX_CUSTOM_SECTIONS
+    );
+    expect(document.config.sectionOrder.length).toBeLessThanOrEqual(
+      RESUME_LIMITS.MAX_SECTION_ORDER
+    );
+    expect(document.basics.links.length).toBeLessThanOrEqual(
+      RESUME_LIMITS.MAX_LINKS
+    );
+    expect(document.sections.customSections[0].items.length).toBeLessThanOrEqual(
+      RESUME_LIMITS.MAX_ITEMS_PER_SECTION
+    );
   });
 });

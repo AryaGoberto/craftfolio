@@ -351,4 +351,67 @@ describe("Workspace Tabs & File Tree Store", () => {
       globalThis.sessionStorage.getItem(CRAFTFOLIO_STORAGE_KEY)
     ).not.toContain("Guest Temp CV");
   });
+
+  it("allows applyCloudWorkspace to clear local default into a 0-document workspace for new accounts", () => {
+    useResumeStore.getState().applyCloudWorkspace({
+      documents: {},
+      activeDocumentId: "",
+      openTabIds: [],
+      fileOrder: [],
+    });
+
+    const state = useResumeStore.getState();
+    expect(state.documents).toEqual({});
+    expect(state.activeDocumentId).toBe("");
+    expect(state.openTabIds).toEqual([]);
+    expect(state.fileOrder).toEqual([]);
+
+    // Creating or importing from 0-doc state hydrates cleanly
+    state.createDocument("CV Pertama");
+    const afterCreate = useResumeStore.getState();
+    expect(Object.keys(afterCreate.documents)).toHaveLength(1);
+    expect(afterCreate.activeDocumentId).not.toBe("");
+    expect(afterCreate.openTabIds).toEqual([afterCreate.activeDocumentId]);
+    expect(afterCreate.fileOrder).toEqual([afterCreate.activeDocumentId]);
+  });
+
+  it("allows authenticated users to delete their last remaining CV while protecting Guest Mode", () => {
+    const base = useResumeStore.getState().activeDocumentId;
+
+    useResumeStore.getState().setAuthUser({
+      uid: "user-delete-last",
+      email: "user@example.com",
+      displayName: "User",
+      photoURL: null,
+    });
+
+    useResumeStore.getState().deleteDocument(base);
+    const afterDelete = useResumeStore.getState();
+    expect(afterDelete.documents).toEqual({});
+    expect(afterDelete.activeDocumentId).toBe("");
+    expect(afterDelete.openTabIds).toEqual([]);
+    expect(afterDelete.fileOrder).toEqual([]);
+
+    // Deleting last doc is allowed when signed in; verify importing JSON from 0-doc state also works cleanly
+    const exportedJson = JSON.stringify(createSampleResume("2026-01-01T00:00:00.000Z"));
+    const invalidJson = useResumeStore.getState().importResumeJson("{invalid-json");
+    expect(invalidJson.ok).toBe(false);
+
+    const invalidSchema = useResumeStore
+      .getState()
+      .importResumeJson(JSON.stringify({ hello: "world" }));
+    expect(invalidSchema.ok).toBe(false);
+
+    const importedFromEmpty = useResumeStore
+      .getState()
+      .importResumeJson(exportedJson);
+    expect(importedFromEmpty.ok).toBe(true);
+    const afterImport = useResumeStore.getState();
+    expect(Object.keys(afterImport.documents)).toHaveLength(1);
+    expect(afterImport.openTabIds).toEqual([afterImport.activeDocumentId]);
+    expect(afterImport.fileOrder).toEqual([afterImport.activeDocumentId]);
+
+    // Cleanup auth state for subsequent tests
+    useResumeStore.getState().setAuthUser(null);
+  });
 });
