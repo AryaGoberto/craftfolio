@@ -43,19 +43,19 @@ const EXPERIENCE_CONFIG: SectionFormConfig = {
     {
       key: "company",
       label: "Perusahaan / Organisasi",
-      placeholder: "Contoh: PT Teknologi Nusantara",
+      placeholder: "Nama Perusahaan / Organisasi",
     },
     {
       key: "position",
       label: "Posisi / Peran",
-      placeholder: "Contoh: Software Engineer",
+      placeholder: "Posisi / Jabatan Anda",
     },
-    { key: "startDate", label: "Tanggal Mulai", placeholder: "Jan 2023" },
-    { key: "endDate", label: "Tanggal Selesai", placeholder: "Present" },
+    { key: "startDate", label: "Tanggal Mulai", placeholder: "Bulan Tahun" },
+    { key: "endDate", label: "Tanggal Selesai", placeholder: "Sekarang / Bulan Tahun" },
     {
       key: "location",
       label: "Lokasi (opsional)",
-      placeholder: "Jakarta, Indonesia",
+      placeholder: "Kota, Negara",
       fullWidth: true,
     },
   ],
@@ -77,20 +77,20 @@ const SECTION_CONFIGS: Record<
       {
         key: "institution",
         label: "Institusi / Universitas",
-        placeholder: "Contoh: Institut Teknologi Bandung",
+        placeholder: "Nama Universitas / Institusi",
       },
       {
         key: "degree",
         label: "Gelar & Jurusan",
-        placeholder: "Contoh: S1 Teknik Informatika",
+        placeholder: "Gelar & Program Studi",
       },
-      { key: "startDate", label: "Tahun Masuk", placeholder: "2019" },
-      { key: "endDate", label: "Tahun Lulus", placeholder: "2023" },
-      { key: "gpa", label: "IPK / GPA (opsional)", placeholder: "3.78 / 4.00" },
+      { key: "startDate", label: "Tahun Masuk", placeholder: "Tahun Masuk" },
+      { key: "endDate", label: "Tahun Lulus", placeholder: "Tahun Lulus" },
+      { key: "gpa", label: "IPK / GPA (opsional)", placeholder: "IPK (opsional)" },
       {
         key: "location",
         label: "Lokasi (opsional)",
-        placeholder: "Bandung, Indonesia",
+        placeholder: "Kota, Negara",
       },
     ],
   },
@@ -103,18 +103,18 @@ const SECTION_CONFIGS: Record<
       {
         key: "name",
         label: "Nama Proyek",
-        placeholder: "Contoh: Craftfolio CV Builder",
+        placeholder: "Nama Proyek",
       },
       {
         key: "techStack",
-        label: "Tech Stack",
-        placeholder: "Next.js, TypeScript, Tailwind CSS",
+        label: "Teknologi / Peran",
+        placeholder: "Teknologi atau peralatan yang digunakan",
       },
-      { key: "date", label: "Tahun / Tanggal", placeholder: "2025" },
+      { key: "date", label: "Tahun / Tanggal", placeholder: "Tahun" },
       {
         key: "url",
         label: "Tautan (opsional)",
-        placeholder: "github.com/username/proyek",
+        placeholder: "tautan-proyek.com",
       },
     ],
   },
@@ -126,13 +126,13 @@ const SECTION_CONFIGS: Record<
       {
         key: "category",
         label: "Kategori",
-        placeholder: "Frontend / Languages / Tools",
+        placeholder: "Kategori Keahlian (mis. Teknis / Bahasa / Tools)",
         fullWidth: true,
       },
       {
         key: "skills",
         label: "Daftar Keahlian (pisahkan dengan koma)",
-        placeholder: "React, Next.js, TypeScript, Tailwind CSS",
+        placeholder: "Keahlian 1, Keahlian 2, Keahlian 3",
         fullWidth: true,
       },
     ],
@@ -142,9 +142,14 @@ const SECTION_CONFIGS: Record<
     getTitle: (it) => String(it.name ?? ""),
     getSubtitle: (it) => String(it.issuer ?? ""),
     fields: [
-      { key: "name", label: "Nama Sertifikasi", fullWidth: true },
-      { key: "issuer", label: "Penerbit" },
-      { key: "date", label: "Tanggal / Tahun" },
+      {
+        key: "name",
+        label: "Nama Sertifikasi",
+        placeholder: "Nama Sertifikasi",
+        fullWidth: true,
+      },
+      { key: "issuer", label: "Penerbit", placeholder: "Lembaga Penerbit" },
+      { key: "date", label: "Tanggal / Tahun", placeholder: "Tahun" },
     ],
   },
   awards: {
@@ -152,9 +157,14 @@ const SECTION_CONFIGS: Record<
     getTitle: (it) => String(it.title ?? ""),
     getSubtitle: (it) => String(it.issuer ?? ""),
     fields: [
-      { key: "title", label: "Nama Penghargaan", fullWidth: true },
-      { key: "issuer", label: "Pemberi" },
-      { key: "date", label: "Tahun" },
+      {
+        key: "title",
+        label: "Nama Penghargaan",
+        placeholder: "Judul Penghargaan",
+        fullWidth: true,
+      },
+      { key: "issuer", label: "Pemberi", placeholder: "Penyelenggara" },
+      { key: "date", label: "Tahun", placeholder: "Tahun" },
     ],
   },
   languages: {
@@ -162,11 +172,11 @@ const SECTION_CONFIGS: Record<
     getTitle: (it) => String(it.language ?? ""),
     getSubtitle: (it) => String(it.proficiency ?? ""),
     fields: [
-      { key: "language", label: "Bahasa", placeholder: "English" },
+      { key: "language", label: "Bahasa", placeholder: "Nama Bahasa" },
       {
         key: "proficiency",
         label: "Tingkat Kemahiran",
-        placeholder: "Professional Working",
+        placeholder: "Tingkat Kemahiran (mis. Fasih / Aktif)",
       },
     ],
   },
@@ -177,9 +187,22 @@ const SECTION_CONFIGS: Record<
     getTitle: (it) => String(it.title ?? ""),
     getSubtitle: (it) => String(it.date ?? ""),
     fields: [
-      { key: "title", label: "Judul Item" },
-      { key: "subtitle", label: "Subjudul / Penerbit" },
-      { key: "date", label: "Tanggal / Tahun", fullWidth: true },
+      {
+        key: "title",
+        label: "Judul Item / Sertifikasi",
+        placeholder: "Judul Sertifikasi / Item",
+      },
+      {
+        key: "subtitle",
+        label: "Subjudul / Penerbit",
+        placeholder: "Penerbit / Penyelenggara",
+      },
+      {
+        key: "date",
+        label: "Tanggal / Tahun",
+        placeholder: "Tahun",
+        fullWidth: true,
+      },
     ],
   },
 };
@@ -194,6 +217,7 @@ type GenericItem = {
 export function SectionBodyForm({ sectionKey }: { sectionKey: SectionKey }) {
   const documents = useResumeStore((s) => s.documents);
   const activeDocumentId = useResumeStore((s) => s.activeDocumentId);
+  const updateSectionTitle = useResumeStore((s) => s.updateSectionTitle);
   const addSectionItem = useResumeStore((s) => s.addSectionItem);
   const updateSectionItem = useResumeStore((s) => s.updateSectionItem);
   const removeSectionItem = useResumeStore((s) => s.removeSectionItem);
@@ -209,18 +233,33 @@ export function SectionBodyForm({ sectionKey }: { sectionKey: SectionKey }) {
 
   const isCustom = sectionKey.startsWith("custom:");
   const targetKey = sectionKey as BuiltinSectionKey | `custom:${string}`;
+  const customSectionObj = isCustom
+    ? doc.sections.customSections.find(
+        (cs) => cs.id === sectionKey.replace("custom:", "")
+      )
+    : undefined;
   const config = isCustom
     ? SECTION_CONFIGS.custom
     : SECTION_CONFIGS[sectionKey as BuiltinSectionKey];
 
   const items: GenericItem[] = isCustom
-    ? (doc.sections.customSections.find(
-        (cs) => cs.id === sectionKey.replace("custom:", "")
-      )?.items as GenericItem[] | undefined) ?? []
+    ? (customSectionObj?.items as GenericItem[] | undefined) ?? []
     : (doc.sections[sectionKey as BuiltinSectionKey].items as GenericItem[]);
 
   return (
     <div className="space-y-3">
+      {isCustom && customSectionObj && (
+        <div>
+          <label className={labelClass}>Judul Header Section</label>
+          <input
+            type="text"
+            value={customSectionObj.title}
+            onChange={(e) => updateSectionTitle(sectionKey, e.target.value)}
+            placeholder="Misal: Sertifikasi / Penghargaan / Organisasi"
+            className={inputClass}
+          />
+        </div>
+      )}
       {items.length === 0 && config.emptyText ? (
         <div className="border border-dashed border-[#E4E4E7] rounded-lg p-4 text-center text-[12px] text-[#52525B]">
           {config.emptyText}

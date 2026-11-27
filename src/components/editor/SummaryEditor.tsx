@@ -232,7 +232,7 @@ export function SummaryEditor() {
           updateSummary({ text: e.target.value });
           if (suggestion) setSuggestion(null);
         }}
-        placeholder="Contoh: Software Engineer dengan pengalaman membangun aplikasi web menggunakan TypeScript dan Next.js. Berfokus pada performa antarmuka, arsitektur modular, dan kolaborasi lintas tim."
+        placeholder="Tulis ringkasan singkat (2–3 kalimat) mengenai profil profesional, keahlian utama, dan fokus karier Anda..."
         className="w-full p-2.5 text-[13px] text-[#09090B] bg-white border border-[#E4E4E7] rounded-md focus:outline-none focus:ring-1 focus:ring-[#18181B] placeholder:text-[#A1A1AA]"
       />
 

@@ -29,7 +29,7 @@ export function BasicsForm() {
             type="text"
             value={basics.fullName}
             onChange={(e) => updateBasics({ fullName: e.target.value })}
-            placeholder="Contoh: Raka Pratama"
+            placeholder="Nama Lengkap Anda"
             className={inputClass}
           />
         </div>
@@ -39,7 +39,7 @@ export function BasicsForm() {
             type="text"
             value={basics.headline ?? ""}
             onChange={(e) => updateBasics({ headline: e.target.value })}
-            placeholder="Contoh: Frontend Engineer"
+            placeholder="Posisi / Bidang Keahlian"
             className={inputClass}
           />
         </div>
@@ -49,7 +49,7 @@ export function BasicsForm() {
             type="email"
             value={basics.email}
             onChange={(e) => updateBasics({ email: e.target.value })}
-            placeholder="nama@email.com"
+            placeholder="email.anda@domain.com"
             className={inputClass}
           />
         </div>
@@ -59,7 +59,7 @@ export function BasicsForm() {
             type="text"
             value={basics.phone ?? ""}
             onChange={(e) => updateBasics({ phone: e.target.value })}
-            placeholder="+62 812-3456-7890"
+            placeholder="+62 8xx-xxxx-xxxx"
             className={inputClass}
           />
         </div>
@@ -71,7 +71,7 @@ export function BasicsForm() {
           type="text"
           value={basics.location ?? ""}
           onChange={(e) => updateBasics({ location: e.target.value })}
-          placeholder="Jakarta, Indonesia"
+          placeholder="Kota, Negara"
           className={inputClass}
         />
       </div>
