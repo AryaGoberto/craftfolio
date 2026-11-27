@@ -288,10 +288,9 @@ export function FileTreeSidebar({
     };
   }, [contextMenu]);
 
-  if (!isFileTreeOpen) return null;
-
   const totalDocs = orderedIds.length;
-  const menuTargetDoc = contextMenu ? documents[contextMenu.docId] : undefined;
+  const menuTargetDoc =
+    isFileTreeOpen && contextMenu ? documents[contextMenu.docId] : undefined;
 
   const showError = (message: string) => {
     setImportError(message);
@@ -387,17 +386,28 @@ export function FileTreeSidebar({
 
   return (
     <>
-      {/* Mobile Backdrop */}
+      {/* Mobile Backdrop with smooth fade-in / fade-out */}
       <div
         onClick={() => toggleFileTree(false)}
         aria-hidden="true"
-        className="fixed inset-0 bg-black/20 z-30 lg:hidden"
+        className={`fixed inset-0 bg-black/25 z-30 lg:hidden transition-opacity duration-200 ease-out motion-reduce:duration-100 ${
+          isFileTreeOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
       />
 
       <aside
         aria-label="File Tree CV"
-        className="fixed inset-y-0 left-0 z-40 lg:static lg:z-auto w-60 bg-[#F4F4F5] border-r border-[#E4E4E7] flex flex-col h-full shrink-0 select-none shadow-lg lg:shadow-none"
+        aria-hidden={!isFileTreeOpen}
+        inert={!isFileTreeOpen ? true : undefined}
+        className={`fixed inset-y-0 left-0 z-40 lg:static lg:z-auto h-full shrink-0 select-none overflow-hidden bg-[#F4F4F5] border-r border-[#E4E4E7] shadow-lg lg:shadow-none transition-[width,opacity,transform,border-color] duration-200 ease-out motion-reduce:duration-100 ${
+          isFileTreeOpen
+            ? "w-60 opacity-100 translate-x-0 pointer-events-auto"
+            : "w-60 lg:w-0 opacity-0 -translate-x-3 lg:translate-x-0 lg:border-r-0 pointer-events-none"
+        }`}
       >
+        <div className="w-60 h-full flex flex-col">
         {/* Header */}
         <div className="h-9 px-2.5 border-b border-[#E4E4E7] bg-[#FAFAFA] flex items-center justify-between gap-1 shrink-0">
           <div className="flex items-center gap-1.5 min-w-0">
@@ -448,21 +458,9 @@ export function FileTreeSidebar({
             {onOpenImportCvModal && (
               <button
                 type="button"
-                onClick={() => {
-                  if (!authUser) {
-                    openAuthModal(
-                      "Masuk atau buat akun gratis untuk menggunakan fitur Import CV lama (PDF / DOCX) dengan asisten AI Gemini."
-                    );
-                    return;
-                  }
-                  onOpenImportCvModal();
-                }}
-                title={
-                  !authUser
-                    ? "Masuk untuk Import CV dengan AI"
-                    : "Import CV lama (PDF / DOCX)"
-                }
-                aria-label="Import CV lama dari PDF atau DOCX"
+                onClick={onOpenImportCvModal}
+                title="Import File CV (PDF / DOCX / Teks / .json)"
+                aria-label="Import File CV"
                 className="w-6 h-6 inline-flex items-center justify-center rounded text-[#52525B] hover:text-[#09090B] hover:bg-[#E4E4E7]/70 transition-colors"
               >
                 <FileUp className="w-3.5 h-3.5" />
@@ -552,10 +550,11 @@ export function FileTreeSidebar({
           onChange={handleImportFile}
           className="hidden"
         />
+        </div>
       </aside>
 
       {/* Fixed Context Menu (prevents clipping by sidebar scroll container) */}
-      {contextMenu && menuTargetDoc && (
+      {isFileTreeOpen && contextMenu && menuTargetDoc && (
         <div
           ref={menuRef}
           role="menu"

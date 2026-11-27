@@ -24,6 +24,109 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const CRAFTFOLIO_STORAGE_KEY = "craftfolio-storage";
 export const CRAFTFOLIO_CLOUD_SESSION_FLAG = "craftfolio-cloud-session";
+export const STORAGE_WRITE_DEBOUNCE_MS = 350;
+export const TEMPORAL_THROTTLE_MS = 500;
+
+export interface DebouncedStorageWriter {
+  schedule: (name: string, value: string) => void;
+  flush: () => void;
+  cancel: (name?: string) => void;
+}
+
+/**
+ * Coalesces rapid storage writes (e.g., per-keystroke Zustand persist updates)
+ * so JSON writes happen once after a brief typing pause instead of blocking every keystroke.
+ */
+export function createDebouncedStorageWriter(
+  writeNow: (name: string, value: string) => void,
+  delayMs: number = STORAGE_WRITE_DEBOUNCE_MS
+): DebouncedStorageWriter {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const pending = new Map<string, string>();
+
+  const flush = () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    if (pending.size === 0) return;
+    const entries = Array.from(pending.entries());
+    pending.clear();
+    for (const [k, v] of entries) {
+      writeNow(k, v);
+    }
+  };
+
+  const schedule = (name: string, value: string) => {
+    pending.set(name, value);
+    if (delayMs <= 0) {
+      flush();
+      return;
+    }
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(flush, delayMs);
+  };
+
+  const cancel = (name?: string) => {
+    if (name !== undefined) {
+      pending.delete(name);
+      if (pending.size === 0 && timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      return;
+    }
+    pending.clear();
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+
+  return { schedule, flush, cancel };
+}
+
+function writeResumeStorageNow(name: string, value: string): void {
+  const ss = getSafeSessionStorage();
+  ss?.setItem(name, value);
+
+  const ls = getSafeLocalStorage();
+  if (ls) {
+    if (ls.getItem(CRAFTFOLIO_CLOUD_SESSION_FLAG) === "1") {
+      ls.setItem(name, value);
+    } else {
+      ls.removeItem(name);
+    }
+  }
+}
+
+const debouncedResumeStorageWriter = createDebouncedStorageWriter(
+  writeResumeStorageNow,
+  STORAGE_WRITE_DEBOUNCE_MS
+);
+
+let unloadFlushRegistered = false;
+function ensureBrowserUnloadFlushRegistered(): void {
+  if (unloadFlushRegistered || typeof window === "undefined") return;
+  unloadFlushRegistered = true;
+
+  const flushSafe = () => {
+    debouncedResumeStorageWriter.flush();
+  };
+  window.addEventListener("pagehide", flushSafe);
+  window.addEventListener("beforeunload", flushSafe);
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        flushSafe();
+      }
+    });
+  }
+}
+
+export function flushPendingResumeStorage(): void {
+  debouncedResumeStorageWriter.flush();
+}
 
 function getSafeSessionStorage(): Storage | null {
   if (typeof globalThis === "undefined") return null;
@@ -53,6 +156,7 @@ export function isCloudSessionPersisted(): boolean {
 }
 
 export function clearAllResumeStorages(): void {
+  debouncedResumeStorageWriter.cancel();
   const ss = getSafeSessionStorage();
   const ls = getSafeLocalStorage();
   ss?.removeItem(CRAFTFOLIO_STORAGE_KEY);
@@ -85,20 +189,16 @@ const craftfolioStorage = createJSONStorage(() => ({
   },
   setItem: (name: string, value: string) => {
     if (typeof window === "undefined" && !process.env.VITEST) return;
-    const ss = getSafeSessionStorage();
-    ss?.setItem(name, value);
-
-    const ls = getSafeLocalStorage();
-    if (ls) {
-      if (ls.getItem(CRAFTFOLIO_CLOUD_SESSION_FLAG) === "1") {
-        ls.setItem(name, value);
-      } else {
-        ls.removeItem(name);
-      }
+    if (process.env.VITEST) {
+      writeResumeStorageNow(name, value);
+      return;
     }
+    ensureBrowserUnloadFlushRegistered();
+    debouncedResumeStorageWriter.schedule(name, value);
   },
   removeItem: (name: string) => {
     if (typeof window === "undefined" && !process.env.VITEST) return;
+    debouncedResumeStorageWriter.cancel(name);
     getSafeSessionStorage()?.removeItem(name);
     const ls = getSafeLocalStorage();
     ls?.removeItem(name);
@@ -107,6 +207,8 @@ const craftfolioStorage = createJSONStorage(() => ({
     }
   },
 }));
+
+let lastTemporalSnapshotAt = 0;
 
 export const useResumeStore = create<ResumeStoreState>()(
   persist(
@@ -157,6 +259,23 @@ export const useResumeStore = create<ResumeStoreState>()(
         }),
         equality: (pastState, currentState) =>
           pastState.documents === currentState.documents,
+        handleSet: (handleSet) => (pastState, replace, currentState, deltaState) => {
+          const now = Date.now();
+          const hasExistingHistory =
+            useResumeStore?.temporal?.getState().pastStates.length > 0;
+          if (
+            !hasExistingHistory ||
+            now - lastTemporalSnapshotAt >= TEMPORAL_THROTTLE_MS
+          ) {
+            lastTemporalSnapshotAt = now;
+            (handleSet as unknown as (
+              past: typeof pastState,
+              rep: typeof replace,
+              curr: typeof currentState,
+              delta: typeof deltaState
+            ) => void)(pastState, replace, currentState, deltaState);
+          }
+        },
       }
     ),
     {

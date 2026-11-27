@@ -15,7 +15,6 @@ import {
   LayoutGrid,
   LogOut,
   MoreHorizontal,
-  PanelLeft,
   Redo2,
   RefreshCw,
   SlidersHorizontal,
@@ -88,16 +87,13 @@ export function EditorTopBar({
   onOpenAuthModal,
   onOpenImportCvModal,
 }: EditorTopBarProps) {
-  const documents = useResumeStore((s) => s.documents);
-  const activeDocumentId = useResumeStore((s) => s.activeDocumentId);
+  const doc = useResumeStore((s) => s.documents[s.activeDocumentId]);
   const saveStatus = useResumeStore((s) => s.saveStatus);
   const authUser = useResumeStore((s) => s.authUser);
   const openAuthModal = useResumeStore((s) => s.openAuthModal);
   const cloudSyncStatus = useResumeStore((s) => s.cloudSyncStatus);
   const cloudSyncError = useResumeStore((s) => s.cloudSyncError);
   const triggerManualSync = useResumeStore((s) => s.triggerManualSync);
-  const isFileTreeOpen = useResumeStore((s) => s.isFileTreeOpen);
-  const toggleFileTree = useResumeStore((s) => s.toggleFileTree);
   const loadSampleResume = useResumeStore((s) => s.loadSampleResume);
   const clearActiveResume = useResumeStore((s) => s.clearActiveResume);
   const updateConfig = useResumeStore((s) => s.updateConfig);
@@ -105,8 +101,8 @@ export function EditorTopBar({
   const exportResumeJson = useResumeStore((s) => s.exportResumeJson);
   const importResumeJson = useResumeStore((s) => s.importResumeJson);
 
-  const pastStates = useStore(useResumeStore.temporal, (s) => s.pastStates);
-  const futureStates = useStore(useResumeStore.temporal, (s) => s.futureStates);
+  const canUndo = useStore(useResumeStore.temporal, (s) => s.pastStates.length > 0);
+  const canRedo = useStore(useResumeStore.temporal, (s) => s.futureStates.length > 0);
   const undo = useStore(useResumeStore.temporal, (s) => s.undo);
   const redo = useStore(useResumeStore.temporal, (s) => s.redo);
 
@@ -132,7 +128,6 @@ export function EditorTopBar({
     };
   }, [openMenu]);
 
-  const doc = documents[activeDocumentId];
   if (!doc) return null;
 
   const toggleMenu = (target: Exclude<OpenMenu, null>) => {
@@ -184,27 +179,8 @@ export function EditorTopBar({
       ref={headerRef}
       className="h-12 px-3 sm:px-4 bg-white border-b border-[#E4E4E7] grid grid-cols-[1fr_auto_1fr] items-center gap-2 shrink-0 z-30"
     >
-      {/* Left: Sidebar Toggle + Brand + Quiet Save Indicator */}
+      {/* Left: Brand + Quiet Save Indicator */}
       <div className="flex items-center gap-2.5 min-w-0">
-        <button
-          type="button"
-          onClick={() => toggleFileTree()}
-          aria-label="Toggle File Tree Sidebar"
-          aria-pressed={isFileTreeOpen}
-          title={
-            isFileTreeOpen
-              ? "Sembunyikan File Tree (Ctrl+B)"
-              : "Tampilkan File Tree (Ctrl+B)"
-          }
-          className={`inline-flex items-center justify-center w-8 h-8 rounded-md shrink-0 transition-colors ${
-            isFileTreeOpen
-              ? "bg-[#F4F4F5] text-[#09090B]"
-              : "text-[#52525B] hover:text-[#09090B] hover:bg-[#F4F4F5]"
-          }`}
-        >
-          <PanelLeft className="w-4 h-4" />
-        </button>
-
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <BrandLogo className="h-6 w-auto shrink-0" />
           <span className="text-[14px] font-semibold tracking-[-0.01em] text-[#09090B] hidden sm:inline">
@@ -434,7 +410,7 @@ export function EditorTopBar({
             <div className="absolute right-0 mt-1.5 w-56 bg-white border border-[#E4E4E7] rounded-lg shadow-xl p-1.5 z-50 text-[12px]">
               <button
                 type="button"
-                disabled={pastStates.length === 0}
+                disabled={!canUndo}
                 onClick={() => {
                   undo();
                   setOpenMenu(null);
@@ -451,7 +427,7 @@ export function EditorTopBar({
               </button>
               <button
                 type="button"
-                disabled={futureStates.length === 0}
+                disabled={!canRedo}
                 onClick={() => {
                   redo();
                   setOpenMenu(null);
@@ -517,18 +493,12 @@ export function EditorTopBar({
                   type="button"
                   onClick={() => {
                     setOpenMenu(null);
-                    if (!authUser) {
-                      openAuthModal(
-                        "Masuk atau buat akun gratis untuk menggunakan fitur Import CV (PDF / DOCX) dengan asisten AI Gemini."
-                      );
-                      return;
-                    }
                     onOpenImportCvModal();
                   }}
                   className="w-full text-left px-2.5 py-1.5 rounded hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
                 >
                   <FileUp className="w-3.5 h-3.5 text-[#52525B]" />
-                  Import CV (PDF / DOCX)
+                  Import File CV
                 </button>
               )}
 

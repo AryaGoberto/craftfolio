@@ -1,3 +1,5 @@
+export const MAX_PDF_EXTRACT_PAGES = 15;
+
 export interface ExtractedPdfContent {
   pageCount: number;
   pages: string[];
@@ -5,7 +7,8 @@ export interface ExtractedPdfContent {
 }
 
 export async function extractTextFromPdfBuffer(
-  data: ArrayBuffer | Uint8Array
+  data: ArrayBuffer | Uint8Array,
+  options?: { maxPages?: number }
 ): Promise<ExtractedPdfContent> {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
 
@@ -23,8 +26,10 @@ export async function extractTextFromPdfBuffer(
   try {
     const pdfDoc = await loadingTask.promise;
     const pages: string[] = [];
+    const maxPages = Math.max(1, options?.maxPages ?? MAX_PDF_EXTRACT_PAGES);
+    const pagesToRead = Math.min(pdfDoc.numPages, maxPages);
 
-    for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+    for (let pageNum = 1; pageNum <= pagesToRead; pageNum++) {
       const page = await pdfDoc.getPage(pageNum);
       const content = await page.getTextContent();
 

@@ -117,11 +117,25 @@ export function createDocumentSlice(
     },
 
     deleteDocument: (id) => {
-      const { documents, activeDocumentId, openTabIds, fileOrder } = get();
-      if (Object.keys(documents).length <= 1 || !documents[id]) return;
+      const { documents, activeDocumentId, openTabIds, fileOrder, authUser } =
+        get();
+      if (!documents[id]) return;
+      // Guest Mode retains at least 1 active worksheet; signed-in accounts may clear to 0 CVs.
+      if (!authUser && Object.keys(documents).length <= 1) return;
 
       const nextDocs = { ...documents };
       delete nextDocs[id];
+
+      if (Object.keys(nextDocs).length === 0) {
+        set({
+          documents: {},
+          activeDocumentId: "",
+          openTabIds: [],
+          fileOrder: [],
+        });
+        mutators.scheduleSaved();
+        return;
+      }
 
       const nextOrder = syncFileOrder(
         fileOrder.filter((fid) => fid !== id),

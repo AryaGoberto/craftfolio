@@ -32,7 +32,7 @@ export type ReserveQuotaResult =
     }
   | {
       allowed: false;
-      code: "AI_QUOTA_EXCEEDED" | "AI_BURST_LIMITED";
+      code: "AI_QUOTA_EXCEEDED" | "AI_BURST_LIMITED" | "AI_SERVER_QUOTA_EXCEEDED";
       error: string;
       retryAfterSeconds: number;
       quota: AiQuotaSnapshot;
@@ -45,13 +45,23 @@ interface UserDailyUsageRecord {
   burstTimestamps: number[];
 }
 
+interface GlobalDailyUsageRecord {
+  dayKey: string;
+  totalUsed: number;
+  burstTimestamps: number[];
+}
+
 const DEFAULT_DAILY_ENHANCE_LIMIT = 10;
 const DEFAULT_DAILY_IMPORT_LIMIT = 2;
 const DEFAULT_BURST_PER_MINUTE = 4;
+const DEFAULT_GLOBAL_DAILY_LIMIT = 450; // Safe buffer under 500 RPD free tier
+const DEFAULT_GLOBAL_RPM_LIMIT = 12; // Safe buffer under 15 RPM free tier
 const BURST_WINDOW_MS = 60_000;
 
 const globalQuotaStore = globalThis as typeof globalThis & {
   __craftfolioAiUsageStore?: Map<string, UserDailyUsageRecord>;
+  __craftfolioAiGlobalUsage?: GlobalDailyUsageRecord;
+  __craftfolioAiLastPrunedDayKey?: string;
 };
 
 function getUsageStore(): Map<string, UserDailyUsageRecord> {
@@ -59,6 +69,34 @@ function getUsageStore(): Map<string, UserDailyUsageRecord> {
     globalQuotaStore.__craftfolioAiUsageStore = new Map();
   }
   return globalQuotaStore.__craftfolioAiUsageStore;
+}
+
+function getOrResetGlobalRecord(dayKey: string): GlobalDailyUsageRecord {
+  const existing = globalQuotaStore.__craftfolioAiGlobalUsage;
+  if (!existing || existing.dayKey !== dayKey) {
+    const fresh: GlobalDailyUsageRecord = {
+      dayKey,
+      totalUsed: 0,
+      burstTimestamps: existing?.burstTimestamps ?? [],
+    };
+    globalQuotaStore.__craftfolioAiGlobalUsage = fresh;
+    return fresh;
+  }
+  return existing;
+}
+
+/** Evicts stale user quota buckets from prior WIB calendar days to prevent unbounded Map growth. */
+function pruneStaleDayBuckets(currentDayKey: string): void {
+  if (globalQuotaStore.__craftfolioAiLastPrunedDayKey === currentDayKey) {
+    return;
+  }
+  globalQuotaStore.__craftfolioAiLastPrunedDayKey = currentDayKey;
+  const store = getUsageStore();
+  for (const [uid, record] of store.entries()) {
+    if (record.dayKey !== currentDayKey) {
+      store.delete(uid);
+    }
+  }
 }
 
 function parsePositiveEnvInt(name: string, fallback: number): number {
@@ -72,6 +110,8 @@ export function getAiQuotaLimits(): {
   enhanceDailyLimit: number;
   importDailyLimit: number;
   burstPerMinute: number;
+  globalDailyLimit: number;
+  globalRpmLimit: number;
 } {
   return {
     enhanceDailyLimit: parsePositiveEnvInt(
@@ -85,6 +125,14 @@ export function getAiQuotaLimits(): {
     burstPerMinute: parsePositiveEnvInt(
       "AI_BURST_PER_MINUTE",
       DEFAULT_BURST_PER_MINUTE
+    ),
+    globalDailyLimit: parsePositiveEnvInt(
+      "AI_GLOBAL_DAILY_LIMIT",
+      DEFAULT_GLOBAL_DAILY_LIMIT
+    ),
+    globalRpmLimit: parsePositiveEnvInt(
+      "AI_GLOBAL_RPM_LIMIT",
+      DEFAULT_GLOBAL_RPM_LIMIT
     ),
   };
 }
@@ -170,16 +218,43 @@ export function reserveAiQuota(
   nowMs: number = Date.now()
 ): ReserveQuotaResult {
   const dayKey = getWibDayKey(nowMs);
+  pruneStaleDayBuckets(dayKey);
   const record = getOrResetUserRecord(uid, dayKey);
-  const { enhanceDailyLimit, importDailyLimit, burstPerMinute } =
-    getAiQuotaLimits();
+  const globalRecord = getOrResetGlobalRecord(dayKey);
+  const {
+    enhanceDailyLimit,
+    importDailyLimit,
+    burstPerMinute,
+    globalDailyLimit,
+    globalRpmLimit,
+  } = getAiQuotaLimits();
 
   // Prune timestamps older than 60s
   record.burstTimestamps = record.burstTimestamps.filter(
     (ts) => nowMs - ts < BURST_WINDOW_MS
   );
+  globalRecord.burstTimestamps = globalRecord.burstTimestamps.filter(
+    (ts) => nowMs - ts < BURST_WINDOW_MS
+  );
 
-  // 1. Check daily feature limit first
+  // 0. Check global daily circuit breaker (protects free-tier API key across all accounts)
+  if (globalDailyLimit > 0 && globalRecord.totalUsed >= globalDailyLimit) {
+    const nextResetMs = new Date(getNextWibMidnightIso(nowMs)).getTime();
+    const retryAfterSeconds = Math.max(
+      60,
+      Math.ceil((nextResetMs - nowMs) / 1000)
+    );
+    return {
+      allowed: false,
+      code: "AI_SERVER_QUOTA_EXCEEDED",
+      error:
+        "Kuota server AI harian sedang penuh. Silakan coba kembali besok setelah pukul 00.00 WIB.",
+      retryAfterSeconds,
+      quota: buildSnapshot(record, nowMs),
+    };
+  }
+
+  // 1. Check user daily feature limit
   const currentUsed = feature === "enhance" ? record.enhance : record.import;
   const dailyLimit =
     feature === "enhance" ? enhanceDailyLimit : importDailyLimit;
@@ -201,7 +276,7 @@ export function reserveAiQuota(
     };
   }
 
-  // 2. Check rolling 1-minute burst limit
+  // 2. Check rolling 1-minute per-user burst limit
   if (burstPerMinute > 0 && record.burstTimestamps.length >= burstPerMinute) {
     const oldest = record.burstTimestamps[0] ?? nowMs;
     const retryAfterSeconds = Math.max(
@@ -217,13 +292,31 @@ export function reserveAiQuota(
     };
   }
 
-  // 3. Reserve slot
+  // 3. Check rolling 1-minute global RPM circuit breaker
+  if (globalRpmLimit > 0 && globalRecord.burstTimestamps.length >= globalRpmLimit) {
+    const oldest = globalRecord.burstTimestamps[0] ?? nowMs;
+    const retryAfterSeconds = Math.max(
+      1,
+      Math.ceil((BURST_WINDOW_MS - (nowMs - oldest)) / 1000)
+    );
+    return {
+      allowed: false,
+      code: "AI_BURST_LIMITED",
+      error: `Server AI sedang sibuk. Tunggu ${retryAfterSeconds} detik lalu coba lagi.`,
+      retryAfterSeconds,
+      quota: buildSnapshot(record, nowMs),
+    };
+  }
+
+  // 4. Reserve user + global slots atomically
   if (feature === "enhance") {
     record.enhance += 1;
   } else {
     record.import += 1;
   }
   record.burstTimestamps.push(nowMs);
+  globalRecord.totalUsed += 1;
+  globalRecord.burstTimestamps.push(nowMs);
 
   return {
     allowed: true,
@@ -253,17 +346,28 @@ export function refundAiQuota(reservation: QuotaReservation): void {
 
   const store = getUsageStore();
   const record = store.get(reservation.uid);
-  if (!record || record.dayKey !== reservation.dayKey) return;
+  if (record && record.dayKey === reservation.dayKey) {
+    if (reservation.feature === "enhance" && record.enhance > 0) {
+      record.enhance -= 1;
+    } else if (reservation.feature === "import" && record.import > 0) {
+      record.import -= 1;
+    }
 
-  if (reservation.feature === "enhance" && record.enhance > 0) {
-    record.enhance -= 1;
-  } else if (reservation.feature === "import" && record.import > 0) {
-    record.import -= 1;
+    const tsIdx = record.burstTimestamps.indexOf(reservation.burstTimestamp);
+    if (tsIdx !== -1) {
+      record.burstTimestamps.splice(tsIdx, 1);
+    }
   }
 
-  const tsIdx = record.burstTimestamps.indexOf(reservation.burstTimestamp);
-  if (tsIdx !== -1) {
-    record.burstTimestamps.splice(tsIdx, 1);
+  const globalRecord = globalQuotaStore.__craftfolioAiGlobalUsage;
+  if (globalRecord && globalRecord.dayKey === reservation.dayKey) {
+    if (globalRecord.totalUsed > 0) {
+      globalRecord.totalUsed -= 1;
+    }
+    const gIdx = globalRecord.burstTimestamps.indexOf(reservation.burstTimestamp);
+    if (gIdx !== -1) {
+      globalRecord.burstTimestamps.splice(gIdx, 1);
+    }
   }
 }
 
@@ -313,4 +417,11 @@ export async function executeWithAiQuota<T>(
 /** Test-only helper to clear in-memory quota state between test cases. */
 export function resetAiQuotaStoreForTests(): void {
   getUsageStore().clear();
+  globalQuotaStore.__craftfolioAiGlobalUsage = undefined;
+  globalQuotaStore.__craftfolioAiLastPrunedDayKey = undefined;
+}
+
+/** Test-only helper to inspect stored user bucket count for memory pruning verification. */
+export function getAiQuotaStoreSizeForTests(): number {
+  return getUsageStore().size;
 }

@@ -1,19 +1,31 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { AlertTriangle, Eye, FileSearch, Minus, Plus, Sparkles } from "lucide-react";
 import { useResumeStore } from "@/store/use-resume-store";
 import { PAPER_DIMENSIONS } from "@/lib/template-tokens";
 import { ResumeHtmlRenderer } from "@/components/preview/ResumeHtmlRenderer";
-import { AtsXRayView } from "@/components/preview/AtsXRayView";
+
+const AtsXRayView = dynamic(
+  () =>
+    import("@/components/preview/AtsXRayView").then((mod) => mod.AtsXRayView),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full max-w-[794px] bg-white border border-[#E4E4E7] rounded-lg shadow-sm p-6 text-[12px] text-[#52525B]">
+        Memuat ATS X-Ray Mode...
+      </div>
+    ),
+  }
+);
 
 interface PreviewPanelProps {
   onPageStatsChange?: (pageCount: number, lastPageFillRatio: number) => void;
 }
 
 export function PreviewPanel({ onPageStatsChange }: PreviewPanelProps) {
-  const documents = useResumeStore((s) => s.documents);
-  const activeDocumentId = useResumeStore((s) => s.activeDocumentId);
+  const doc = useResumeStore((s) => s.documents[s.activeDocumentId]);
   const previewZoom = useResumeStore((s) => s.previewZoom);
   const previewMode = useResumeStore((s) => s.previewMode);
   const showGhostPreview = useResumeStore((s) => s.showGhostPreview);
@@ -22,34 +34,45 @@ export function PreviewPanel({ onPageStatsChange }: PreviewPanelProps) {
   const toggleGhostPreview = useResumeStore((s) => s.toggleGhostPreview);
   const updateConfig = useResumeStore((s) => s.updateConfig);
 
-  const doc = documents[activeDocumentId];
+  const deferredDoc = useDeferredValue(doc);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const onPageStatsChangeRef = useRef(onPageStatsChange);
+
+  useEffect(() => {
+    onPageStatsChangeRef.current = onPageStatsChange;
+  }, [onPageStatsChange]);
 
   const [pageCount, setPageCount] = useState(1);
   const [lastPageFillRatio, setLastPageFillRatio] = useState(1);
 
   const paper = doc ? PAPER_DIMENSIONS[doc.config.paperSize] : PAPER_DIMENSIONS.A4;
+  const hasDoc = Boolean(doc);
 
   useEffect(() => {
     const el = contentRef.current;
-    if (!el || !doc) return;
+    if (!el || !hasDoc || previewMode !== "visual") return;
 
     const measure = () => {
       const scrollH = el.scrollHeight;
       const pages = Math.max(1, Math.ceil(scrollH / paper.heightPx));
       const remainder = scrollH % paper.heightPx;
-      const fill = pages === 1 ? scrollH / paper.heightPx : remainder === 0 ? 1 : remainder / paper.heightPx;
+      const fill =
+        pages === 1
+          ? scrollH / paper.heightPx
+          : remainder === 0
+            ? 1
+            : remainder / paper.heightPx;
       setPageCount(pages);
       setLastPageFillRatio(fill);
-      onPageStatsChange?.(pages, fill);
+      onPageStatsChangeRef.current?.(pages, fill);
     };
 
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [doc, paper.heightPx, onPageStatsChange]);
+  }, [hasDoc, previewMode, paper.heightPx]);
 
   const handleFit = () => {
     const wrapper = containerRef.current;
@@ -191,7 +214,7 @@ export function PreviewPanel({ onPageStatsChange }: PreviewPanelProps) {
         className="flex-1 overflow-auto p-6 flex justify-center items-start"
       >
         {previewMode === "xray" ? (
-          <AtsXRayView doc={doc} />
+          <AtsXRayView doc={deferredDoc ?? doc} />
         ) : (
           <div
             style={{
@@ -210,7 +233,7 @@ export function PreviewPanel({ onPageStatsChange }: PreviewPanelProps) {
               className="relative shadow-xl border border-[#E4E4E7] bg-white"
             >
               <ResumeHtmlRenderer
-                doc={doc}
+                doc={deferredDoc ?? doc}
                 showGhostPlaceholders={showGhostPreview}
               />
 

@@ -1,8 +1,9 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowRight,
   Cloud,
@@ -20,6 +21,7 @@ import { CvDocumentCard } from "@/components/dashboard/CvDocumentCard";
 import {
   DashboardAuthPrompt,
   DashboardEmptyFilterState,
+  DashboardEmptyState,
   DashboardSkeletonGrid,
 } from "@/components/dashboard/DashboardStates";
 import {
@@ -30,6 +32,14 @@ import {
 } from "@/lib/dashboard-utils";
 import { logOut } from "@/lib/firebase/auth";
 import { syncFileOrder, useResumeStore } from "@/store/use-resume-store";
+
+const CvImportModal = dynamic(
+  () =>
+    import("@/components/editor/CvImportModal").then(
+      (mod) => mod.CvImportModal
+    ),
+  { ssr: false }
+);
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -46,16 +56,17 @@ export default function DashboardPage() {
   const renameDocument = useResumeStore((s) => s.renameDocument);
   const deleteDocument = useResumeStore((s) => s.deleteDocument);
   const exportResumeJson = useResumeStore((s) => s.exportResumeJson);
-  const importResumeJson = useResumeStore((s) => s.importResumeJson);
+  const authModalOpen = useResumeStore((s) => s.authModalOpen);
+  const authModalMode = useResumeStore((s) => s.authModalMode);
+  const authModalReason = useResumeStore((s) => s.authModalReason);
+  const openAuthModal = useResumeStore((s) => s.openAuthModal);
+  const closeAuthModal = useResumeStore((s) => s.closeAuthModal);
 
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] =
     useState<DashboardStatusFilter>("all");
   const [sortBy, setSortBy] = useState<DashboardSortBy>("updatedAt");
-  const [authModalMode, setAuthModalMode] = useState<"signin" | "signup" | null>(
-    null
-  );
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   const allDocs = useMemo(() => {
     const orderedIds = syncFileOrder(fileOrder, documents);
@@ -103,17 +114,6 @@ export default function DashboardPage() {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-  };
-
-  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-    const res = importResumeJson(text);
-    if (!res.ok) {
-      alert(res.error || "Gagal mengimpor file JSON.");
-    }
-    e.target.value = "";
   };
 
   return (
@@ -187,7 +187,9 @@ export default function DashboardPage() {
         {!hasHydrated || authLoading ? (
           <DashboardSkeletonGrid />
         ) : !authUser ? (
-          <DashboardAuthPrompt onOpenAuth={(mode) => setAuthModalMode(mode)} />
+          <DashboardAuthPrompt
+            onOpenAuth={(mode) => openAuthModal(undefined, mode)}
+          />
         ) : (
           <div className="space-y-6">
             {/* Dashboard Title & Primary Actions */}
@@ -204,11 +206,11 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => setImportModalOpen(true)}
                   className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md bg-white border border-[#E4E4E7] hover:bg-[#F4F4F5] text-[12.5px] font-medium text-[#09090B] transition-colors"
                 >
                   <Upload className="w-3.5 h-3.5 text-[#52525B]" />
-                  Import .json
+                  Import File
                 </button>
                 <button
                   type="button"
@@ -218,104 +220,115 @@ export default function DashboardPage() {
                   <Plus className="w-4 h-4" />
                   Buat CV Baru
                 </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="application/json"
-                  onChange={handleImportFile}
-                  className="hidden"
-                />
               </div>
             </div>
 
-            {/* Filter, Search & Sort Bar */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white border border-[#E4E4E7] rounded-lg p-2.5">
-              <div className="inline-flex items-center bg-[#F4F4F5] p-0.5 rounded-md border border-[#E4E4E7] self-start">
-                {(
-                  [
-                    { id: "all", label: `Semua (${counts.total})` },
-                    { id: "ready", label: `Siap (${counts.ready})` },
-                    { id: "draft", label: `Draf (${counts.draft})` },
-                  ] as const
-                ).map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setStatusFilter(tab.id)}
-                    className={`px-3 py-1 text-[12px] font-medium rounded transition-colors ${
-                      statusFilter === tab.id
-                        ? "bg-white text-[#09090B] shadow-2xs"
-                        : "text-[#52525B] hover:text-[#09090B]"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-2 flex-1 md:max-w-md">
-                <div className="relative flex-1">
-                  <Search
-                    className="w-3.5 h-3.5 text-[#71717A] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                    aria-hidden="true"
-                  />
-                  <input
-                    type="search"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Cari judul CV atau posisi..."
-                    aria-label="Cari dokumen CV"
-                    className="w-full h-8 pl-8 pr-3 text-[12.5px] bg-[#FAFAFA] border border-[#E4E4E7] rounded-md focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#18181B]"
-                  />
-                </div>
-
-                <select
-                  value={sortBy}
-                  onChange={(e) =>
-                    setSortBy(e.target.value as DashboardSortBy)
-                  }
-                  aria-label="Urutkan dokumen CV"
-                  className="h-8 px-2.5 text-[12px] font-medium text-[#09090B] bg-[#FAFAFA] border border-[#E4E4E7] rounded-md focus:outline-none focus:ring-1 focus:ring-[#18181B]"
-                >
-                  <option value="updatedAt">Terbaru Diubah</option>
-                  <option value="title">Nama (A–Z)</option>
-                </select>
-              </div>
-            </div>
-
-            {/* CV Cards Grid */}
-            {visibleDocs.length === 0 ? (
-              <DashboardEmptyFilterState
-                onReset={() => {
-                  setQuery("");
-                  setStatusFilter("all");
-                }}
+            {allDocs.length === 0 ? (
+              <DashboardEmptyState
+                onCreateNew={handleCreateNewCv}
+                onOpenImport={() => setImportModalOpen(true)}
               />
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {visibleDocs.map((item) => (
-                  <CvDocumentCard
-                    key={item.id}
-                    doc={item}
-                    canDelete={allDocs.length > 1}
-                    onOpenEditor={() => handleOpenInEditor(item.id)}
-                    onRename={(newTitle) => renameDocument(item.id, newTitle)}
-                    onDuplicate={() => duplicateDocument(item.id)}
-                    onExportJson={() => handleExportJson(item.id, item.title)}
-                    onDelete={() => deleteDocument(item.id)}
+              <>
+                {/* Filter, Search & Sort Bar */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white border border-[#E4E4E7] rounded-lg p-2.5">
+                  <div className="inline-flex items-center bg-[#F4F4F5] p-0.5 rounded-md border border-[#E4E4E7] self-start">
+                    {(
+                      [
+                        { id: "all", label: `Semua (${counts.total})` },
+                        { id: "ready", label: `Siap (${counts.ready})` },
+                        { id: "draft", label: `Draf (${counts.draft})` },
+                      ] as const
+                    ).map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setStatusFilter(tab.id)}
+                        className={`px-3 py-1 text-[12px] font-medium rounded transition-colors ${
+                          statusFilter === tab.id
+                            ? "bg-white text-[#09090B] shadow-2xs"
+                            : "text-[#52525B] hover:text-[#09090B]"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-1 md:max-w-md">
+                    <div className="relative flex-1">
+                      <Search
+                        className="w-3.5 h-3.5 text-[#71717A] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                        aria-hidden="true"
+                      />
+                      <input
+                        type="search"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Cari judul CV atau posisi..."
+                        aria-label="Cari dokumen CV"
+                        className="w-full h-8 pl-8 pr-3 text-[12.5px] bg-[#FAFAFA] border border-[#E4E4E7] rounded-md focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#18181B]"
+                      />
+                    </div>
+
+                    <select
+                      value={sortBy}
+                      onChange={(e) =>
+                        setSortBy(e.target.value as DashboardSortBy)
+                      }
+                      aria-label="Urutkan dokumen CV"
+                      className="h-8 px-2.5 text-[12px] font-medium text-[#09090B] bg-[#FAFAFA] border border-[#E4E4E7] rounded-md focus:outline-none focus:ring-1 focus:ring-[#18181B]"
+                    >
+                      <option value="updatedAt">Terbaru Diubah</option>
+                      <option value="title">Nama (A–Z)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* CV Cards Grid */}
+                {visibleDocs.length === 0 ? (
+                  <DashboardEmptyFilterState
+                    onReset={() => {
+                      setQuery("");
+                      setStatusFilter("all");
+                    }}
                   />
-                ))}
-              </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {visibleDocs.map((item) => (
+                      <CvDocumentCard
+                        key={item.id}
+                        doc={item}
+                        canDelete={Boolean(authUser) || allDocs.length > 1}
+                        onOpenEditor={() => handleOpenInEditor(item.id)}
+                        onRename={(newTitle) => renameDocument(item.id, newTitle)}
+                        onDuplicate={() => duplicateDocument(item.id)}
+                        onExportJson={() => handleExportJson(item.id, item.title)}
+                        onDelete={() => deleteDocument(item.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
       </main>
 
       <AuthModal
-        open={authModalMode !== null}
-        initialMode={authModalMode ?? "signin"}
-        onClose={() => setAuthModalMode(null)}
+        open={authModalOpen}
+        initialMode={authModalMode}
+        onClose={closeAuthModal}
+        reason={authModalReason ?? undefined}
       />
+
+      {importModalOpen && (
+        <CvImportModal
+          open={importModalOpen}
+          onClose={() => setImportModalOpen(false)}
+          onImported={() => router.push("/editor")}
+        />
+      )}
     </div>
   );
 }

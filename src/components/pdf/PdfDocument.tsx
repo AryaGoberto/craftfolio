@@ -56,7 +56,7 @@ function splitIntoSmallCapsRuns(rawTitle: string): SmallCapsRun[] {
 }
 
 export function ResumePdfDocument({ doc }: { doc: ResumeDocument }) {
-  registerPdfFonts();
+  registerPdfFonts(doc.config.fontFamily);
 
   const { basics, sections, config } = doc;
   const density = DENSITY_TOKENS[config.density];

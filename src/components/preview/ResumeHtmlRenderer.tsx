@@ -120,15 +120,25 @@ export function ResumeHtmlRenderer({
     if (key.startsWith("custom:")) {
       const customId = key.replace("custom:", "");
       const custom = sections.customSections.find((cs) => cs.id === customId);
-      if (!custom || !custom.isVisible || !custom.title.trim()) return null;
-      const visibleItems = custom.items.filter(
+      if (!custom || !custom.isVisible) return null;
+      const realItems = custom.items.filter(
         (it) => it.isVisible && isNonEmptyCustomItem(it)
       );
+      const isGhostCustom = realItems.length === 0 && Boolean(ghost);
+      if (!isGhostCustom && !custom.title.trim()) return null;
+      const visibleItems = isGhostCustom && ghost ? ghost.custom : realItems;
       if (visibleItems.length === 0) return null;
+      const primaryText = isGhostCustom ? "text-[#A1A1AA]" : "text-[#09090B]";
+      const secondaryText = isGhostCustom ? "text-[#A1A1AA]" : "text-[#18181B]";
+      const headingTitle = custom.title.trim() || "Sertifikasi";
 
       return (
-        <section key={key} style={{ marginBottom: `${density.sectionGapPt}pt` }}>
-          {renderSectionHeading(custom.title)}
+        <section
+          key={key}
+          style={{ marginBottom: `${density.sectionGapPt}pt` }}
+          className={isGhostCustom ? "select-none" : undefined}
+        >
+          {renderSectionHeading(headingTitle, isGhostCustom)}
           <div
             className={`flex flex-col ${listIndentClass}`}
             style={{ gap: `${density.itemGapPt}pt` }}
@@ -138,10 +148,10 @@ export function ResumeHtmlRenderer({
               return (
                 <div key={item.id}>
                   <div className="flex items-baseline justify-between gap-4">
-                    <div className="font-bold text-[#09090B]">{item.title}</div>
+                    <div className={`font-bold ${primaryText}`}>{item.title}</div>
                     {item.date ? (
                       <span
-                        className="shrink-0 text-[#18181B]"
+                        className={`shrink-0 ${secondaryText}`}
                         style={{
                           fontSize: `${isClassic ? effectiveBodyPt : subBodyPt}pt`,
                         }}
@@ -152,7 +162,7 @@ export function ResumeHtmlRenderer({
                   </div>
                   {item.subtitle ? (
                     <div
-                      className="italic text-[#18181B]"
+                      className={`italic ${secondaryText}`}
                       style={{ fontSize: `${subBodyPt}pt` }}
                     >
                       {item.subtitle}
@@ -167,7 +177,7 @@ export function ResumeHtmlRenderer({
                       }}
                     >
                       {bullets.map((b) => (
-                        <li key={b.id} className="text-[#18181B]">
+                        <li key={b.id} className={secondaryText}>
                           {normalizeParagraphText(b.text)}
                         </li>
                       ))}

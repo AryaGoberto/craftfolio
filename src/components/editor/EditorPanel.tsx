@@ -282,10 +282,17 @@ export function EditorPanel() {
     if (key.startsWith("custom:")) {
       const id = key.replace("custom:", "");
       const custom = doc.sections.customSections.find((c) => c.id === id);
+      if (custom) {
+        return {
+          title: custom.title.trim() || "Sertifikasi",
+          subtitle: custom.items[0]?.title || "",
+          isVisible: custom.isVisible,
+        };
+      }
       return {
-        title: custom?.title || "Section Kustom",
-        subtitle: custom?.items[0]?.title || "",
-        isVisible: custom?.isVisible ?? true,
+        title: "Sertifikasi",
+        subtitle: "",
+        isVisible: true,
       };
     }
 
@@ -429,11 +436,11 @@ export function EditorPanel() {
       {/* Add Custom Section Button */}
       <button
         type="button"
-        onClick={() => addCustomSection("Sertifikasi / Kustom")}
+        onClick={() => addCustomSection("Sertifikasi")}
         className="w-full h-10 rounded-lg border border-dashed border-[#D4D4D8] bg-white hover:border-[#18181B] text-[12px] font-medium text-[#52525B] hover:text-[#09090B] inline-flex items-center justify-center gap-1.5 transition-colors"
       >
         <Plus className="w-3.5 h-3.5" />
-        Tambah Section Kustom
+        Tambah Section (Sertifikasi / Kustom)
       </button>
     </aside>
   );

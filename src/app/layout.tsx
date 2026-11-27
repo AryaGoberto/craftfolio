@@ -11,6 +11,7 @@ const roboto = Roboto({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
   style: ["normal", "italic"],
+  preload: false,
   variable: "--font-roboto",
 });
 
@@ -18,6 +19,7 @@ const merriweather = Merriweather({
   subsets: ["latin"],
   weight: ["400", "700"],
   style: ["normal", "italic"],
+  preload: false,
   variable: "--font-merriweather",
 });
 
