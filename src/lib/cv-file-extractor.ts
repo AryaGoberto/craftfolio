@@ -1,6 +1,9 @@
 import { extractTextFromPdfBuffer } from "@/lib/pdf-text-extractor";
 
 const MAX_IMPORT_TEXT_CHARS = 35_000;
+export const MAX_CV_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB upload cap
+export const MAX_DOCX_UNCOMPRESSED_XML_BYTES = 5 * 1024 * 1024; // 5 MB anti-zip-bomb cap
+const MAX_ZIP_ENTRIES = 2_000;
 
 function decodeXmlEntities(xml: string): string {
   return xml
@@ -17,26 +20,45 @@ function decodeXmlEntities(xml: string): string {
 
 /**
  * Decompresses raw DEFLATE bytes using standard Web Streams (`DecompressionStream`),
- * compatible with modern browsers as well as Node 20+ runtimes.
+ * enforcing a strict output byte budget to neutralize decompression / zip bombs.
  */
-async function inflateRawBytes(compressed: Uint8Array): Promise<Uint8Array> {
+async function inflateRawBytes(
+  compressed: Uint8Array,
+  maxOutputBytes: number = MAX_DOCX_UNCOMPRESSED_XML_BYTES
+): Promise<Uint8Array> {
   const ds = new DecompressionStream("deflate-raw");
   const writer = ds.writable.getWriter();
   const copy = new Uint8Array(compressed.byteLength);
   copy.set(compressed);
-  void writer.write(copy).then(() => writer.close());
+  const writePromise = writer
+    .write(copy)
+    .then(() => writer.close())
+    .catch(() => {
+      // Ignore write abort errors when reader cancels early on limit breach
+    });
 
   const reader = ds.readable.getReader();
   const chunks: Uint8Array[] = [];
   let totalLength = 0;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      totalLength += value.length;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) {
+        totalLength += value.length;
+        if (totalLength > maxOutputBytes) {
+          await reader.cancel().catch(() => {});
+          await writer.abort().catch(() => {});
+          throw new Error(
+            "Ukuran konten terkompresi file DOCX melebihi batas aman (maksimal 5 MB)."
+          );
+        }
+        chunks.push(value);
+      }
     }
+  } finally {
+    await writePromise;
   }
 
   const merged = new Uint8Array(totalLength);
@@ -53,9 +75,16 @@ async function inflateRawBytes(compressed: Uint8Array): Promise<Uint8Array> {
  * via Central Directory scanning so Data Descriptors (flag bit 3) work reliably too.
  */
 export async function extractTextFromDocxBuffer(
-  data: ArrayBuffer | Uint8Array
+  data: ArrayBuffer | Uint8Array,
+  options?: { maxUncompressedBytes?: number }
 ): Promise<string> {
   const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+  if (bytes.byteLength > MAX_CV_UPLOAD_BYTES) {
+    throw new Error("Ukuran file DOCX melebihi batas maksimal 10 MB.");
+  }
+
+  const maxUncompressedBytes =
+    options?.maxUncompressedBytes ?? MAX_DOCX_UNCOMPRESSED_XML_BYTES;
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 
   // Locate End of Central Directory (PK\x05\x06) near end of buffer
@@ -74,16 +103,22 @@ export async function extractTextFromDocxBuffer(
 
   const centralDirOffset = view.getUint32(eocdOffset + 16, true);
   const entryCount = view.getUint16(eocdOffset + 10, true);
+  if (entryCount > MAX_ZIP_ENTRIES) {
+    throw new Error("Arsip DOCX memiliki terlalu banyak entri file.");
+  }
+
   const decoder = new TextDecoder("utf-8");
 
   const xmlTexts: string[] = [];
   let cursor = centralDirOffset;
+  let remainingUncompressedBudget = maxUncompressedBytes;
 
   for (let idx = 0; idx < entryCount && cursor + 46 <= bytes.length; idx++) {
     if (view.getUint32(cursor, true) !== 0x02014b50) break;
 
     const method = view.getUint16(cursor + 10, true);
     const compressedSize = view.getUint32(cursor + 20, true);
+    const declaredUncompressedSize = view.getUint32(cursor + 24, true);
     const fileNameLen = view.getUint16(cursor + 28, true);
     const extraLen = view.getUint16(cursor + 30, true);
     const commentLen = view.getUint16(cursor + 32, true);
@@ -98,6 +133,12 @@ export async function extractTextFromDocxBuffer(
       entryName === "word/document.xml" ||
       /^word\/header\d*\.xml$/.test(entryName);
     if (!isRelevantXml) continue;
+
+    if (declaredUncompressedSize > remainingUncompressedBudget) {
+      throw new Error(
+        "Ukuran konten terkompresi file DOCX melebihi batas aman (maksimal 5 MB)."
+      );
+    }
 
     if (
       localHeaderOffset + 30 > bytes.length ||
@@ -116,13 +157,19 @@ export async function extractTextFromDocxBuffer(
 
     let inflated: Uint8Array;
     if (method === 0) {
+      if (rawPayload.byteLength > remainingUncompressedBudget) {
+        throw new Error(
+          "Ukuran konten terkompresi file DOCX melebihi batas aman (maksimal 5 MB)."
+        );
+      }
       inflated = rawPayload;
     } else if (method === 8) {
-      inflated = await inflateRawBytes(rawPayload);
+      inflated = await inflateRawBytes(rawPayload, remainingUncompressedBudget);
     } else {
       continue;
     }
 
+    remainingUncompressedBudget -= inflated.byteLength;
     xmlTexts.push(decoder.decode(inflated));
   }
 
@@ -158,6 +205,12 @@ export async function extractTextFromDocxBuffer(
  * Extracts raw plain text in browser from an uploaded `.pdf`, `.docx`, or `.txt` file.
  */
 export async function extractResumeFileText(file: File): Promise<string> {
+  if (file.size > MAX_CV_UPLOAD_BYTES) {
+    throw new Error(
+      "Ukuran file terlalu besar (maksimal 10 MB). Kompres file CV Anda terlebih dahulu."
+    );
+  }
+
   const lowerName = file.name.toLowerCase();
 
   if (file.type === "application/pdf" || lowerName.endsWith(".pdf")) {

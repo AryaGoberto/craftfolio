@@ -7,12 +7,20 @@ import { promisify } from "node:util";
 import { NextResponse } from "next/server";
 import { generateLatexDocument } from "@/lib/latex-generator";
 import { ResumeDocumentSchema } from "@/lib/schemas/resume";
+import {
+  createSlidingWindowRateLimiter,
+  extractClientIp,
+  verifySameOriginRequest,
+} from "@/lib/security/request-guard";
 
 const execFileAsync = promisify(execFile);
 
 const MAX_BODY_BYTES = 512 * 1024; // 512 KB cap against DoS payloads
 const PDFLATEX_TIMEOUT_MS = 15_000;
 const PDFLATEX_MAX_BUFFER = 2 * 1024 * 1024;
+const DEFAULT_MAX_CONCURRENT_PDFLATEX = 2;
+const DEFAULT_MAX_PDFLATEX_QUEUE = 6;
+const DEFAULT_LATEX_RATE_LIMIT_PER_MIN = 10;
 
 const COMMON_PDFLATEX_PATHS = [
   "/Library/TeX/texbin/pdflatex",
@@ -20,6 +28,99 @@ const COMMON_PDFLATEX_PATHS = [
   "/usr/local/bin/pdflatex",
   "/usr/bin/pdflatex",
 ];
+
+function parsePositiveIntEnv(name: string, fallback: number): number {
+  const raw = process.env[name]?.trim();
+  if (!raw) return fallback;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const latexIpLimiter = createSlidingWindowRateLimiter({
+  maxRequests: parsePositiveIntEnv(
+    "LATEX_RATE_LIMIT_PER_MINUTE",
+    DEFAULT_LATEX_RATE_LIMIT_PER_MIN
+  ),
+  windowMs: 60_000,
+});
+
+interface ConcurrencyState {
+  active: number;
+  waiters: Array<() => void>;
+}
+
+const globalLatexConcurrency = globalThis as typeof globalThis & {
+  __craftfolioLatexConcurrency?: ConcurrencyState;
+};
+
+function getConcurrencyState(): ConcurrencyState {
+  if (!globalLatexConcurrency.__craftfolioLatexConcurrency) {
+    globalLatexConcurrency.__craftfolioLatexConcurrency = {
+      active: 0,
+      waiters: [],
+    };
+  }
+  return globalLatexConcurrency.__craftfolioLatexConcurrency;
+}
+
+async function acquireLatexSlot(
+  maxConcurrent: number,
+  maxQueue: number
+): Promise<(() => void) | null> {
+  const state = getConcurrencyState();
+
+  if (state.active < maxConcurrent) {
+    state.active += 1;
+    return () => releaseLatexSlot();
+  }
+
+  if (state.waiters.length >= maxQueue) {
+    return null;
+  }
+
+  await new Promise<void>((resolve) => {
+    state.waiters.push(resolve);
+  });
+  return () => releaseLatexSlot();
+}
+
+function releaseLatexSlot(): void {
+  const state = getConcurrencyState();
+  const next = state.waiters.shift();
+  if (next) {
+    // Hand active slot directly to next waiter without decrementing active count
+    next();
+  } else {
+    state.active = Math.max(0, state.active - 1);
+  }
+}
+
+export function resetLatexCompilerGuardsForTests(): void {
+  latexIpLimiter.reset();
+  const state = getConcurrencyState();
+  state.active = 0;
+  state.waiters.length = 0;
+}
+
+/**
+ * Builds a minimal least-privilege environment for `pdflatex` so application secrets
+ * (such as `GOOGLE_GENERATIVE_AI_API_KEY`) are never exposed to the child process.
+ */
+export function buildSanitizedLatexEnv(tmpDir: string): NodeJS.ProcessEnv {
+  return {
+    NODE_ENV: process.env.NODE_ENV ?? "production",
+    PATH:
+      process.env.PATH ||
+      "/Library/TeX/texbin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
+    HOME: tmpDir,
+    TMPDIR: tmpDir,
+    TEXMFVAR: process.env.TEXMFVAR || "/tmp/texmf-var",
+    LANG: "C.UTF-8",
+    // Web2C paranoid file I/O mode: blocks parent-dir / arbitrary path access
+    openout_any: "p",
+    openin_any: "p",
+  };
+}
 
 export type RunPdflatexFn = (
   binary: string,
@@ -29,6 +130,9 @@ export type RunPdflatexFn = (
 
 export interface LatexPdfHandlerDeps {
   runPdflatex?: RunPdflatexFn;
+  maxConcurrent?: number;
+  maxQueue?: number;
+  bypassRateLimit?: boolean;
 }
 
 async function resolvePdflatexBinary(): Promise<string> {
@@ -52,12 +156,7 @@ const defaultRunPdflatex: RunPdflatexFn = async (binary, args, tmpDir) => {
     cwd: tmpDir,
     timeout: PDFLATEX_TIMEOUT_MS,
     maxBuffer: PDFLATEX_MAX_BUFFER,
-    env: {
-      ...process.env,
-      // Web2C paranoid file I/O mode: blocks parent-dir / arbitrary path access
-      openout_any: "p",
-      openin_any: "p",
-    },
+    env: buildSanitizedLatexEnv(tmpDir),
   });
 };
 
@@ -78,6 +177,29 @@ export async function handleLatexPdfPost(
   request: Request,
   deps?: LatexPdfHandlerDeps
 ): Promise<NextResponse> {
+  const originError = verifySameOriginRequest(request);
+  if (originError) {
+    return originError;
+  }
+
+  if (!deps?.bypassRateLimit) {
+    const clientIp = extractClientIp(request);
+    const rate = latexIpLimiter.consume(clientIp);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        {
+          code: "LATEX_RATE_LIMITED",
+          error:
+            "Terlalu banyak permintaan ekspor PDF dalam waktu singkat. Coba lagi sebentar lagi.",
+        },
+        {
+          status: 429,
+          headers: { "Retry-After": String(rate.retryAfterSeconds) },
+        }
+      );
+    }
+  }
+
   let rawText: string;
   try {
     rawText = await request.text();
@@ -113,11 +235,34 @@ export async function handleLatexPdfPost(
     );
   }
 
+  const maxConcurrent =
+    deps?.maxConcurrent ??
+    parsePositiveIntEnv("LATEX_MAX_CONCURRENT", DEFAULT_MAX_CONCURRENT_PDFLATEX);
+  const maxQueue =
+    deps?.maxQueue ??
+    parsePositiveIntEnv("LATEX_MAX_QUEUE", DEFAULT_MAX_PDFLATEX_QUEUE);
+
+  const releaseSlot = await acquireLatexSlot(maxConcurrent, maxQueue);
+  if (!releaseSlot) {
+    return NextResponse.json(
+      {
+        code: "LATEX_COMPILER_BUSY",
+        error:
+          "Server kompilasi PDF sedang sibuk. Silakan coba beberapa detik lagi.",
+      },
+      {
+        status: 503,
+        headers: { "Retry-After": "5" },
+      }
+    );
+  }
+
   const runPdflatex = deps?.runPdflatex ?? defaultRunPdflatex;
   const pdflatexBin = await resolvePdflatexBinary();
-  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "craftfolio-tex-"));
+  let tmpDir = "";
 
   try {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "craftfolio-tex-"));
     const texSource = generateLatexDocument(parsed.data);
     const texFilePath = path.join(tmpDir, "resume.tex");
     const pdfFilePath = path.join(tmpDir, "resume.pdf");
@@ -178,5 +323,6 @@ export async function handleLatexPdfPost(
     });
   } finally {
     await safeRemoveTmpDir(tmpDir);
+    releaseSlot();
   }
 }

@@ -32,6 +32,7 @@ export function CloudSyncManager() {
   const isApplyingCloudRef = useRef(false);
   const dirtyDocIdsRef = useRef<Set<string>>(new Set());
   const deletedDocIdsRef = useRef<Set<string>>(new Set());
+  const lastSyncedUpdatedAtRef = useRef<Map<string, string>>(new Map());
   const metaDirtyRef = useRef(false);
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -53,6 +54,7 @@ export function CloudSyncManager() {
       }
       dirtyDocIdsRef.current.clear();
       deletedDocIdsRef.current.clear();
+      lastSyncedUpdatedAtRef.current.clear();
       metaDirtyRef.current = false;
 
       if (!fbUser) {
@@ -105,6 +107,10 @@ export function CloudSyncManager() {
 
         if (!cancelled) {
           hydratedUidRef.current = profile.uid;
+          lastSyncedUpdatedAtRef.current.clear();
+          for (const [id, resume] of Object.entries(workspace.documents)) {
+            lastSyncedUpdatedAtRef.current.set(id, resume.updatedAt);
+          }
           setCloudSyncStatus("synced");
         }
       } catch (err) {
@@ -176,6 +182,16 @@ export function CloudSyncManager() {
           );
         }
 
+        for (const id of dirtyIds) {
+          const syncedDoc = state.documents[id];
+          if (syncedDoc) {
+            lastSyncedUpdatedAtRef.current.set(id, syncedDoc.updatedAt);
+          }
+        }
+        for (const id of deletedIds) {
+          lastSyncedUpdatedAtRef.current.delete(id);
+        }
+
         setCloudSyncStatus("synced");
       } catch (err) {
         // Re-queue failed IDs so next edit or manual sync retries safely
@@ -227,7 +243,9 @@ export function CloudSyncManager() {
 
       if (!hasChanges) return;
 
-      setCloudSyncStatus("syncing");
+      if (state.cloudSyncStatus !== "syncing") {
+        setCloudSyncStatus("syncing");
+      }
       if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
       syncTimerRef.current = setTimeout(() => {
         void flushPendingSync();
@@ -260,16 +278,37 @@ export function CloudSyncManager() {
       try {
         const state = useResumeStore.getState();
         const pendingDeletes = Array.from(deletedDocIdsRef.current);
+        const changedIds = new Set<string>(dirtyDocIdsRef.current);
+        for (const [id, resume] of Object.entries(state.documents)) {
+          if (lastSyncedUpdatedAtRef.current.get(id) !== resume.updatedAt) {
+            changedIds.add(id);
+          }
+        }
+        const idsToUpload = Array.from(changedIds);
         dirtyDocIdsRef.current.clear();
         deletedDocIdsRef.current.clear();
         metaDirtyRef.current = false;
 
-        await saveUserWorkspaceToCloud(currentUser, {
-          documents: state.documents,
-          activeDocumentId: state.activeDocumentId,
-          openTabIds: state.openTabIds,
-          fileOrder: state.fileOrder,
-        });
+        await saveUserWorkspaceToCloud(
+          currentUser,
+          {
+            documents: state.documents,
+            activeDocumentId: state.activeDocumentId,
+            openTabIds: state.openTabIds,
+            fileOrder: state.fileOrder,
+          },
+          idsToUpload
+        );
+
+        for (const id of idsToUpload) {
+          const syncedDoc = state.documents[id];
+          if (syncedDoc) {
+            lastSyncedUpdatedAtRef.current.set(id, syncedDoc.updatedAt);
+          }
+        }
+        for (const id of pendingDeletes) {
+          lastSyncedUpdatedAtRef.current.delete(id);
+        }
 
         if (pendingDeletes.length > 0) {
           await Promise.all(

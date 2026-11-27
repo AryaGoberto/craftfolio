@@ -11,6 +11,7 @@ import {
   type VerifyFirebaseIdTokenFn,
 } from "@/lib/ai/auth-guard";
 import { executeWithAiQuota } from "@/lib/ai/quota";
+import { verifySameOriginRequest } from "@/lib/security/request-guard";
 
 const MAX_ENHANCE_BODY_BYTES = 16 * 1024;
 
@@ -138,6 +139,11 @@ export async function handleEnhanceBulletPost(
   request: Request,
   deps?: EnhanceBulletDeps
 ): Promise<NextResponse> {
+  const originError = verifySameOriginRequest(request);
+  if (originError) {
+    return originError;
+  }
+
   const auth = await authenticateAiRequest(request, deps?.verifyIdToken);
   if (!auth.ok) {
     return auth.response;

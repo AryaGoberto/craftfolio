@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import {
   Copy,
   Download,
@@ -31,7 +31,7 @@ interface CvDocumentCardProps {
   onDelete: () => void;
 }
 
-export function CvDocumentCard({
+export const CvDocumentCard = memo(function CvDocumentCard({
   doc,
   canDelete,
   onOpenEditor,
@@ -110,7 +110,13 @@ export function CvDocumentCard({
   };
 
   return (
-    <article className="bg-white border border-[#E4E4E7] hover:border-[#A1A1AA] rounded-lg flex flex-col justify-between transition-colors">
+    <article
+      style={{
+        contentVisibility: "auto",
+        containIntrinsicSize: "auto 380px",
+      }}
+      className="bg-white border border-[#E4E4E7] hover:border-[#A1A1AA] rounded-lg flex flex-col justify-between transition-colors"
+    >
       {/* Top Miniature A4 Paper Preview */}
       <button
         type="button"
@@ -336,4 +342,4 @@ export function CvDocumentCard({
       </div>
     </article>
   );
-}
+});

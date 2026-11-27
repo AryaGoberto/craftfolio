@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 
 export interface AuthenticatedAiUser {
@@ -13,6 +14,99 @@ export type AuthGuardResult =
   | { ok: true; user: AuthenticatedAiUser }
   | { ok: false; response: NextResponse };
 
+interface CachedVerifiedToken {
+  user: AuthenticatedAiUser;
+  expiresAtMs: number;
+}
+
+const TOKEN_CACHE_MAX_ENTRIES = 500;
+const TOKEN_CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes max TTL
+const TOKEN_EXPIRY_SAFETY_BUFFER_MS = 5_000;
+
+const globalTokenCache = globalThis as typeof globalThis & {
+  __craftfolioVerifiedTokenCache?: Map<string, CachedVerifiedToken>;
+};
+
+function getTokenCache(): Map<string, CachedVerifiedToken> {
+  if (!globalTokenCache.__craftfolioVerifiedTokenCache) {
+    globalTokenCache.__craftfolioVerifiedTokenCache = new Map();
+  }
+  return globalTokenCache.__craftfolioVerifiedTokenCache;
+}
+
+function hashTokenKey(idToken: string): string {
+  return createHash("sha256").update(idToken).digest("hex");
+}
+
+/**
+ * Extracts the numeric `exp` claim (ms) from a JWT payload without trusting its
+ * signature — used strictly to cap the local cache TTL AFTER server verification succeeds.
+ */
+function readJwtExpMs(idToken: string): number | null {
+  const parts = idToken.split(".");
+  if (parts.length !== 3 || !parts[1]) return null;
+  try {
+    const payloadJson = Buffer.from(parts[1], "base64url").toString("utf8");
+    const payload = JSON.parse(payloadJson) as { exp?: unknown };
+    return typeof payload.exp === "number" && Number.isFinite(payload.exp)
+      ? payload.exp * 1000
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function getCachedVerifiedUser(
+  tokenHash: string,
+  nowMs: number
+): AuthenticatedAiUser | null {
+  const cache = getTokenCache();
+  const entry = cache.get(tokenHash);
+  if (!entry) return null;
+  if (nowMs >= entry.expiresAtMs) {
+    cache.delete(tokenHash);
+    return null;
+  }
+  return entry.user;
+}
+
+function setCachedVerifiedUser(
+  tokenHash: string,
+  idToken: string,
+  user: AuthenticatedAiUser,
+  nowMs: number
+): void {
+  const cache = getTokenCache();
+  const jwtExpMs = readJwtExpMs(idToken);
+  const maxAllowedExpMs = nowMs + TOKEN_CACHE_TTL_MS;
+  const expiresAtMs =
+    jwtExpMs !== null
+      ? Math.min(maxAllowedExpMs, jwtExpMs - TOKEN_EXPIRY_SAFETY_BUFFER_MS)
+      : maxAllowedExpMs;
+
+  if (expiresAtMs <= nowMs) return;
+
+  // Prune expired or oldest entries to keep memory strictly bounded
+  if (cache.size >= TOKEN_CACHE_MAX_ENTRIES) {
+    for (const [k, v] of cache.entries()) {
+      if (nowMs >= v.expiresAtMs) {
+        cache.delete(k);
+      }
+    }
+    while (cache.size >= TOKEN_CACHE_MAX_ENTRIES) {
+      const oldestKey = cache.keys().next().value;
+      if (oldestKey === undefined) break;
+      cache.delete(oldestKey);
+    }
+  }
+
+  cache.set(tokenHash, { user, expiresAtMs });
+}
+
+export function resetTokenVerificationCacheForTests(): void {
+  getTokenCache().clear();
+}
+
 export function extractBearerToken(request: Request): string | null {
   const header = request.headers.get("authorization");
   if (!header) return null;
@@ -23,17 +117,26 @@ export function extractBearerToken(request: Request): string | null {
 
 /**
  * Verifies a Firebase ID Token on the server via Google Identity Toolkit's
- * official `accounts:lookup` endpoint using `NEXT_PUBLIC_FIREBASE_API_KEY`.
+ * official `accounts:lookup` endpoint using `NEXT_PUBLIC_FIREBASE_API_KEY`,
+ * with a short-lived SHA-256 keyed in-memory cache to avoid repeated network hops.
  */
 export async function verifyFirebaseIdTokenWithLookup(
-  idToken: string
+  idToken: string,
+  fetchFn: typeof fetch = fetch
 ): Promise<AuthenticatedAiUser | null> {
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim();
   if (!apiKey) {
     throw new Error("FIREBASE_NOT_CONFIGURED");
   }
 
-  const res = await fetch(
+  const nowMs = Date.now();
+  const tokenHash = hashTokenKey(idToken);
+  const cached = getCachedVerifiedUser(tokenHash, nowMs);
+  if (cached) {
+    return cached;
+  }
+
+  const res = await fetchFn(
     `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`,
     {
       method: "POST",
@@ -55,10 +158,13 @@ export async function verifyFirebaseIdTokenWithLookup(
     return null;
   }
 
-  return {
+  const verified: AuthenticatedAiUser = {
     uid: firstUser.localId,
     email: firstUser.email ?? null,
   };
+  setCachedVerifiedUser(tokenHash, idToken, verified, nowMs);
+
+  return verified;
 }
 
 export async function authenticateAiRequest(

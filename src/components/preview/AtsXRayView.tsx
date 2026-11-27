@@ -160,6 +160,8 @@ export function extractLinearResumeText(doc: ResumeDocument): string {
   return lines.join("\n").trim();
 }
 
+const XRAY_BINARY_DEBOUNCE_MS = 850;
+
 export function AtsXRayView({ doc }: { doc: ResumeDocument }) {
   const fallbackText = useMemo(() => extractLinearResumeText(doc), [doc]);
   const [pdfText, setPdfText] = useState<string | null>(null);
@@ -202,7 +204,7 @@ export function AtsXRayView({ doc }: { doc: ResumeDocument }) {
           setIsExtracting(false);
         }
       }
-    }, 250);
+    }, XRAY_BINARY_DEBOUNCE_MS);
 
     return () => {
       cancelled = true;
@@ -210,7 +212,9 @@ export function AtsXRayView({ doc }: { doc: ResumeDocument }) {
     };
   }, [doc]);
 
-  const displayedText = source === "pdf" && pdfText ? pdfText : fallbackText;
+  // Show live linear text immediately while debounced binary verification runs
+  const displayedText =
+    !isExtracting && source === "pdf" && pdfText ? pdfText : fallbackText;
 
   return (
     <div className="w-full max-w-[794px] bg-white border border-[#E4E4E7] rounded-lg shadow-sm p-6">
