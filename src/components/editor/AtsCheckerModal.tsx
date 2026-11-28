@@ -2,7 +2,10 @@
 
 import { AlertCircle, AlertTriangle, CheckCircle2, X } from "lucide-react";
 import type { AtsLintReport } from "@/lib/ats-linter";
+import { deriveFoldyMood } from "@/lib/foldy-coach";
+import { useFoldyPrefs } from "@/lib/foldy-prefs";
 import type { SectionKey } from "@/lib/schemas/resume";
+import { FoldyMascot } from "@/components/mascot/FoldyMascot";
 
 interface AtsCheckerModalProps {
   open: boolean;
@@ -17,39 +20,55 @@ export function AtsCheckerModal({
   report,
   onJumpToSection,
 }: AtsCheckerModalProps) {
+  const foldyPrefs = useFoldyPrefs();
   if (!open) return null;
+
+  const modalMood = deriveFoldyMood({ report });
 
   return (
     <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-white border border-[#E4E4E7] rounded-lg shadow-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-[#E4E4E7] flex items-center justify-between">
-          <div>
-            <h2 className="text-[14px] font-semibold text-[#09090B]">
-              ATS Readability Checker
-            </h2>
-            <p className="text-[11px] text-[#52525B]">
-              Pemeriksaan berbasis aturan deterministik (bukan jaminan mutlak kelulusan ATS).
-            </p>
+      <div className="w-full max-w-lg bg-ui-card border border-ui-border rounded-lg shadow-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-ui-border flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {foldyPrefs.visibility !== "hidden" && (
+              <div className="w-9 h-9 rounded-lg bg-ui-panel border border-ui-divider flex items-center justify-center shrink-0">
+                <FoldyMascot
+                  mood={modalMood}
+                  size="xs"
+                  engine="ambient"
+                  interactiveClick
+                  ariaLabel="Status ATS menurut Foldy"
+                />
+              </div>
+            )}
+            <div className="min-w-0">
+              <h2 className="text-[14px] font-semibold text-ui-text">
+                ATS Readability Checker
+              </h2>
+              <p className="text-[11px] text-ui-text-secondary">
+                Pemeriksaan berbasis aturan deterministik (bukan jaminan mutlak kelulusan ATS).
+              </p>
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 text-[#52525B] hover:text-[#09090B] rounded hover:bg-[#F4F4F5]"
+            className="p-1 text-ui-text-secondary hover:text-ui-text rounded hover:bg-ui-subtle"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="px-4 py-2.5 bg-[#FAFAFA] border-b border-[#E4E4E7] flex items-center gap-3 text-[12px]">
-          <span className="inline-flex items-center gap-1 text-[#10B981] font-medium">
+        <div className="px-4 py-2.5 bg-ui-panel border-b border-ui-border flex items-center gap-3 text-[12px]">
+          <span className="inline-flex items-center gap-1 text-ui-success font-medium">
             <CheckCircle2 className="w-3.5 h-3.5" />
             {report.summary.good} Good
           </span>
-          <span className="inline-flex items-center gap-1 text-[#F59E0B] font-medium">
+          <span className="inline-flex items-center gap-1 text-ui-warning font-medium">
             <AlertTriangle className="w-3.5 h-3.5" />
             {report.summary.review} Review
           </span>
-          <span className="inline-flex items-center gap-1 text-[#EF4444] font-medium">
+          <span className="inline-flex items-center gap-1 text-ui-error font-medium">
             <AlertCircle className="w-3.5 h-3.5" />
             {report.summary.fix} Fix
           </span>
@@ -59,18 +78,18 @@ export function AtsCheckerModal({
           {report.items.map((item) => {
             const badgeStyle =
               item.status === "good"
-                ? "bg-[#ECFDF5] text-[#10B981]"
+                ? "bg-ui-success-bg text-ui-success"
                 : item.status === "review"
-                ? "bg-[#FFFBEB] text-[#F59E0B]"
-                : "bg-[#FEF2F2] text-[#EF4444]";
+                ? "bg-ui-warning-bg text-ui-warning"
+                : "bg-ui-error-bg text-ui-error";
 
             return (
               <div
                 key={item.id}
-                className="p-3 rounded-lg border border-[#E4E4E7] bg-white"
+                className="p-3 rounded-lg border border-ui-border bg-ui-card"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="text-[12.5px] font-semibold text-[#09090B]">
+                  <div className="text-[12.5px] font-semibold text-ui-text">
                     {item.title}
                   </div>
                   <span
@@ -79,7 +98,7 @@ export function AtsCheckerModal({
                     {item.status}
                   </span>
                 </div>
-                <p className="text-[12px] text-[#52525B] mt-1">
+                <p className="text-[12px] text-ui-text-secondary mt-1">
                   {item.description}
                 </p>
                 {item.targetSection && (
@@ -89,7 +108,7 @@ export function AtsCheckerModal({
                       onJumpToSection(item.targetSection!);
                       onClose();
                     }}
-                    className="mt-2 text-[11px] font-medium text-[#18181B] underline hover:text-[#52525B]"
+                    className="mt-2 text-[11px] font-medium text-ui-link underline hover:text-ui-link-hover"
                   >
                     Buka bagian terkait →
                   </button>

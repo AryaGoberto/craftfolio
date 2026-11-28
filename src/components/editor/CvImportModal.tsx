@@ -13,8 +13,11 @@ import {
 } from "lucide-react";
 import { extractResumeFileText } from "@/lib/cv-file-extractor";
 import { postAuthenticatedAiJson } from "@/lib/ai/client-fetch";
+import { emitFoldyEvent } from "@/lib/foldy-events";
+import { useFoldyPrefs } from "@/lib/foldy-prefs";
 import type { ResumeDocument } from "@/lib/schemas/resume";
 import { useResumeStore } from "@/store/use-resume-store";
+import { FoldyMascot } from "@/components/mascot/FoldyMascot";
 
 export type ImportTabMode = "file" | "paste" | "json";
 
@@ -97,6 +100,7 @@ export function CvImportModal({
 
   const [parsedDoc, setParsedDoc] = useState<ResumeDocument | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
+  const foldyPrefs = useFoldyPrefs();
 
   const preferredLanguage = documents[activeDocumentId]?.language ?? "en";
 
@@ -251,6 +255,7 @@ export function CvImportModal({
         return;
       }
       handleClose();
+      emitFoldyEvent({ type: "cv-imported" });
       onImported?.();
     } catch {
       setErrorMessage("Gagal membaca file .json yang dipilih.");
@@ -278,6 +283,7 @@ export function CvImportModal({
 
     setErrorMessage(null);
     setIsParsingAi(true);
+    emitFoldyEvent({ type: "ai-start", docId: activeDocumentId });
 
     try {
       const { ok, status, data } = await postAuthenticatedAiJson<{
@@ -312,12 +318,14 @@ export function CvImportModal({
       );
     } finally {
       setIsParsingAi(false);
+      emitFoldyEvent({ type: "ai-end", docId: activeDocumentId });
     }
   };
 
   const handleConfirmCreate = () => {
     if (!parsedDoc) return;
     addParsedDocument(parsedDoc);
+    emitFoldyEvent({ type: "cv-imported", docId: parsedDoc.id });
     handleClose();
     onImported?.();
   };
@@ -377,28 +385,43 @@ export function CvImportModal({
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       {...({ closedby: "any" } as Record<string, string>)}
-      className="craftfolio-dialog m-auto w-[calc(100%-2rem)] max-w-2xl max-h-[88vh] p-0 bg-white border border-[#E4E4E7] rounded-lg shadow-xl text-[#09090B] overflow-hidden"
+      className="craftfolio-dialog m-auto w-[calc(100%-2rem)] max-w-2xl max-h-[88vh] p-0 bg-ui-card border border-ui-border rounded-lg shadow-xl text-ui-text overflow-hidden"
     >
       <div className="flex flex-col max-h-[88vh]">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-[#E4E4E7] flex items-center justify-between gap-3 shrink-0">
-          <div>
-            <h1
-              id="cv-import-title"
-              className="text-[14px] font-semibold text-[#09090B]"
-            >
-              Import File CV
-            </h1>
-            <p className="text-[11px] text-[#52525B]">
-              Unggah CV lama (PDF, Word, Teks) untuk diekstrak otomatis dengan AI, atau impor file backup .json Craftfolio.
-            </p>
+        <div className="px-4 py-3 border-b border-ui-border flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {foldyPrefs.visibility !== "hidden" && (
+              <div className="w-9 h-9 rounded-lg bg-ui-panel border border-ui-divider flex items-center justify-center shrink-0">
+                <FoldyMascot
+                  mood={
+                    isParsingAi ? "ai" : parsedDoc ? "happy" : "crafty"
+                  }
+                  size="xs"
+                  engine="ambient"
+                  interactiveClick
+                  ariaLabel="Status impor CV oleh Foldy"
+                />
+              </div>
+            )}
+            <div className="min-w-0">
+              <h1
+                id="cv-import-title"
+                className="text-[14px] font-semibold text-ui-text"
+              >
+                Import File CV
+              </h1>
+              <p className="text-[11px] text-ui-text-secondary">
+                Unggah CV lama (PDF, Word, Teks) untuk diekstrak otomatis dengan AI, atau impor file backup .json Craftfolio.
+              </p>
+            </div>
           </div>
           <button
             type="button"
             onClick={handleClose}
             aria-label="Tutup modal Import File CV"
             title="Tutup (Esc)"
-            className="p-1 text-[#52525B] hover:text-[#09090B] rounded hover:bg-[#F4F4F5]"
+            className="p-1 text-ui-text-secondary hover:text-ui-text rounded hover:bg-ui-subtle"
           >
             <X className="w-4 h-4" />
           </button>
@@ -412,7 +435,7 @@ export function CvImportModal({
               <div
                 role="tablist"
                 aria-label="Metode impor CV"
-                className="flex items-center overflow-x-auto bg-[#F4F4F5] p-0.5 rounded-md border border-[#E4E4E7] text-[12px]"
+                className="flex items-center overflow-x-auto bg-ui-subtle p-0.5 rounded-md border border-ui-border text-[12px]"
               >
                 {IMPORT_TABS.map((tab, idx) => {
                   const selected = inputMode === tab.id;
@@ -431,8 +454,8 @@ export function CvImportModal({
                       onKeyDown={(e) => handleTabKeyDown(e, idx)}
                       className={`relative flex-none px-3 py-1.5 rounded font-medium whitespace-nowrap transition-colors ${
                         selected
-                          ? "bg-white text-[#09090B] border-b-2 border-[#18181B]"
-                          : "text-[#52525B] hover:text-[#09090B] border-b-2 border-transparent"
+                          ? "bg-ui-card text-ui-text border-b-2 border-ui-primary"
+                          : "text-ui-text-secondary hover:text-ui-text border-b-2 border-transparent"
                       }`}
                     >
                       {tab.label}
@@ -448,8 +471,8 @@ export function CvImportModal({
                 className="space-y-4"
               >
                 {inputMode === "file" && (
-                  <div className="border border-dashed border-[#D4D4D8] bg-[#FAFAFA] rounded-lg p-5 text-center space-y-2.5">
-                    <div className="w-9 h-9 rounded-full bg-white border border-[#E4E4E7] mx-auto flex items-center justify-center text-[#18181B]">
+                  <div className="border border-dashed border-ui-border-strong bg-ui-panel rounded-lg p-5 text-center space-y-2.5">
+                    <div className="w-9 h-9 rounded-full bg-ui-card border border-ui-border mx-auto flex items-center justify-center text-ui-link">
                       {isReadingFile ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
@@ -457,12 +480,12 @@ export function CvImportModal({
                       )}
                     </div>
                     <div className="space-y-0.5">
-                      <p className="text-[12.5px] font-medium text-[#09090B]">
+                      <p className="text-[12.5px] font-medium text-ui-text">
                         {selectedFileName
                           ? selectedFileName
                           : "Pilih file CV (.pdf, .docx, atau .txt)"}
                       </p>
-                      <p className="text-[11px] text-[#52525B]">
+                      <p className="text-[11px] text-ui-text-secondary">
                         Teks diekstrak di browser Anda sebelum dipetakan oleh Gemini AI ke struktur form (termasuk sub-header kustom).
                       </p>
                     </div>
@@ -470,7 +493,7 @@ export function CvImportModal({
                       type="button"
                       disabled={isReadingFile || isParsingAi}
                       onClick={() => fileInputRef.current?.click()}
-                      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-white border border-[#E4E4E7] hover:bg-[#F4F4F5] text-[12px] font-medium text-[#09090B]"
+                      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-ui-card border border-ui-border hover:bg-ui-subtle text-[12px] font-medium text-ui-text"
                     >
                       <FileText className="w-3.5 h-3.5" />
                       {selectedFileName ? "Ganti File" : "Pilih File CV"}
@@ -486,8 +509,8 @@ export function CvImportModal({
                 )}
 
                 {inputMode === "json" && (
-                  <div className="border border-dashed border-[#D4D4D8] bg-[#FAFAFA] rounded-lg p-6 text-center space-y-3">
-                    <div className="w-9 h-9 rounded-full bg-white border border-[#E4E4E7] mx-auto flex items-center justify-center text-[#18181B]">
+                  <div className="border border-dashed border-ui-border-strong bg-ui-panel rounded-lg p-6 text-center space-y-3">
+                    <div className="w-9 h-9 rounded-full bg-ui-card border border-ui-border mx-auto flex items-center justify-center text-ui-link">
                       {isReadingJson ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
@@ -495,10 +518,10 @@ export function CvImportModal({
                       )}
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[13px] font-medium text-[#09090B]">
+                      <p className="text-[13px] font-medium text-ui-text">
                         Unggah File Backup JSON Craftfolio (.json)
                       </p>
-                      <p className="text-[11.5px] text-[#52525B]">
+                      <p className="text-[11.5px] text-ui-text-secondary">
                         Impor instan tanpa AI dan tidak mengurangi kuota harian.
                       </p>
                     </div>
@@ -506,7 +529,7 @@ export function CvImportModal({
                       type="button"
                       disabled={isReadingJson}
                       onClick={() => jsonInputRef.current?.click()}
-                      className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-md bg-[#18181B] hover:bg-[#27272A] disabled:opacity-50 text-white text-[12px] font-medium transition-colors"
+                      className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-md bg-ui-primary hover:bg-ui-primary-hover disabled:opacity-50 text-white text-[12px] font-medium transition-colors"
                     >
                       <FileJson className="w-3.5 h-3.5" />
                       {isReadingJson ? "Membaca JSON..." : "Pilih File .json"}
@@ -524,7 +547,7 @@ export function CvImportModal({
                 {inputMode !== "json" &&
                   (inputMode === "paste" || rawText.length > 0) && (
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] text-[#52525B]">
+                      <div className="flex items-center justify-between text-[11px] text-ui-text-secondary">
                         <label
                           htmlFor="cv-import-raw-text"
                           className="font-medium"
@@ -541,7 +564,7 @@ export function CvImportModal({
                         value={rawText}
                         onChange={(e) => setRawText(e.target.value)}
                         placeholder="Tempel seluruh teks dari CV lama Anda di sini..."
-                        className="w-full p-2.5 text-[12px] text-[#09090B] bg-[#FAFAFA] border border-[#E4E4E7] rounded-md focus:outline-none focus:ring-1 focus:ring-[#18181B] placeholder:text-[#A1A1AA]"
+                        className="w-full p-2.5 text-[12px] text-ui-text bg-ui-panel border border-ui-border rounded-md focus:outline-none focus:ring-1 focus:ring-ui-focus placeholder:text-ui-text-placeholder"
                       />
                     </div>
                   )}
@@ -549,7 +572,7 @@ export function CvImportModal({
                 {errorMessage && (
                   <div
                     role="alert"
-                    className="px-3 py-2.5 rounded-md bg-[#FEF2F2] border border-[#FECACA] text-[11.5px] text-[#B91C1C]"
+                    className="px-3 py-2.5 rounded-md bg-ui-error-bg border border-ui-error-border text-[11.5px] text-ui-error-text"
                   >
                     {errorMessage}
                   </div>
@@ -557,14 +580,14 @@ export function CvImportModal({
 
                 {inputMode !== "json" && (
                   <>
-                    <p className="text-[11px] leading-relaxed text-[#71717A]">
+                    <p className="text-[11px] leading-relaxed text-ui-text-muted">
                       Catatan privasi: teks CV yang Anda unggah atau tempel akan diproses sementara melalui Google Gemini API semata-mata untuk memetakan struktur CV Anda.
                     </p>
 
                     {!authUser && (
-                      <div className="flex items-center justify-between gap-3 p-3 bg-[#F4F4F5] border border-[#E4E4E7] rounded-lg text-[12px]">
-                        <div className="flex items-center gap-2 text-[#09090B]">
-                          <Sparkles className="w-4 h-4 text-[#18181B] shrink-0" />
+                      <div className="flex items-center justify-between gap-3 p-3 bg-ui-subtle border border-ui-border rounded-lg text-[12px]">
+                        <div className="flex items-center gap-2 text-ui-text">
+                          <Sparkles className="w-4 h-4 text-ui-link shrink-0" />
                           <span>
                             Fitur ekstraksi AI memerlukan akun Craftfolio (gratis).
                           </span>
@@ -576,7 +599,7 @@ export function CvImportModal({
                               "Masuk atau buat akun gratis untuk menggunakan fitur Import CV dengan AI Gemini."
                             )
                           }
-                          className="px-2.5 py-1 bg-[#18181B] hover:bg-[#27272A] text-white text-[11px] font-medium rounded transition-colors shrink-0"
+                          className="px-2.5 py-1 bg-ui-primary hover:bg-ui-primary-hover text-white text-[11px] font-medium rounded transition-colors shrink-0"
                         >
                           Masuk Akun
                         </button>
@@ -588,16 +611,16 @@ export function CvImportModal({
             </>
           ) : (
             <div className="space-y-4">
-              <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[#ECFDF5] border border-[#A7F3D0] text-[12px] text-[#065F46]">
+              <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-ui-success-bg border border-ui-success-border text-[12px] text-ui-success-text">
                 <span className="inline-flex items-center gap-1.5 font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
+                  <CheckCircle2 className="w-4 h-4 text-ui-success" />
                   Struktur CV berhasil diekstrak oleh Gemini AI. Silakan tinjau sebelum dibuat:
                 </span>
                 <span className="text-[10.5px] font-mono">AI Extracted</span>
               </div>
 
               {warnings.length > 0 && (
-                <div className="p-3 rounded-lg bg-[#FFFBEB] border border-[#FDE68A] space-y-1.5 text-[11.5px] text-[#92400E]">
+                <div className="p-3 rounded-lg bg-ui-warning-bg border border-ui-warning-border space-y-1.5 text-[11.5px] text-ui-warning-text">
                   <p className="font-semibold flex items-center gap-1.5">
                     <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                     Field yang perlu ditinjau / dilengkapi:
@@ -611,75 +634,75 @@ export function CvImportModal({
               )}
 
               {/* Structured Summary Preview */}
-              <div className="rounded-lg border border-[#E4E4E7] bg-[#FAFAFA] p-3.5 space-y-3 text-[12px]">
+              <div className="rounded-lg border border-ui-border bg-ui-panel p-3.5 space-y-3 text-[12px]">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div>
-                    <span className="text-[10.5px] uppercase tracking-wider text-[#71717A] font-medium">
+                    <span className="text-[10.5px] uppercase tracking-wider text-ui-text-muted font-medium">
                       Nama Lengkap
                     </span>
-                    <p className="font-semibold text-[#09090B]">
+                    <p className="font-semibold text-ui-text">
                       {parsedDoc.basics.fullName || "— (Kosong)"}
                     </p>
                   </div>
                   <div>
-                    <span className="text-[10.5px] uppercase tracking-wider text-[#71717A] font-medium">
+                    <span className="text-[10.5px] uppercase tracking-wider text-ui-text-muted font-medium">
                       Kontak &amp; Bahasa
                     </span>
-                    <p className="text-[#09090B] truncate">
+                    <p className="text-ui-text truncate">
                       {parsedDoc.basics.email || "Tanpa email"} ·{" "}
                       {parsedDoc.language === "id" ? "Indonesia" : "English"}
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-[#E4E4E7]">
-                  <div className="bg-white border border-[#E4E4E7] rounded p-2">
-                    <span className="text-[10.5px] text-[#52525B]">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-ui-border">
+                  <div className="bg-ui-card border border-ui-border rounded p-2">
+                    <span className="text-[10.5px] text-ui-text-secondary">
                       Pengalaman
                     </span>
-                    <p className="text-[14px] font-semibold text-[#09090B] tabular-nums">
+                    <p className="text-[14px] font-semibold text-ui-text tabular-nums">
                       {parsedDoc.sections.experience.items.length}
                     </p>
                   </div>
-                  <div className="bg-white border border-[#E4E4E7] rounded p-2">
-                    <span className="text-[10.5px] text-[#52525B]">
+                  <div className="bg-ui-card border border-ui-border rounded p-2">
+                    <span className="text-[10.5px] text-ui-text-secondary">
                       Pendidikan
                     </span>
-                    <p className="text-[14px] font-semibold text-[#09090B] tabular-nums">
+                    <p className="text-[14px] font-semibold text-ui-text tabular-nums">
                       {parsedDoc.sections.education.items.length}
                     </p>
                   </div>
-                  <div className="bg-white border border-[#E4E4E7] rounded p-2">
-                    <span className="text-[10.5px] text-[#52525B]">
+                  <div className="bg-ui-card border border-ui-border rounded p-2">
+                    <span className="text-[10.5px] text-ui-text-secondary">
                       Proyek
                     </span>
-                    <p className="text-[14px] font-semibold text-[#09090B] tabular-nums">
+                    <p className="text-[14px] font-semibold text-ui-text tabular-nums">
                       {parsedDoc.sections.projects.items.length}
                     </p>
                   </div>
-                  <div className="bg-white border border-[#E4E4E7] rounded p-2">
-                    <span className="text-[10.5px] text-[#52525B]">
+                  <div className="bg-ui-card border border-ui-border rounded p-2">
+                    <span className="text-[10.5px] text-ui-text-secondary">
                       Keahlian
                     </span>
-                    <p className="text-[14px] font-semibold text-[#09090B] tabular-nums">
+                    <p className="text-[14px] font-semibold text-ui-text tabular-nums">
                       {parsedDoc.sections.skills.items.length}
                     </p>
                   </div>
                 </div>
 
                 {extraSectionBadges.length > 0 && (
-                  <div className="pt-2 border-t border-[#E4E4E7] space-y-1.5">
-                    <span className="text-[10.5px] uppercase tracking-wider text-[#71717A] font-medium">
+                  <div className="pt-2 border-t border-ui-border space-y-1.5">
+                    <span className="text-[10.5px] uppercase tracking-wider text-ui-text-muted font-medium">
                       Bagian Tambahan &amp; Kustom Terdeteksi
                     </span>
                     <div className="flex flex-wrap gap-1.5">
                       {extraSectionBadges.map((badge) => (
                         <span
                           key={badge.key}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-[#E4E4E7] text-[11px] font-medium text-[#09090B]"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-ui-card border border-ui-border text-[11px] font-medium text-ui-text"
                         >
                           <span>{badge.label}</span>
-                          <span className="text-[#71717A] font-mono tabular-nums">
+                          <span className="text-ui-text-muted font-mono tabular-nums">
                             ({badge.count})
                           </span>
                         </span>
@@ -689,11 +712,11 @@ export function CvImportModal({
                 )}
 
                 {parsedDoc.sections.experience.items.length > 0 && (
-                  <div className="pt-2 border-t border-[#E4E4E7] space-y-1">
-                    <span className="text-[10.5px] uppercase tracking-wider text-[#71717A] font-medium">
+                  <div className="pt-2 border-t border-ui-border space-y-1">
+                    <span className="text-[10.5px] uppercase tracking-wider text-ui-text-muted font-medium">
                       Cuplikan Pengalaman Terdeteksi
                     </span>
-                    <ul className="space-y-1 text-[11.5px] text-[#18181B]">
+                    <ul className="space-y-1 text-[11.5px] text-ui-text">
                       {parsedDoc.sections.experience.items
                         .slice(0, 3)
                         .map((exp) => (
@@ -717,10 +740,10 @@ export function CvImportModal({
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-[#E4E4E7] bg-[#FAFAFA] flex items-center justify-between gap-2 shrink-0">
+        <div className="px-4 py-3 border-t border-ui-border bg-ui-panel flex items-center justify-between gap-2 shrink-0">
           {!parsedDoc ? (
             <>
-              <span className="text-[11px] text-[#71717A]">
+              <span className="text-[11px] text-ui-text-muted">
                 {inputMode === "json"
                   ? "Dokumen yang sudah ada tidak akan tertimpa."
                   : authUser && aiQuota
@@ -731,7 +754,7 @@ export function CvImportModal({
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="h-8 px-3 rounded-md border border-[#E4E4E7] bg-white hover:bg-[#F4F4F5] text-[12px] font-medium text-[#52525B]"
+                  className="h-8 px-3 rounded-md border border-ui-border bg-ui-card hover:bg-ui-subtle text-[12px] font-medium text-ui-text-secondary"
                 >
                   Batal
                 </button>
@@ -747,7 +770,7 @@ export function CvImportModal({
                         authUser && aiQuota && aiQuota.import.remaining <= 0
                       )
                     }
-                    className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-md bg-[#18181B] hover:bg-[#27272A] disabled:opacity-50 text-white text-[12px] font-medium"
+                    className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-md bg-ui-primary hover:bg-ui-primary-hover disabled:opacity-50 text-white text-[12px] font-medium"
                   >
                     {isParsingAi ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -766,14 +789,14 @@ export function CvImportModal({
               <button
                 type="button"
                 onClick={() => setParsedDoc(null)}
-                className="h-8 px-3 rounded-md border border-[#E4E4E7] bg-white hover:bg-[#F4F4F5] text-[12px] font-medium text-[#52525B]"
+                className="h-8 px-3 rounded-md border border-ui-border bg-ui-card hover:bg-ui-subtle text-[12px] font-medium text-ui-text-secondary"
               >
                 ← Ubah Teks Sumber
               </button>
               <button
                 type="button"
                 onClick={handleConfirmCreate}
-                className="inline-flex items-center gap-1.5 h-8 px-4 rounded-md bg-[#18181B] hover:bg-[#27272A] text-white text-[12px] font-medium"
+                className="inline-flex items-center gap-1.5 h-8 px-4 rounded-md bg-ui-primary hover:bg-ui-primary-hover text-white text-[12px] font-medium"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 Konfirmasi &amp; Buat CV

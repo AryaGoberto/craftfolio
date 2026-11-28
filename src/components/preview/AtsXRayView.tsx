@@ -217,34 +217,34 @@ export function AtsXRayView({ doc }: { doc: ResumeDocument }) {
     !isExtracting && source === "pdf" && pdfText ? pdfText : fallbackText;
 
   return (
-    <div className="w-full max-w-[794px] bg-white border border-[#E4E4E7] rounded-lg shadow-sm p-6">
-      <div className="flex items-center justify-between gap-3 pb-3 mb-4 border-b border-[#F4F4F5]">
+    <div className="w-full max-w-[794px] bg-ui-card border border-ui-border rounded-lg shadow-sm p-6">
+      <div className="flex items-center justify-between gap-3 pb-3 mb-4 border-b border-ui-divider">
         <div>
-          <h3 className="text-[13px] font-semibold text-[#09090B]">
+          <h3 className="text-[13px] font-semibold text-ui-text">
             ATS X-Ray — Ekstraksi Teks Linear PDF
           </h3>
-          <p className="text-[11px] text-[#52525B] mt-0.5">
+          <p className="text-[11px] text-ui-text-secondary mt-0.5">
             {source === "pdf"
               ? "Teks berikut diekstrak langsung dari file biner PDF hasil render sebagaimana dibaca parser ATS."
               : "Menampilkan simulasi urutan teks linear dari atas ke bawah sebagaimana dibaca parser ATS."}
           </p>
         </div>
         {isExtracting ? (
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded bg-[#F4F4F5] text-[#52525B] shrink-0">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded bg-ui-subtle text-ui-text-secondary shrink-0">
             <Loader2 className="w-3 h-3 animate-spin" />
             Mengekstrak PDF...
           </span>
         ) : source === "pdf" && pdfPageCount !== null ? (
-          <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-[#ECFDF5] text-[#10B981] shrink-0">
+          <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-ui-success-bg text-ui-success shrink-0">
             PDF Binary Parsed · {pdfPageCount} Halaman
           </span>
         ) : (
-          <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-[#F4F4F5] text-[#52525B] shrink-0">
+          <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-ui-subtle text-ui-text-secondary shrink-0">
             Linear Simulation
           </span>
         )}
       </div>
-      <pre className="text-[12px] leading-relaxed font-mono text-[#18181B] whitespace-pre-wrap break-words bg-[#FAFAFA] border border-[#E4E4E7] rounded-md p-4">
+      <pre className="text-[12px] leading-relaxed font-mono text-ui-text whitespace-pre-wrap break-words bg-ui-panel border border-ui-border rounded-md p-4">
         {displayedText}
       </pre>
     </div>

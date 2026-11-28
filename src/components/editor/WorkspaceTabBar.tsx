@@ -100,13 +100,13 @@ function SortableTabItem({
         isDragging ? "shadow-md z-30 opacity-90" : ""
       } ${
         isActive
-          ? "bg-white text-[#09090B] font-medium border-t border-x border-[#E4E4E7] -mb-px h-[32px] px-3 z-10"
-          : "bg-[#E4E4E7]/50 hover:bg-[#E4E4E7]/90 text-[#52525B] hover:text-[#09090B] h-[28px] mb-0.5 px-2.5"
+          ? "bg-ui-card text-ui-text font-medium border-t border-x border-ui-border -mb-px h-[32px] px-3 z-10"
+          : "bg-ui-border/50 hover:bg-ui-border/90 text-ui-text-secondary hover:text-ui-text h-[28px] mb-0.5 px-2.5"
       }`}
     >
       <FileText
         className={`w-3.5 h-3.5 shrink-0 ${
-          isActive ? "text-[#18181B]" : "text-[#71717A]"
+          isActive ? "text-ui-link" : "text-ui-text-muted"
         }`}
       />
 
@@ -134,7 +134,7 @@ function SortableTabItem({
             }
           }}
           aria-label="Ubah nama tab CV"
-          className="w-28 h-5 px-1 text-[12px] font-normal text-[#09090B] bg-white border border-[#18181B] rounded focus:outline-none"
+          className="w-28 h-5 px-1 text-[12px] font-normal text-ui-text bg-ui-card border border-ui-primary rounded focus:outline-none"
         />
       ) : (
         <span
@@ -160,8 +160,8 @@ function SortableTabItem({
           title="Tutup tab (file tetap tersimpan di File Tree)"
           className={`p-0.5 rounded transition-colors ${
             isActive
-              ? "text-[#71717A] hover:text-[#09090B] hover:bg-[#F4F4F5]"
-              : "text-[#71717A] hover:text-[#09090B] hover:bg-white/70 opacity-60 group-hover:opacity-100"
+              ? "text-ui-text-muted hover:text-ui-text hover:bg-ui-subtle"
+              : "text-ui-text-muted hover:text-ui-text hover:bg-ui-card/70 opacity-60 group-hover:opacity-100"
           }`}
         >
           <X className="w-3 h-3" />
@@ -228,7 +228,7 @@ export function WorkspaceTabBar() {
     <div
       role="tablist"
       aria-label="Tab lembar kerja CV"
-      className="h-9 bg-[#F4F4F5] border-b border-[#E4E4E7] flex items-end px-2 gap-1 overflow-x-auto shrink-0 select-none"
+      className="h-9 bg-ui-subtle border-b border-ui-border flex items-end px-2 gap-1 overflow-x-auto shrink-0 select-none"
     >
       {!isFileTreeOpen && (
         <button
@@ -236,7 +236,7 @@ export function WorkspaceTabBar() {
           onClick={() => toggleFileTree(true)}
           title="Buka File Tree Sidebar (Ctrl+B)"
           aria-label="Buka File Tree Sidebar"
-          className="h-7 w-7 mb-1 mr-0.5 inline-flex items-center justify-center rounded-md text-[#52525B] hover:text-[#09090B] hover:bg-[#E4E4E7]/80 shrink-0 transition-colors"
+          className="h-7 w-7 mb-1 mr-0.5 inline-flex items-center justify-center rounded-md text-ui-text-secondary hover:text-ui-text hover:bg-ui-border/80 shrink-0 transition-colors"
         >
           <PanelLeft className="w-3.5 h-3.5" />
         </button>
@@ -293,7 +293,7 @@ export function WorkspaceTabBar() {
             : "Buat & buka tab CV baru"
         }
         aria-label="Buat dan buka tab CV baru"
-        className="h-7 w-7 mb-1 ml-0.5 inline-flex items-center justify-center rounded-md text-[#52525B] hover:text-[#09090B] hover:bg-[#E4E4E7]/80 shrink-0 transition-colors"
+        className="h-7 w-7 mb-1 ml-0.5 inline-flex items-center justify-center rounded-md text-ui-text-secondary hover:text-ui-text hover:bg-ui-border/80 shrink-0 transition-colors"
       >
         <Plus className="w-3.5 h-3.5" />
       </button>

@@ -13,7 +13,7 @@ const AtsXRayView = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full max-w-[794px] bg-white border border-[#E4E4E7] rounded-lg shadow-sm p-6 text-[12px] text-[#52525B]">
+      <div className="w-full max-w-[794px] bg-ui-card border border-ui-border rounded-lg shadow-sm p-6 text-[12px] text-ui-text-secondary">
         Memuat ATS X-Ray Mode...
       </div>
     ),
@@ -89,18 +89,18 @@ export function PreviewPanel({ onPageStatsChange }: PreviewPanelProps) {
     (pageCount > 1 && lastPageFillRatio > 0 && lastPageFillRatio < 0.15);
 
   return (
-    <section className="flex-1 flex flex-col bg-[#F8F9FA] h-full overflow-hidden">
+    <section className="flex-1 flex flex-col bg-ui-canvas h-full overflow-hidden">
       {/* Preview Top Strip */}
-      <div className="h-11 px-4 border-b border-[#E4E4E7] bg-[#FAFAFA] flex items-center justify-between gap-3 shrink-0">
+      <div className="h-11 px-4 border-b border-ui-border bg-ui-panel flex items-center justify-between gap-3 shrink-0">
         {/* Segmented Mode Switch */}
-        <div className="inline-flex items-center bg-[#F4F4F5] p-0.5 rounded-md border border-[#E4E4E7]">
+        <div className="inline-flex items-center bg-ui-subtle p-0.5 rounded-md border border-ui-border">
           <button
             type="button"
             onClick={() => setPreviewMode("visual")}
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[12px] font-medium rounded transition-colors ${
               previewMode === "visual"
-                ? "bg-white text-[#09090B] shadow-sm"
-                : "text-[#52525B] hover:text-[#09090B]"
+                ? "bg-ui-card text-ui-text shadow-sm"
+                : "text-ui-text-secondary hover:text-ui-text"
             }`}
           >
             <Eye className="w-3.5 h-3.5" />
@@ -111,8 +111,8 @@ export function PreviewPanel({ onPageStatsChange }: PreviewPanelProps) {
             onClick={() => setPreviewMode("xray")}
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[12px] font-medium rounded transition-colors ${
               previewMode === "xray"
-                ? "bg-white text-[#09090B] shadow-sm"
-                : "text-[#52525B] hover:text-[#09090B]"
+                ? "bg-ui-card text-ui-text shadow-sm"
+                : "text-ui-text-secondary hover:text-ui-text"
             }`}
           >
             <FileSearch className="w-3.5 h-3.5" />
@@ -130,8 +130,8 @@ export function PreviewPanel({ onPageStatsChange }: PreviewPanelProps) {
               title="Tampilkan/sembunyikan teks contoh panduan (abu-abu) pada bagian kosong. Teks panduan tidak pernah ikut terekspor ke PDF."
               className={`hidden md:inline-flex items-center gap-1 px-2 py-1 rounded border text-[11px] font-medium transition-colors ${
                 showGhostPreview
-                  ? "bg-white border-[#18181B] text-[#09090B]"
-                  : "bg-[#F4F4F5] border-[#E4E4E7] text-[#52525B] hover:text-[#09090B]"
+                  ? "bg-ui-card border-ui-primary text-ui-text"
+                  : "bg-ui-subtle border-ui-border text-ui-text-secondary hover:text-ui-text"
               }`}
             >
               <Sparkles className="w-3 h-3" />
@@ -146,42 +146,42 @@ export function PreviewPanel({ onPageStatsChange }: PreviewPanelProps) {
               })
             }
             title="Klik untuk ganti ukuran kertas (A4 / Letter)"
-            className="px-2 py-1 rounded bg-white border border-[#E4E4E7] font-medium text-[#18181B] hover:bg-[#F4F4F5] transition-colors"
+            className="px-2 py-1 rounded bg-ui-card border border-ui-border font-medium text-ui-text hover:bg-ui-subtle transition-colors"
           >
             {paper.label}
           </button>
 
-          <div className="hidden sm:inline-flex items-center bg-[#F4F4F5] p-0.5 rounded-md border border-[#E4E4E7]">
+          <div className="hidden sm:inline-flex items-center bg-ui-subtle p-0.5 rounded-md border border-ui-border">
             <button
               type="button"
               onClick={() => setPreviewZoom(Number((previewZoom - 0.1).toFixed(2)))}
-              className="p-1 text-[#52525B] hover:text-[#09090B]"
+              className="p-1 text-ui-text-secondary hover:text-ui-text"
               aria-label="Perkecil preview"
             >
               <Minus className="w-3.5 h-3.5" />
             </button>
-            <span className="px-2 text-[11px] font-mono tabular-nums text-[#09090B]">
+            <span className="px-2 text-[11px] font-mono tabular-nums text-ui-text">
               {Math.round(previewZoom * 100)}%
             </span>
             <button
               type="button"
               onClick={() => setPreviewZoom(Number((previewZoom + 0.1).toFixed(2)))}
-              className="p-1 text-[#52525B] hover:text-[#09090B]"
+              className="p-1 text-ui-text-secondary hover:text-ui-text"
               aria-label="Perbesar preview"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
-            <span className="h-4 w-px bg-[#E4E4E7] mx-0.5" />
+            <span className="h-4 w-px bg-ui-border mx-0.5" />
             <button
               type="button"
               onClick={handleFit}
-              className="px-2 py-0.5 text-[11px] font-medium text-[#52525B] hover:text-[#09090B]"
+              className="px-2 py-0.5 text-[11px] font-medium text-ui-text-secondary hover:text-ui-text"
             >
               Fit
             </button>
           </div>
 
-          <span className="text-[11px] font-mono tabular-nums text-[#52525B] whitespace-nowrap">
+          <span className="text-[11px] font-mono tabular-nums text-ui-text-secondary whitespace-nowrap">
             Halaman {pageCount} / {doc.config.targetPages}
           </span>
         </div>
@@ -189,9 +189,9 @@ export function PreviewPanel({ onPageStatsChange }: PreviewPanelProps) {
 
       {/* Overflow Banner */}
       {isOverflow && previewMode === "visual" && (
-        <div className="mx-4 mt-3 px-3 py-2 rounded-lg bg-[#FFFBEB] border border-[#FDE68A] flex items-center justify-between gap-3 text-[12px] text-[#92400E] shrink-0">
+        <div className="mx-4 mt-3 px-3 py-2 rounded-lg bg-ui-warning-bg border border-ui-warning-border flex items-center justify-between gap-3 text-[12px] text-ui-warning-text shrink-0">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-[#F59E0B] shrink-0" />
+            <AlertTriangle className="w-4 h-4 text-ui-warning shrink-0" />
             <span>
               Konten meluber ke {pageCount} halaman (target {doc.config.targetPages} halaman).
             </span>
@@ -200,7 +200,7 @@ export function PreviewPanel({ onPageStatsChange }: PreviewPanelProps) {
             <button
               type="button"
               onClick={() => updateConfig({ density: "compact" })}
-              className="px-2.5 py-1 rounded bg-[#18181B] text-white text-[11px] font-medium hover:bg-[#27272A] shrink-0"
+              className="px-2.5 py-1 rounded bg-ui-primary text-white text-[11px] font-medium hover:bg-ui-primary-hover shrink-0"
             >
               Ubah ke Compact
             </button>
@@ -242,9 +242,9 @@ export function PreviewPanel({ onPageStatsChange }: PreviewPanelProps) {
                 <div
                   key={idx}
                   style={{ top: `${paper.heightPx * (idx + 1)}px` }}
-                  className="absolute left-0 right-0 border-t border-dashed border-[#A1A1AA] pointer-events-none flex justify-end"
+                  className="absolute left-0 right-0 border-t border-dashed border-ui-border-strong pointer-events-none flex justify-end"
                 >
-                  <span className="bg-[#F4F4F5] text-[#52525B] text-[10px] px-1.5 py-0.5 rounded-b border border-t-0 border-[#E4E4E7]">
+                  <span className="bg-ui-subtle text-ui-text-secondary text-[10px] px-1.5 py-0.5 rounded-b border border-t-0 border-ui-border">
                     Batas Halaman {idx + 1}
                   </span>
                 </div>

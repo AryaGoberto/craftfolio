@@ -2,15 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase/config";
+import { getFirebaseAuth } from "@/lib/firebase/config";
+import { isFirebaseConfigured } from "@/lib/firebase/env";
 import { toAuthUserProfile } from "@/lib/firebase/auth";
 import { refreshAiQuotaFromServer } from "@/lib/ai/client-fetch";
-import {
-  buildMergedWorkspaceState,
-  deleteResumeFromCloud,
-  fetchUserCloudWorkspace,
-  saveUserWorkspaceToCloud,
-} from "@/lib/firebase/firestore-sync";
 import {
   isCloudSessionPersisted,
   useResumeStore,
@@ -77,6 +72,11 @@ export function CloudSyncManager() {
       void refreshAiQuotaFromServer();
 
       try {
+        const {
+          buildMergedWorkspaceState,
+          fetchUserCloudWorkspace,
+          saveUserWorkspaceToCloud,
+        } = await import("@/lib/firebase/firestore-sync");
         const cloudSnapshot = await fetchUserCloudWorkspace(profile.uid);
         if (cancelled) return;
 
@@ -164,6 +164,8 @@ export function CloudSyncManager() {
 
       setCloudSyncStatus("syncing");
       try {
+        const { deleteResumeFromCloud, saveUserWorkspaceToCloud } =
+          await import("@/lib/firebase/firestore-sync");
         const state = useResumeStore.getState();
         await saveUserWorkspaceToCloud(
           currentUser,
@@ -276,6 +278,8 @@ export function CloudSyncManager() {
     const runManualSync = async () => {
       setCloudSyncStatus("syncing");
       try {
+        const { deleteResumeFromCloud, saveUserWorkspaceToCloud } =
+          await import("@/lib/firebase/firestore-sync");
         const state = useResumeStore.getState();
         const pendingDeletes = Array.from(deletedDocIdsRef.current);
         const changedIds = new Set<string>(dirtyDocIdsRef.current);

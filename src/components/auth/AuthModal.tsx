@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
-import { isFirebaseConfigured } from "@/lib/firebase/config";
+import { isFirebaseConfigured } from "@/lib/firebase/env";
 import {
   mapFirebaseAuthError,
   resetPassword,
@@ -291,17 +291,17 @@ export function AuthModal({
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       {...({ closedby: "any" } as Record<string, string>)}
-      className="auth-dialog m-auto w-[calc(100%-2rem)] max-w-md max-h-[90dvh] overflow-y-auto p-0 bg-white border border-[#E4E4E7] rounded-xl shadow-2xl text-[#09090B]"
+      className="auth-dialog m-auto w-[calc(100%-2rem)] max-w-md max-h-[90dvh] overflow-y-auto p-0 bg-ui-card border border-ui-border rounded-xl shadow-2xl text-ui-text"
     >
       <div className="w-full">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-[#E4E4E7] flex items-center justify-between gap-3">
+        <div className="px-5 py-4 border-b border-ui-border flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <BrandLogo className="h-6 w-auto shrink-0" />
             <div>
               <h1
                 id="auth-modal-title"
-                className="text-[14px] font-semibold text-[#09090B]"
+                className="text-[14px] font-semibold text-ui-text"
               >
                 {mode === "signin"
                   ? "Masuk & Simpan ke Cloud"
@@ -309,7 +309,7 @@ export function AuthModal({
                     ? "Buat Akun Craftfolio"
                     : "Reset Kata Sandi"}
               </h1>
-              <p className="text-[11px] text-[#52525B]">
+              <p className="text-[11px] text-ui-text-secondary">
                 Sinkronkan CV lintas perangkat via Firebase Firestore
               </p>
             </div>
@@ -319,7 +319,7 @@ export function AuthModal({
             onClick={() => void requestClose()}
             aria-label="Tutup modal autentikasi"
             title="Tutup (Esc)"
-            className="p-1.5 rounded-md text-[#52525B] hover:text-[#09090B] hover:bg-[#F4F4F5] transition-colors"
+            className="p-1.5 rounded-md text-ui-text-secondary hover:text-ui-text hover:bg-ui-subtle transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -329,19 +329,19 @@ export function AuthModal({
         <div className="p-5 space-y-4">
           {/* Contextual Feature Gate Banner */}
           {reason && (
-            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[#F4F4F5] border border-[#E4E4E7] text-[12px] text-[#09090B] font-medium leading-relaxed">
-              <Sparkles className="w-4 h-4 text-[#18181B] shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-ui-subtle border border-ui-border text-[12px] text-ui-text font-medium leading-relaxed">
+              <Sparkles className="w-4 h-4 text-ui-link shrink-0 mt-0.5" />
               <span>{reason}</span>
             </div>
           )}
 
           {/* Guest-to-Cloud Reassurance Banner */}
           {!reason && (
-            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[#FAFAFA] border border-[#E4E4E7] text-[11.5px] text-[#52525B] leading-relaxed">
-              <Cloud className="w-4 h-4 text-[#18181B] shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-ui-panel border border-ui-border text-[11.5px] text-ui-text-secondary leading-relaxed">
+              <Cloud className="w-4 h-4 text-ui-link shrink-0 mt-0.5" />
               <span>
                 Draf CV yang sedang Anda buat di browser ini akan{" "}
-                <strong className="text-[#09090B] font-medium">
+                <strong className="text-ui-text font-medium">
                   otomatis digabungkan
                 </strong>{" "}
                 ke akun Cloud tanpa menghapus data lokal.
@@ -350,8 +350,8 @@ export function AuthModal({
           )}
 
           {!firebaseReady && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-[#FFFBEB] border border-[#FDE68A] text-[11.5px] text-[#92400E] leading-relaxed">
-              <AlertCircle className="w-4 h-4 text-[#F59E0B] shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-ui-warning-bg border border-ui-warning-border text-[11.5px] text-ui-warning-text leading-relaxed">
+              <AlertCircle className="w-4 h-4 text-ui-warning shrink-0 mt-0.5" />
               <div>
                 <p className="font-medium">
                   Konfigurasi Firebase belum diisi di <code>.env.local</code>
@@ -367,14 +367,14 @@ export function AuthModal({
 
           {/* Mode Tabs */}
           {mode !== "reset" && (
-            <div className="grid grid-cols-2 gap-1 bg-[#F4F4F5] p-1 rounded-lg border border-[#E4E4E7]">
+            <div className="grid grid-cols-2 gap-1 bg-ui-subtle p-1 rounded-lg border border-ui-border">
               <button
                 type="button"
                 onClick={() => switchMode("signin")}
                 className={`py-1.5 text-[12px] font-medium rounded-md transition-colors ${
                   mode === "signin"
-                    ? "bg-white text-[#09090B] shadow-xs"
-                    : "text-[#52525B] hover:text-[#09090B]"
+                    ? "bg-ui-card text-ui-text shadow-xs"
+                    : "text-ui-text-secondary hover:text-ui-text"
                 }`}
               >
                 Masuk
@@ -384,8 +384,8 @@ export function AuthModal({
                 onClick={() => switchMode("signup")}
                 className={`py-1.5 text-[12px] font-medium rounded-md transition-colors ${
                   mode === "signup"
-                    ? "bg-white text-[#09090B] shadow-xs"
-                    : "text-[#52525B] hover:text-[#09090B]"
+                    ? "bg-ui-card text-ui-text shadow-xs"
+                    : "text-ui-text-secondary hover:text-ui-text"
                 }`}
               >
                 Daftar Akun
@@ -395,15 +395,15 @@ export function AuthModal({
 
           {/* Alerts */}
           {error && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-[#FEF2F2] border border-[#FECACA] text-[12px] text-[#B91C1C]">
-              <AlertCircle className="w-4 h-4 text-[#EF4444] shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-ui-error-bg border border-ui-error-border text-[12px] text-ui-error-text">
+              <AlertCircle className="w-4 h-4 text-ui-error shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
           {info && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-[#ECFDF5] border border-[#A7F3D0] text-[12px] text-[#065F46]">
-              <CheckCircle2 className="w-4 h-4 text-[#10B981] shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-ui-success-bg border border-ui-success-border text-[12px] text-ui-success-text">
+              <CheckCircle2 className="w-4 h-4 text-ui-success shrink-0 mt-0.5" />
               <span>{info}</span>
             </div>
           )}
@@ -415,10 +415,10 @@ export function AuthModal({
                 type="button"
                 disabled={!firebaseReady || isBusy}
                 onClick={handleGoogleSignIn}
-                className="w-full h-9 px-3 rounded-md bg-white border border-[#E4E4E7] hover:bg-[#F4F4F5] disabled:opacity-50 text-[12.5px] font-medium text-[#09090B] inline-flex items-center justify-center gap-2 transition-colors"
+                className="w-full h-9 px-3 rounded-md bg-ui-card border border-ui-border hover:bg-ui-subtle disabled:opacity-50 text-[12.5px] font-medium text-ui-text inline-flex items-center justify-center gap-2 transition-colors"
               >
                 {googleSubmitting ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-[#52525B]" />
+                  <Loader2 className="w-4 h-4 animate-spin text-ui-text-secondary" />
                 ) : (
                   <GoogleIcon />
                 )}
@@ -426,11 +426,11 @@ export function AuthModal({
               </button>
 
               <div className="relative flex items-center justify-center">
-                <span className="w-full border-t border-[#E4E4E7]" />
-                <span className="bg-white px-2.5 text-[11px] text-[#A1A1AA] shrink-0">
+                <span className="w-full border-t border-ui-border" />
+                <span className="bg-ui-card px-2.5 text-[11px] text-ui-text-placeholder shrink-0">
                   atau gunakan email
                 </span>
-                <span className="w-full border-t border-[#E4E4E7]" />
+                <span className="w-full border-t border-ui-border" />
               </div>
             </>
           )}
@@ -441,7 +441,7 @@ export function AuthModal({
               <div>
                 <label
                   htmlFor="auth-display-name"
-                  className="block text-[11px] font-medium text-[#52525B] mb-1"
+                  className="block text-[11px] font-medium text-ui-text-secondary mb-1"
                 >
                   Nama Lengkap (Opsional)
                 </label>
@@ -452,7 +452,7 @@ export function AuthModal({
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="Contoh: Raka Pratama"
                   disabled={!firebaseReady || isBusy}
-                  className="w-full h-9 px-3 text-[13px] text-[#09090B] bg-white border border-[#E4E4E7] rounded-md focus:outline-none focus:ring-1 focus:ring-[#18181B] disabled:opacity-50"
+                  className="w-full h-9 px-3 text-[13px] text-ui-text bg-ui-card border border-ui-border rounded-md focus:outline-none focus:ring-1 focus:ring-ui-focus disabled:opacity-50"
                 />
               </div>
             )}
@@ -460,7 +460,7 @@ export function AuthModal({
             <div>
               <label
                 htmlFor="auth-email"
-                className="block text-[11px] font-medium text-[#52525B] mb-1"
+                className="block text-[11px] font-medium text-ui-text-secondary mb-1"
               >
                 Alamat Email
               </label>
@@ -473,7 +473,7 @@ export function AuthModal({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="nama@email.com"
                 disabled={!firebaseReady || isBusy}
-                className="w-full h-9 px-3 text-[13px] text-[#09090B] bg-white border border-[#E4E4E7] rounded-md focus:outline-none focus:ring-1 focus:ring-[#18181B] disabled:opacity-50"
+                className="w-full h-9 px-3 text-[13px] text-ui-text bg-ui-card border border-ui-border rounded-md focus:outline-none focus:ring-1 focus:ring-ui-focus disabled:opacity-50"
               />
             </div>
 
@@ -482,7 +482,7 @@ export function AuthModal({
                 <div className="flex items-center justify-between mb-1">
                   <label
                     htmlFor="auth-password"
-                    className="block text-[11px] font-medium text-[#52525B]"
+                    className="block text-[11px] font-medium text-ui-text-secondary"
                   >
                     Kata Sandi
                   </label>
@@ -490,7 +490,7 @@ export function AuthModal({
                     <button
                       type="button"
                       onClick={() => switchMode("reset")}
-                      className="text-[11px] font-medium text-[#52525B] hover:text-[#09090B] hover:underline"
+                      className="text-[11px] font-medium text-ui-text-secondary hover:text-ui-text hover:underline"
                     >
                       Lupa kata sandi?
                     </button>
@@ -509,7 +509,7 @@ export function AuthModal({
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Minimal 6 karakter"
                     disabled={!firebaseReady || isBusy}
-                    className="w-full h-9 pl-3 pr-9 text-[13px] text-[#09090B] bg-white border border-[#E4E4E7] rounded-md focus:outline-none focus:ring-1 focus:ring-[#18181B] disabled:opacity-50"
+                    className="w-full h-9 pl-3 pr-9 text-[13px] text-ui-text bg-ui-card border border-ui-border rounded-md focus:outline-none focus:ring-1 focus:ring-ui-focus disabled:opacity-50"
                   />
                   <button
                     type="button"
@@ -519,7 +519,7 @@ export function AuthModal({
                         ? "Sembunyikan kata sandi"
                         : "Tampilkan kata sandi"
                     }
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[#A1A1AA] hover:text-[#09090B]"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-ui-text-placeholder hover:text-ui-text"
                   >
                     {showPassword ? (
                       <EyeOff className="w-3.5 h-3.5" />
@@ -534,7 +534,7 @@ export function AuthModal({
             <button
               type="submit"
               disabled={!firebaseReady || isBusy}
-              className="w-full h-9 px-4 rounded-md bg-[#18181B] hover:bg-[#27272A] disabled:opacity-50 text-white text-[12.5px] font-medium inline-flex items-center justify-center gap-2 transition-colors"
+              className="w-full h-9 px-4 rounded-md bg-ui-primary hover:bg-ui-primary-hover disabled:opacity-50 text-white text-[12.5px] font-medium inline-flex items-center justify-center gap-2 transition-colors"
             >
               {submitting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -554,19 +554,19 @@ export function AuthModal({
               <button
                 type="button"
                 onClick={() => switchMode("signin")}
-                className="w-full py-1.5 text-[12px] font-medium text-[#52525B] hover:text-[#09090B] hover:underline"
+                className="w-full py-1.5 text-[12px] font-medium text-ui-text-secondary hover:text-ui-text hover:underline"
               >
                 ← Kembali ke halaman Masuk
               </button>
             )}
           </form>
 
-          <div className="pt-2 border-t border-[#F4F4F5] flex items-center justify-between text-[11px] text-[#71717A]">
+          <div className="pt-2 border-t border-ui-divider flex items-center justify-between text-[11px] text-ui-text-muted">
             <span>Tetap lanjut tanpa login?</span>
             <button
               type="button"
               onClick={() => void requestClose()}
-              className="px-2.5 py-1 rounded-md text-[11.5px] font-medium text-[#52525B] hover:text-[#09090B] hover:bg-[#F4F4F5] transition-colors"
+              className="px-2.5 py-1 rounded-md text-[11.5px] font-medium text-ui-text-secondary hover:text-ui-text hover:bg-ui-subtle transition-colors"
             >
               Tutup
             </button>

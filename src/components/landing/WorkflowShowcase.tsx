@@ -62,16 +62,16 @@ export function WorkflowShowcase() {
       {/* 3-Step Editorial Workflow */}
       <section
         aria-labelledby="workflow-heading"
-        className="border-t border-[#E4E4E7] bg-white"
+        className="border-t border-ui-border bg-ui-card"
       >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
           <div className="max-w-2xl">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#52525B]">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-ui-text-secondary">
               Cara Kerja
             </p>
             <h2
               id="workflow-heading"
-              className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-[#09090B]"
+              className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-ui-text"
             >
               Dirancang agar Anda fokus pada isi, bukan merapikan kotak teks.
             </h2>
@@ -81,15 +81,15 @@ export function WorkflowShowcase() {
             {WORKFLOW_STEPS.map((step) => (
               <li
                 key={step.number}
-                className="pt-5 border-t border-[#E4E4E7] space-y-2.5"
+                className="pt-5 border-t border-ui-border space-y-2.5"
               >
-                <span className="text-[12px] font-mono font-semibold text-[#52525B]">
+                <span className="text-[12px] font-mono font-semibold text-ui-text-secondary">
                   {step.number}
                 </span>
-                <h3 className="text-[15px] font-semibold text-[#09090B]">
+                <h3 className="text-[15px] font-semibold text-ui-text">
                   {step.title}
                 </h3>
-                <p className="text-[13px] text-[#52525B] leading-relaxed">
+                <p className="text-[13px] text-ui-text-secondary leading-relaxed">
                   {step.description}
                 </p>
               </li>
@@ -101,23 +101,23 @@ export function WorkflowShowcase() {
       {/* Core Capabilities (2x2 Editorial Grid) */}
       <section
         aria-labelledby="capabilities-heading"
-        className="border-t border-[#E4E4E7] bg-[#F8F9FA]"
+        className="border-t border-ui-border bg-ui-canvas"
       >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div className="max-w-xl">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#52525B]">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-ui-text-secondary">
                 Fitur Inti
               </p>
               <h2
                 id="capabilities-heading"
-                className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-[#09090B]"
+                className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-ui-text"
               >
                 Alat produktivitas serius untuk setiap tahap lamaran.
               </h2>
             </div>
-            <div className="inline-flex items-center gap-2 text-[12px] text-[#52525B]">
-              <FolderTree className="w-4 h-4 text-[#18181B]" aria-hidden="true" />
+            <div className="inline-flex items-center gap-2 text-[12px] text-ui-text-secondary">
+              <FolderTree className="w-4 h-4 text-ui-link" aria-hidden="true" />
               <span>File Tree + Multi-Tab Workspace siap pakai</span>
             </div>
           </div>
@@ -128,25 +128,25 @@ export function WorkflowShowcase() {
               return (
                 <article
                   key={item.title}
-                  className="bg-white border border-[#E4E4E7] rounded-lg p-6 flex flex-col justify-between gap-5"
+                  className="bg-ui-card border border-ui-border rounded-lg p-6 flex flex-col justify-between gap-5"
                 >
                   <div>
                     <div className="flex items-center gap-2.5">
-                      <span className="w-8 h-8 rounded-md bg-[#F4F4F5] border border-[#E4E4E7] text-[#18181B] inline-flex items-center justify-center shrink-0">
+                      <span className="w-8 h-8 rounded-md bg-ui-primary-soft border border-ui-border text-ui-link-soft-text inline-flex items-center justify-center shrink-0">
                         <Icon className="w-4 h-4" aria-hidden="true" />
                       </span>
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-[#52525B]">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-ui-text-secondary">
                         {item.label}
                       </span>
                     </div>
-                    <h3 className="mt-4 text-[16px] font-semibold text-[#09090B]">
+                    <h3 className="mt-4 text-[16px] font-semibold text-ui-text">
                       {item.title}
                     </h3>
-                    <p className="mt-2 text-[13.5px] text-[#52525B] leading-relaxed">
+                    <p className="mt-2 text-[13.5px] text-ui-text-secondary leading-relaxed">
                       {item.description}
                     </p>
                   </div>
-                  <p className="pt-3 border-t border-[#F4F4F5] text-[11.5px] font-mono text-[#52525B]">
+                  <p className="pt-3 border-t border-ui-divider text-[11.5px] font-mono text-ui-text-secondary">
                     {item.detail}
                   </p>
                 </article>

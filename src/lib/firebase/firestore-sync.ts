@@ -6,7 +6,7 @@ import {
   getDocs,
   writeBatch,
 } from "firebase/firestore";
-import { getFirebaseDb } from "@/lib/firebase/config";
+import { getFirebaseDb } from "@/lib/firebase/firestore-client";
 import type { AuthUserProfile } from "@/lib/firebase/auth";
 import { ResumeDocumentSchema, type ResumeDocument } from "@/lib/schemas/resume";
 import {

@@ -1,16 +1,54 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
-import { useResumeStore } from "@/store/use-resume-store";
+import { isCloudSessionPersisted, useResumeStore } from "@/store/use-resume-store";
 import { runAtsLint } from "@/lib/ats-linter";
+import {
+  computeAtsReadinessScore,
+  deriveFoldyMood,
+  FOLDY_TYPING_LOCK_MS,
+  resolveMaturityStage,
+  shouldTriggerMilestone,
+  type FoldyMilestoneId,
+  type FoldyMood,
+} from "@/lib/foldy-coach";
+import {
+  readFoldyPrefsSnapshot,
+  recordFoldyMilestone,
+  useFoldyPrefs,
+} from "@/lib/foldy-prefs";
+import { subscribeFoldyEvents } from "@/lib/foldy-events";
 import { EditorTopBar } from "@/components/editor/EditorTopBar";
 import { EditorPanel } from "@/components/editor/EditorPanel";
-import { FileTreeSidebar } from "@/components/editor/FileTreeSidebar";
 import { WorkspaceTabBar } from "@/components/editor/WorkspaceTabBar";
 import { PreviewPanel } from "@/components/preview/PreviewPanel";
-import { CloudSyncManager } from "@/components/auth/CloudSyncManager";
+import {
+  FoldyCelebrationToast,
+  type FoldyCelebrationState,
+} from "@/components/mascot/FoldyCelebrationToast";
+
+const CloudSyncManager = dynamic(
+  () =>
+    import("@/components/auth/CloudSyncManager").then(
+      (mod) => mod.CloudSyncManager
+    ),
+  { ssr: false }
+);
+
+const FileTreeSidebar = dynamic(
+  () =>
+    import("@/components/editor/FileTreeSidebar").then(
+      (mod) => mod.FileTreeSidebar
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="hidden lg:block w-60 shrink-0 bg-ui-subtle border-r border-ui-border h-full" />
+    ),
+  }
+);
 
 const AtsCheckerModal = dynamic(
   () =>
@@ -69,9 +107,20 @@ export default function EditorPage() {
   const [importCvModalOpen, setImportCvModalOpen] = useState(false);
   const [guestBannerDismissed, setGuestBannerDismissed] = useState(false);
 
+  const foldyPrefs = useFoldyPrefs();
+  const [isAiBusy, setIsAiBusy] = useState(false);
+  const [celebration, setCelebration] = useState<FoldyCelebrationState | null>(
+    null
+  );
+  const lastTypingAtRef = useRef<number>(0);
+  const lastCelebrationAtRef = useRef<number>(0);
+  const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevScoreRef = useRef<{ docId: string; score: number } | null>(null);
+
   // Auto-create a clean starter resume when opening /editor from an empty (0-CV) Dashboard
   useEffect(() => {
-    if (!hasHydrated || authLoading) return;
+    if (!hasHydrated) return;
+    if (authLoading && isCloudSessionPersisted()) return;
     if (authUser && cloudSyncStatus === "syncing") return;
 
     const ids = Object.keys(documents);
@@ -147,21 +196,177 @@ export default function EditorPage() {
     return runAtsLint(deferredDoc, pageCount, lastPageFillRatio);
   }, [deferredDoc, pageCount, lastPageFillRatio]);
 
+  const allDocsList = useMemo(() => Object.values(documents), [documents]);
+
+  const foldyMaturity = useMemo(
+    () => resolveMaturityStage(foldyPrefs, allDocsList),
+    [foldyPrefs, allDocsList]
+  );
+
+  const foldyMood = useMemo(
+    () =>
+      deriveFoldyMood({
+        report: lintReport,
+        doc: deferredDoc,
+        isAiBusy,
+        isSyncing: cloudSyncStatus === "syncing",
+      }),
+    [lintReport, deferredDoc, isAiBusy, cloudSyncStatus]
+  );
+
+  const triggerFoldyCelebration = useCallback(
+    (params: {
+      milestoneId: FoldyMilestoneId;
+      docId: string;
+      mood: FoldyMood;
+      title: string;
+      description: string;
+      explicitUserAction?: boolean;
+    }) => {
+      const latestPrefs = readFoldyPrefsSnapshot();
+      const now = Date.now();
+      const allowed = shouldTriggerMilestone({
+        milestoneId: params.milestoneId,
+        docId: params.docId,
+        achievedMilestones: latestPrefs.achievedMilestones,
+        lastCelebrationAt: lastCelebrationAtRef.current,
+        lastTypingAt: lastTypingAtRef.current,
+        now,
+        visibility: latestPrefs.visibility,
+        maturity: foldyMaturity,
+        explicitUserAction: params.explicitUserAction,
+      });
+      if (!allowed) return;
+
+      lastCelebrationAtRef.current = now;
+      recordFoldyMilestone(params.docId, params.milestoneId);
+      setCelebration({
+        id: now,
+        mood: params.mood,
+        title: params.title,
+        description: params.description,
+      });
+
+      if (celebrationTimerRef.current) {
+        clearTimeout(celebrationTimerRef.current);
+      }
+      celebrationTimerRef.current = setTimeout(() => {
+        setCelebration(null);
+      }, 4500);
+    },
+    [foldyMaturity]
+  );
+
+  // Track user typing timestamps in a ref (zero extra re-renders)
+  useEffect(() => {
+    if (!doc) return;
+    lastTypingAtRef.current = Date.now();
+  }, [doc]);
+
+  useEffect(() => {
+    return () => {
+      if (celebrationTimerRef.current) {
+        clearTimeout(celebrationTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Subscribe to explicit AI, PDF export, CV import, and JD match events
+  useEffect(() => {
+    return subscribeFoldyEvents((payload) => {
+      if (payload.type === "ai-start") {
+        setIsAiBusy(true);
+        return;
+      }
+      if (payload.type === "ai-end") {
+        setIsAiBusy(false);
+        return;
+      }
+      const targetDocId = payload.docId || activeDocumentId || "active";
+      if (payload.type === "pdf-exported") {
+        triggerFoldyCelebration({
+          milestoneId: "pdf-export",
+          docId: targetDocId,
+          mood: "happy",
+          title: "PDF berhasil diunduh!",
+          description: "CV ATS-mu siap dikirim ke perekrut. Semoga sukses melamar!",
+          explicitUserAction: true,
+        });
+      } else if (payload.type === "cv-imported") {
+        triggerFoldyCelebration({
+          milestoneId: "cv-import",
+          docId: targetDocId,
+          mood: "eureka",
+          title: "CV lama berhasil diimpor!",
+          description: "Struktur CV sudah rapi di editor. Cek detail terakhir sebelum ekspor.",
+          explicitUserAction: true,
+        });
+      } else if (payload.type === "ai-applied") {
+        triggerFoldyCelebration({
+          milestoneId: "ai-enhance",
+          docId: targetDocId,
+          mood: "crafty",
+          title: "Kalimat makin tajam!",
+          description: payload.detail || "Polesan AI berhasil diterapkan ke CV aktif.",
+          explicitUserAction: true,
+        });
+      } else if (payload.type === "jd-high-match") {
+        triggerFoldyCelebration({
+          milestoneId: "jd-high-match",
+          docId: targetDocId,
+          mood: "happy",
+          title: "Kecocokan JD tinggi!",
+          description: payload.detail || "Kata kunci lowongan utama sudah tercermin di CV-mu.",
+          explicitUserAction: true,
+        });
+      }
+    });
+  }, [activeDocumentId, triggerFoldyCelebration]);
+
+  // Passive milestone: celebrate once when a document crosses ATS readiness >= 80 after user pauses typing
+  useEffect(() => {
+    if (!deferredDoc) return;
+    const score = computeAtsReadinessScore(lintReport, deferredDoc);
+    const prev = prevScoreRef.current;
+    const crossedIntoReady =
+      prev !== null &&
+      prev.docId === deferredDoc.id &&
+      prev.score < 80 &&
+      score >= 80;
+
+    prevScoreRef.current = { docId: deferredDoc.id, score };
+
+    if (!crossedIntoReady) return;
+
+    const timer = setTimeout(() => {
+      triggerFoldyCelebration({
+        milestoneId: "ats-80",
+        docId: deferredDoc.id,
+        mood: "eureka",
+        title: `Skor Kesiapan ATS tembus ${score}/100!`,
+        description: "Struktur dasar dan keterbacaan CV-mu sudah sangat solid.",
+      });
+    }, FOLDY_TYPING_LOCK_MS + 150);
+
+    return () => clearTimeout(timer);
+  }, [deferredDoc, lintReport, triggerFoldyCelebration]);
+
   if (!hasHydrated || !doc) {
     return (
-      <div className="h-screen flex flex-col bg-[#F8F9FA]">
-        <div className="h-12 bg-white border-b border-[#E4E4E7] px-4 flex items-center justify-between">
-          <div className="h-5 w-40 bg-[#F4F4F5] rounded animate-pulse" />
-          <div className="h-7 w-32 bg-[#F4F4F5] rounded animate-pulse" />
+      <div className="h-screen flex flex-col bg-ui-canvas">
+        {hasHydrated && <CloudSyncManager />}
+        <div className="h-12 bg-ui-card border-b border-ui-border px-4 flex items-center justify-between">
+          <div className="h-5 w-40 bg-ui-subtle rounded animate-pulse" />
+          <div className="h-7 w-32 bg-ui-subtle rounded animate-pulse" />
         </div>
         <div className="flex-1 flex overflow-hidden">
-          <div className="w-full lg:w-[480px] bg-[#FAFAFA] border-r border-[#E4E4E7] p-5 space-y-3">
-            <div className="h-32 bg-white border border-[#E4E4E7] rounded-lg animate-pulse" />
-            <div className="h-20 bg-white border border-[#E4E4E7] rounded-lg animate-pulse" />
-            <div className="h-44 bg-white border border-[#E4E4E7] rounded-lg animate-pulse" />
+          <div className="w-full lg:w-[480px] bg-ui-panel border-r border-ui-border p-5 space-y-3">
+            <div className="h-32 bg-ui-card border border-ui-border rounded-lg animate-pulse" />
+            <div className="h-20 bg-ui-card border border-ui-border rounded-lg animate-pulse" />
+            <div className="h-44 bg-ui-card border border-ui-border rounded-lg animate-pulse" />
           </div>
           <div className="hidden lg:flex flex-1 items-center justify-center p-8">
-            <div className="w-[580px] h-[760px] bg-white border border-[#E4E4E7] rounded shadow-sm animate-pulse" />
+            <div className="w-[580px] h-[760px] bg-ui-card border border-ui-border rounded shadow-sm animate-pulse" />
           </div>
         </div>
       </div>
@@ -169,11 +374,17 @@ export default function EditorPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-[#F8F9FA] overflow-hidden">
+    <div className="h-screen flex flex-col bg-ui-canvas overflow-hidden">
       <CloudSyncManager />
 
       <EditorTopBar
         lintReport={lintReport}
+        foldyMood={foldyMood}
+        foldyMaturity={foldyMaturity}
+        onJumpToSection={(section) => {
+          setActiveSection(section);
+          setMobileTab("edit");
+        }}
         onOpenAtsModal={() => setAtsModalOpen(true)}
         onOpenJdModal={() => setJdModalOpen(true)}
         onOpenAuthModal={() => openAuthModal()}
@@ -183,10 +394,10 @@ export default function EditorPage() {
       {!authLoading && !authUser && !guestBannerDismissed && (
         <div
           role="status"
-          className="px-3 sm:px-4 py-1.5 bg-[#FFFBEB] border-b border-[#FDE68A] text-[#92400E] text-[11.5px] flex items-center justify-between gap-2 shrink-0"
+          className="px-3 sm:px-4 py-1.5 bg-ui-warning-bg border-b border-ui-warning-border text-ui-warning-text text-[11.5px] flex items-center justify-between gap-2 shrink-0"
         >
           <div className="flex items-center gap-2 min-w-0">
-            <AlertTriangle className="w-3.5 h-3.5 text-[#D97706] shrink-0" />
+            <AlertTriangle className="w-3.5 h-3.5 text-ui-warning shrink-0" />
             <p className="truncate sm:whitespace-normal">
               <span className="font-semibold">Mode Guest:</span> Data CV ini tidak tersimpan permanen dan akan terhapus saat tab ditutup.
             </p>
@@ -199,7 +410,7 @@ export default function EditorPage() {
                   "Masuk atau buat akun gratis agar CV Anda tersimpan permanen di Cloud dan tidak terhapus saat tab ditutup."
                 )
               }
-              className="px-2.5 py-0.5 rounded bg-[#18181B] hover:bg-[#27272A] text-white text-[11px] font-medium transition-colors"
+              className="px-2.5 py-0.5 rounded bg-ui-primary hover:bg-ui-primary-hover text-white text-[11px] font-medium transition-colors"
             >
               Masuk &amp; Simpan
             </button>
@@ -207,7 +418,7 @@ export default function EditorPage() {
               type="button"
               onClick={() => setGuestBannerDismissed(true)}
               aria-label="Tutup peringatan mode guest"
-              className="p-0.5 rounded text-[#92400E]/70 hover:text-[#92400E] hover:bg-[#FDE68A]/50 transition-colors"
+              className="p-0.5 rounded text-ui-warning-text/75 hover:text-ui-warning-text hover:bg-ui-warning-border/50 transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -225,15 +436,15 @@ export default function EditorPage() {
           <WorkspaceTabBar />
 
           {/* Mobile Tab Switcher */}
-          <div className="lg:hidden px-4 py-2 bg-white border-b border-[#E4E4E7] flex justify-center shrink-0">
-            <div className="inline-flex w-full max-w-xs bg-[#F4F4F5] p-0.5 rounded-md border border-[#E4E4E7]">
+          <div className="lg:hidden px-4 py-2 bg-ui-card border-b border-ui-border flex justify-center shrink-0">
+            <div className="inline-flex w-full max-w-xs bg-ui-subtle p-0.5 rounded-md border border-ui-border">
               <button
                 type="button"
                 onClick={() => setMobileTab("edit")}
                 className={`flex-1 py-1 text-[12px] font-medium rounded transition-colors ${
                   mobileTab === "edit"
-                    ? "bg-white text-[#09090B] shadow-sm"
-                    : "text-[#52525B]"
+                    ? "bg-ui-card text-ui-text shadow-sm"
+                    : "text-ui-text-secondary"
                 }`}
               >
                 Edit
@@ -243,8 +454,8 @@ export default function EditorPage() {
                 onClick={() => setMobileTab("preview")}
                 className={`flex-1 py-1 text-[12px] font-medium rounded transition-colors ${
                   mobileTab === "preview"
-                    ? "bg-white text-[#09090B] shadow-sm"
-                    : "text-[#52525B]"
+                    ? "bg-ui-card text-ui-text shadow-sm"
+                    : "text-ui-text-secondary"
                 }`}
               >
                 Preview
@@ -293,17 +504,26 @@ export default function EditorPage() {
         />
       )}
 
-      <AuthModal
-        open={authModalOpen}
-        initialMode={authModalMode}
-        onClose={closeAuthModal}
-        reason={authModalReason ?? undefined}
-      />
+      {authModalOpen && (
+        <AuthModal
+          open={authModalOpen}
+          initialMode={authModalMode}
+          onClose={closeAuthModal}
+          reason={authModalReason ?? undefined}
+        />
+      )}
 
       {importCvModalOpen && (
         <CvImportModal
           open={importCvModalOpen}
           onClose={() => setImportCvModalOpen(false)}
+        />
+      )}
+
+      {foldyPrefs.visibility !== "hidden" && (
+        <FoldyCelebrationToast
+          celebration={celebration}
+          onDismiss={() => setCelebration(null)}
         />
       )}
     </div>

@@ -12,8 +12,8 @@ import { ItemCardWrapper } from "@/components/editor/ItemCardWrapper";
 import { SummaryEditor } from "@/components/editor/SummaryEditor";
 
 const inputClass =
-  "w-full h-[34px] px-2.5 text-[13px] text-[#09090B] bg-white border border-[#E4E4E7] rounded-md focus:outline-none focus:ring-1 focus:ring-[#18181B] placeholder:text-[#A1A1AA]";
-const labelClass = "block text-[11px] font-medium text-[#52525B] mb-1";
+  "w-full h-[34px] px-2.5 text-[13px] text-ui-text bg-ui-card border border-ui-border rounded-md focus:outline-none focus:ring-1 focus:ring-ui-focus placeholder:text-ui-text-placeholder";
+const labelClass = "block text-[11px] font-medium text-ui-text-secondary mb-1";
 
 interface FieldDef {
   key: string;
@@ -261,7 +261,7 @@ export function SectionBodyForm({ sectionKey }: { sectionKey: SectionKey }) {
         </div>
       )}
       {items.length === 0 && config.emptyText ? (
-        <div className="border border-dashed border-[#E4E4E7] rounded-lg p-4 text-center text-[12px] text-[#52525B]">
+        <div className="border border-dashed border-ui-border rounded-lg p-4 text-center text-[12px] text-ui-text-secondary">
           {config.emptyText}
         </div>
       ) : (
@@ -321,7 +321,7 @@ export function SectionBodyForm({ sectionKey }: { sectionKey: SectionKey }) {
       <button
         type="button"
         onClick={() => addSectionItem(targetKey)}
-        className="w-full h-9 rounded-md border border-dashed border-[#D4D4D8] text-[12px] font-medium text-[#52525B] hover:text-[#09090B] hover:border-[#A1A1AA] inline-flex items-center justify-center gap-1.5 transition-colors"
+        className="w-full h-9 rounded-md border border-dashed border-ui-border-strong text-[12px] font-medium text-ui-text-secondary hover:text-ui-text hover:border-ui-border-strong inline-flex items-center justify-center gap-1.5 transition-colors"
       >
         <Plus className="w-3.5 h-3.5" />
         {config.addLabel}

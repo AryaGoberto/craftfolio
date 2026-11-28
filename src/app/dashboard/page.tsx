@@ -7,16 +7,19 @@ import { useMemo, useState } from "react";
 import {
   ArrowRight,
   Cloud,
+  Eye,
+  EyeOff,
   LayoutGrid,
   LogOut,
   Plus,
   RefreshCw,
   Search,
+  Sparkles,
   Upload,
 } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
-import { AuthModal } from "@/components/auth/AuthModal";
-import { CloudSyncManager } from "@/components/auth/CloudSyncManager";
+import { ColorSchemeToggle } from "@/components/ColorSchemeToggle";
+import { FoldyMascot } from "@/components/mascot/FoldyMascot";
 import { CvDocumentCard } from "@/components/dashboard/CvDocumentCard";
 import {
   DashboardAuthPrompt,
@@ -30,8 +33,26 @@ import {
   type DashboardSortBy,
   type DashboardStatusFilter,
 } from "@/lib/dashboard-utils";
-import { logOut } from "@/lib/firebase/auth";
+import {
+  buildDashboardGreeting,
+  MATURITY_LABELS,
+  resolveMaturityStage,
+} from "@/lib/foldy-coach";
+import { setFoldyVisibility, useFoldyPrefs } from "@/lib/foldy-prefs";
 import { syncFileOrder, useResumeStore } from "@/store/use-resume-store";
+
+const AuthModal = dynamic(
+  () => import("@/components/auth/AuthModal").then((mod) => mod.AuthModal),
+  { ssr: false }
+);
+
+const CloudSyncManager = dynamic(
+  () =>
+    import("@/components/auth/CloudSyncManager").then(
+      (mod) => mod.CloudSyncManager
+    ),
+  { ssr: false }
+);
 
 const CvImportModal = dynamic(
   () =>
@@ -67,11 +88,27 @@ export default function DashboardPage() {
     useState<DashboardStatusFilter>("all");
   const [sortBy, setSortBy] = useState<DashboardSortBy>("updatedAt");
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const foldyPrefs = useFoldyPrefs();
 
   const allDocs = useMemo(() => {
     const orderedIds = syncFileOrder(fileOrder, documents);
     return orderedIds.map((id) => documents[id]).filter(Boolean);
   }, [fileOrder, documents]);
+
+  const foldyMaturity = useMemo(
+    () => resolveMaturityStage(foldyPrefs, allDocs),
+    [foldyPrefs, allDocs]
+  );
+
+  const foldyGreeting = useMemo(
+    () =>
+      buildDashboardGreeting(
+        allDocs,
+        foldyMaturity,
+        cloudSyncStatus === "syncing"
+      ),
+    [allDocs, foldyMaturity, cloudSyncStatus]
+  );
 
   const counts = useMemo(() => {
     let ready = 0;
@@ -117,12 +154,12 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8F9FA] text-[#09090B]">
+    <div className="min-h-screen flex flex-col bg-ui-canvas text-ui-text">
       {/* Always mount CloudSyncManager so Firebase session & Firestore stay synced */}
       <CloudSyncManager />
 
       {/* Top Header */}
-      <header className="sticky top-0 z-30 h-14 bg-white border-b border-[#E4E4E7]">
+      <header className="sticky top-0 z-30 h-14 bg-ui-card border-b border-ui-border">
         <div className="max-w-6xl mx-auto h-full px-4 sm:px-6 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <Link href="/" className="flex items-center gap-2.5 shrink-0">
@@ -137,9 +174,9 @@ export default function DashboardPage() {
                 type="button"
                 onClick={triggerManualSync}
                 title="Klik untuk sinkronkan ulang ke Cloud Firestore"
-                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#FAFAFA] border border-[#E4E4E7] hover:bg-[#F4F4F5] text-[11px] text-[#52525B] transition-colors"
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-ui-panel border border-ui-border hover:bg-ui-subtle text-[11px] text-ui-text-secondary transition-colors"
               >
-                <Cloud className="w-3.5 h-3.5 text-[#18181B]" />
+                <Cloud className="w-3.5 h-3.5 text-ui-link" />
                 <span>
                   {cloudSyncStatus === "syncing"
                     ? "Menyinkronkan..."
@@ -152,32 +189,38 @@ export default function DashboardPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <Link
               href="/templates"
-              className="hidden md:inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[#52525B] hover:text-[#09090B] hover:bg-[#F4F4F5] text-[12px] font-medium transition-colors"
+              className="hidden md:inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-ui-text-secondary hover:text-ui-text hover:bg-ui-subtle text-[12px] font-medium transition-colors"
             >
               <LayoutGrid className="w-3.5 h-3.5" />
               Galeri Template
             </Link>
             <Link
               href="/editor"
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-white border border-[#E4E4E7] hover:bg-[#F4F4F5] text-[12px] font-medium text-[#09090B] transition-colors"
+              className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-md bg-ui-primary hover:bg-ui-primary-hover text-[12px] font-medium text-white transition-colors"
             >
               Buka Editor
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
+            <span className="h-4 w-px bg-ui-border mx-0.5" aria-hidden="true" />
             {authUser && (
               <button
                 type="button"
-                onClick={() => void logOut()}
+                onClick={() => {
+                  void import("@/lib/firebase/auth").then(({ logOut }) =>
+                    logOut()
+                  );
+                }}
                 title="Keluar (Sign Out)"
-                className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[#52525B] hover:text-[#EF4444] hover:bg-[#FEF2F2] text-[12px] font-medium transition-colors"
+                className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-ui-text-secondary hover:text-ui-error hover:bg-ui-error-bg text-[12px] font-medium transition-colors"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Keluar</span>
               </button>
             )}
+            <ColorSchemeToggle />
           </div>
         </div>
       </header>
@@ -195,10 +238,10 @@ export default function DashboardPage() {
             {/* Dashboard Title & Primary Actions */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
               <div>
-                <p className="text-[11.5px] font-medium text-[#52525B]">
+                <p className="text-[11.5px] font-medium text-ui-text-secondary">
                   Halo, {authUser.displayName || authUser.email}
                 </p>
-                <h1 className="mt-0.5 text-2xl sm:text-3xl font-bold tracking-tight text-[#09090B]">
+                <h1 className="mt-0.5 text-2xl sm:text-3xl font-bold tracking-tight text-ui-text">
                   Dokumen CV Saya
                 </h1>
               </div>
@@ -207,15 +250,15 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => setImportModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md bg-white border border-[#E4E4E7] hover:bg-[#F4F4F5] text-[12.5px] font-medium text-[#09090B] transition-colors"
+                  className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md bg-ui-card border border-ui-border hover:bg-ui-subtle text-[12.5px] font-medium text-ui-text transition-colors"
                 >
-                  <Upload className="w-3.5 h-3.5 text-[#52525B]" />
+                  <Upload className="w-3.5 h-3.5 text-ui-text-secondary" />
                   Import File
                 </button>
                 <button
                   type="button"
                   onClick={handleCreateNewCv}
-                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-[#18181B] hover:bg-[#27272A] text-white text-[12.5px] font-medium transition-colors"
+                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-ui-primary hover:bg-ui-primary-hover text-white text-[12.5px] font-medium transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   Buat CV Baru
@@ -230,9 +273,61 @@ export default function DashboardPage() {
               />
             ) : (
               <>
+                {/* Contextual Foldy Progress Greeting Strip */}
+                {foldyPrefs.visibility === "hidden" ? (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setFoldyVisibility("full")}
+                      className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-ui-border bg-ui-card text-[11px] text-ui-text-secondary hover:text-ui-text hover:bg-ui-subtle transition-colors"
+                    >
+                      <Eye className="w-3 h-3" aria-hidden="true" />
+                      Tampilkan Foldy
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-ui-card border border-ui-border rounded-lg px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-11 h-11 rounded-lg bg-ui-panel border border-ui-divider flex items-center justify-center shrink-0">
+                        <FoldyMascot
+                          mood={foldyGreeting.mood}
+                          size="sm"
+                          engine="ambient"
+                          interactiveClick
+                          ariaLabel="Ringkasan progres CV dari Foldy"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-[13px] font-semibold text-ui-text">
+                            {foldyGreeting.headline}
+                          </p>
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-ui-primary-soft text-ui-primary-soft-text text-[10px] font-medium">
+                            <Sparkles className="w-2.5 h-2.5" aria-hidden="true" />
+                            {MATURITY_LABELS[foldyMaturity]}
+                          </span>
+                        </div>
+                        <p className="text-[12px] text-ui-text-secondary mt-0.5 leading-snug">
+                          {foldyGreeting.subtext}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setFoldyVisibility("hidden")}
+                      title="Sembunyikan maskot Foldy"
+                      className="self-end sm:self-center inline-flex items-center gap-1 h-7 px-2 rounded text-[11px] text-ui-text-muted hover:text-ui-text hover:bg-ui-subtle transition-colors shrink-0"
+                    >
+                      <EyeOff className="w-3 h-3" aria-hidden="true" />
+                      <span>Sembunyikan</span>
+                    </button>
+                  </div>
+                )}
+
                 {/* Filter, Search & Sort Bar */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white border border-[#E4E4E7] rounded-lg p-2.5">
-                  <div className="inline-flex items-center bg-[#F4F4F5] p-0.5 rounded-md border border-[#E4E4E7] self-start">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-ui-card border border-ui-border rounded-lg p-2.5">
+                  <div className="inline-flex items-center bg-ui-subtle p-0.5 rounded-md border border-ui-border self-start">
                     {(
                       [
                         { id: "all", label: `Semua (${counts.total})` },
@@ -246,8 +341,8 @@ export default function DashboardPage() {
                         onClick={() => setStatusFilter(tab.id)}
                         className={`px-3 py-1 text-[12px] font-medium rounded transition-colors ${
                           statusFilter === tab.id
-                            ? "bg-white text-[#09090B] shadow-2xs"
-                            : "text-[#52525B] hover:text-[#09090B]"
+                            ? "bg-ui-card text-ui-text shadow-2xs"
+                            : "text-ui-text-secondary hover:text-ui-text"
                         }`}
                       >
                         {tab.label}
@@ -258,7 +353,7 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-2 flex-1 md:max-w-md">
                     <div className="relative flex-1">
                       <Search
-                        className="w-3.5 h-3.5 text-[#71717A] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                        className="w-3.5 h-3.5 text-ui-text-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
                         aria-hidden="true"
                       />
                       <input
@@ -267,7 +362,7 @@ export default function DashboardPage() {
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Cari judul CV atau posisi..."
                         aria-label="Cari dokumen CV"
-                        className="w-full h-8 pl-8 pr-3 text-[12.5px] bg-[#FAFAFA] border border-[#E4E4E7] rounded-md focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#18181B]"
+                        className="w-full h-8 pl-8 pr-3 text-[12.5px] bg-ui-panel border border-ui-border rounded-md focus:bg-ui-card focus:outline-none focus:ring-1 focus:ring-ui-focus"
                       />
                     </div>
 
@@ -277,7 +372,7 @@ export default function DashboardPage() {
                         setSortBy(e.target.value as DashboardSortBy)
                       }
                       aria-label="Urutkan dokumen CV"
-                      className="h-8 px-2.5 text-[12px] font-medium text-[#09090B] bg-[#FAFAFA] border border-[#E4E4E7] rounded-md focus:outline-none focus:ring-1 focus:ring-[#18181B]"
+                      className="h-8 px-2.5 text-[12px] font-medium text-ui-text bg-ui-panel border border-ui-border rounded-md focus:outline-none focus:ring-1 focus:ring-ui-focus"
                     >
                       <option value="updatedAt">Terbaru Diubah</option>
                       <option value="title">Nama (A–Z)</option>
@@ -315,12 +410,14 @@ export default function DashboardPage() {
         )}
       </main>
 
-      <AuthModal
-        open={authModalOpen}
-        initialMode={authModalMode}
-        onClose={closeAuthModal}
-        reason={authModalReason ?? undefined}
-      />
+      {authModalOpen && (
+        <AuthModal
+          open={authModalOpen}
+          initialMode={authModalMode}
+          onClose={closeAuthModal}
+          reason={authModalReason ?? undefined}
+        />
+      )}
 
       {importModalOpen && (
         <CvImportModal

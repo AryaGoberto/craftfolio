@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import type { BulletPoint, BuiltinSectionKey } from "@/lib/schemas/resume";
 import { postAuthenticatedAiJson } from "@/lib/ai/client-fetch";
+import { emitFoldyEvent } from "@/lib/foldy-events";
 import { useResumeStore } from "@/store/use-resume-store";
 
 interface BulletListEditorProps {
@@ -84,6 +85,7 @@ export function BulletListEditor({
 
     setLoadingBulletId(bullet.id);
     setAiError(null);
+    emitFoldyEvent({ type: "ai-start", docId: activeDocumentId });
 
     try {
       const { ok, status, data } = await postAuthenticatedAiJson<{
@@ -136,6 +138,7 @@ export function BulletListEditor({
       });
     } finally {
       setLoadingBulletId(null);
+      emitFoldyEvent({ type: "ai-end", docId: activeDocumentId });
     }
   };
 
@@ -148,6 +151,11 @@ export function BulletListEditor({
       suggestion.improvedText
     );
     setSuggestion(null);
+    emitFoldyEvent({
+      type: "ai-applied",
+      docId: activeDocumentId,
+      detail: "Poin pencapaian hasil polesan AI berhasil diterapkan!",
+    });
   };
 
   return (
@@ -161,11 +169,11 @@ export function BulletListEditor({
         return (
           <div key={b.id} className="space-y-1.5">
             <div
-              className={`flex items-start gap-1.5 bg-[#FAFAFA] border border-[#E4E4E7] rounded-md px-2 py-1.5 ${
+              className={`flex items-start gap-1.5 bg-ui-panel border border-ui-border rounded-md px-2 py-1.5 ${
                 b.isVisible ? "" : "opacity-40"
               }`}
             >
-              <span className="text-[#52525B] text-[13px] leading-[22px] select-none">
+              <span className="text-ui-text-secondary text-[13px] leading-[22px] select-none">
                 •
               </span>
               <textarea
@@ -176,7 +184,7 @@ export function BulletListEditor({
                   if (activeSuggestion) setSuggestion(null);
                 }}
                 placeholder="Tulis pencapaian dengan kata kerja aktif & dampak terukur..."
-                className="flex-1 bg-transparent text-[12px] text-[#09090B] leading-snug resize-none focus:outline-none placeholder:text-[#A1A1AA]"
+                className="flex-1 bg-transparent text-[12px] text-ui-text leading-snug resize-none focus:outline-none placeholder:text-ui-text-placeholder"
               />
               <button
                 type="button"
@@ -196,7 +204,7 @@ export function BulletListEditor({
                         : "Perbaiki dengan AI (Gemini)"
                 }
                 aria-label="Perbaiki poin ini dengan AI"
-                className="p-1 text-[#52525B] hover:text-[#09090B] rounded hover:bg-[#F4F4F5] disabled:opacity-50 transition-colors relative group/ai"
+                className="p-1 text-ui-text-secondary hover:text-ui-text rounded hover:bg-ui-subtle disabled:opacity-50 transition-colors relative group/ai"
               >
                 {isLoading ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -208,7 +216,7 @@ export function BulletListEditor({
                 type="button"
                 onClick={() => toggleBulletVisibility(sectionKey, itemId, b.id)}
                 title={b.isVisible ? "Sembunyikan poin" : "Tampilkan poin"}
-                className="p-1 text-[#52525B] hover:text-[#09090B] rounded hover:bg-[#F4F4F5]"
+                className="p-1 text-ui-text-secondary hover:text-ui-text rounded hover:bg-ui-subtle"
               >
                 {b.isVisible ? (
                   <Eye className="w-3.5 h-3.5" />
@@ -223,7 +231,7 @@ export function BulletListEditor({
                   removeBullet(sectionKey, itemId, b.id);
                 }}
                 title="Hapus poin"
-                className="p-1 text-[#A1A1AA] hover:text-[#EF4444] rounded hover:bg-[#F4F4F5]"
+                className="p-1 text-ui-text-placeholder hover:text-ui-error rounded hover:bg-ui-subtle"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -232,14 +240,14 @@ export function BulletListEditor({
             {bulletError && (
               <div
                 role="status"
-                className="flex items-start justify-between gap-2 px-2.5 py-2 rounded-md bg-[#FFFBEB] border border-[#FDE68A] text-[11px] text-[#92400E]"
+                className="flex items-start justify-between gap-2 px-2.5 py-2 rounded-md bg-ui-warning-bg border border-ui-warning-border text-[11px] text-ui-warning-text"
               >
                 <span>{bulletError}</span>
                 <button
                   type="button"
                   onClick={() => setAiError(null)}
                   aria-label="Tutup pesan AI"
-                  className="shrink-0 text-[#92400E]/70 hover:text-[#92400E]"
+                  className="shrink-0 text-ui-warning-text/75 hover:text-ui-warning-text"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -247,9 +255,9 @@ export function BulletListEditor({
             )}
 
             {activeSuggestion && (
-              <div className="rounded-lg border border-[#E4E4E7] bg-white p-3 shadow-xs space-y-2.5">
+              <div className="rounded-lg border border-ui-border bg-ui-card p-3 shadow-xs space-y-2.5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#F4F4F5] text-[#09090B] text-[10.5px] font-medium">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-ui-subtle text-ui-text text-[10.5px] font-medium">
                     <Sparkles className="w-3 h-3" />
                     Saran AI · Gemini (Perlu Konfirmasi)
                   </span>
@@ -257,22 +265,22 @@ export function BulletListEditor({
                     type="button"
                     onClick={() => setSuggestion(null)}
                     aria-label="Tutup pratinjau saran AI"
-                    className="p-0.5 text-[#71717A] hover:text-[#09090B]"
+                    className="p-0.5 text-ui-text-muted hover:text-ui-text"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
                 <div className="space-y-1.5 text-[11.5px]">
-                  <div className="p-2 rounded bg-[#FAFAFA] border border-[#F4F4F5] text-[#52525B]">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[#71717A] mb-0.5">
+                  <div className="p-2 rounded bg-ui-panel border border-ui-divider text-ui-text-secondary">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-ui-text-muted mb-0.5">
                       Teks Asli
                     </p>
                     <p className="leading-snug">{activeSuggestion.originalText}</p>
                   </div>
 
-                  <div className="p-2 rounded bg-[#F8F9FA] border border-[#18181B]/20 text-[#09090B]">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[#09090B] mb-0.5">
+                  <div className="p-2 rounded bg-ui-primary-soft/60 border border-ui-primary/25 text-ui-text">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-ui-link-soft-text mb-0.5">
                       Saran Perbaikan
                     </p>
                     <p className="leading-snug font-medium">
@@ -281,12 +289,12 @@ export function BulletListEditor({
                   </div>
                 </div>
 
-                <p className="text-[11px] text-[#52525B] leading-snug">
+                <p className="text-[11px] text-ui-text-secondary leading-snug">
                   {activeSuggestion.reasoning}
                 </p>
 
                 {activeSuggestion.missingMetricsHint && (
-                  <div className="flex items-start gap-1.5 px-2 py-1.5 rounded bg-[#FFFBEB] border border-[#FDE68A] text-[10.5px] text-[#92400E] leading-snug">
+                  <div className="flex items-start gap-1.5 px-2 py-1.5 rounded bg-ui-warning-bg border border-ui-warning-border text-[10.5px] text-ui-warning-text leading-snug">
                     <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                     <span>{activeSuggestion.missingMetricsHint}</span>
                   </div>
@@ -296,7 +304,7 @@ export function BulletListEditor({
                   <button
                     type="button"
                     onClick={() => setSuggestion(null)}
-                    className="h-7 px-2.5 rounded-md border border-[#E4E4E7] bg-white hover:bg-[#F4F4F5] text-[11px] font-medium text-[#52525B]"
+                    className="h-7 px-2.5 rounded-md border border-ui-border bg-ui-card hover:bg-ui-subtle text-[11px] font-medium text-ui-text-secondary"
                   >
                     Batal
                   </button>
@@ -304,7 +312,7 @@ export function BulletListEditor({
                     type="button"
                     onClick={() => handleEnhance(b)}
                     disabled={isLoading}
-                    className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-[#E4E4E7] bg-[#FAFAFA] hover:bg-[#F4F4F5] text-[11px] font-medium text-[#09090B]"
+                    className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-ui-border bg-ui-panel hover:bg-ui-subtle text-[11px] font-medium text-ui-text"
                   >
                     <RefreshCw className="w-3 h-3" />
                     Coba Ulang
@@ -312,7 +320,7 @@ export function BulletListEditor({
                   <button
                     type="button"
                     onClick={handleApplySuggestion}
-                    className="inline-flex items-center gap-1 h-7 px-3 rounded-md bg-[#18181B] hover:bg-[#27272A] text-white text-[11px] font-medium"
+                    className="inline-flex items-center gap-1 h-7 px-3 rounded-md bg-ui-primary hover:bg-ui-primary-hover text-white text-[11px] font-medium"
                   >
                     <Check className="w-3 h-3" />
                     Terapkan
@@ -327,7 +335,7 @@ export function BulletListEditor({
       <button
         type="button"
         onClick={() => addBullet(sectionKey, itemId)}
-        className="inline-flex items-center gap-1 text-[11px] font-medium text-[#52525B] hover:text-[#09090B] pt-0.5"
+        className="inline-flex items-center gap-1 text-[11px] font-medium text-ui-text-secondary hover:text-ui-text pt-0.5"
       >
         <Plus className="w-3 h-3" />
         Tambah Poin

@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Craftfolio — Foldy Expressive Character Playground</title>
+  <style>
+    :root {
+      /* Craftfolio Warm Forest Sage — Light Mode */
+      --bg: #F5F4EF;
+      --card: #FFFFFF;
+      --text: #181917;
+      --muted: #57564F;
+      --border: #E6E4DD;
+      --logo-fill: #1F7A61;
+      --flap-fill: #114839;
+      --accent: #165B48;
+      --accent-hover: #114839;
+      --accent-fg: #FFFFFF;
+      --accent-soft: #E9F3EF;
+      --accent-soft-text: #114839;
+      --shadow: rgba(17, 72, 57, 0.18);
+    }
+    body.dark {
+      /* Craftfolio Warm Forest Sage — Dark Mode */
+      --bg: #111311;
+      --card: #171A17;
+      --text: #ECEEE8;
+      --muted: #8E9288;
+      --border: #2C312C;
+      --logo-fill: #258066;
+      --flap-fill: #165B48;
+      --accent: #1D6A54;
+      --accent-hover: #258066;
+      --accent-fg: #FFFFFF;
+      --accent-soft: #17332A;
+      --accent-soft-text: #7ED9B7;
+      --shadow: rgba(0, 0, 0, 0.45);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 32px 24px;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.25s, color 0.25s;
+    }
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-size: 25px;
+      margin: 0 0 4px 0;
+      letter-spacing: -0.02em;
+    }
+    p.sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14.5px;
+    }
+    .stage-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    @media (max-width: 820px) {
+      .stage-grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 28px;
+    }
+    .mascot-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 460px;
+      position: relative;
+      user-select: none;
+    }
+    .mascot-click-zone {
+      cursor: pointer;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px;
+    }
+    .speech-bubble {
+      margin-bottom: 12px;
+      padding: 8px 18px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: var(--accent-fg);
+      box-shadow: 0 4px 14px var(--shadow);
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      transform-origin: bottom center;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s, background 0.25s;
+    }
+    .speech-bubble.pop {
+      transform: scale(1.08);
+    }
+    #foldy-svg {
+      width: 240px;
+      height: 240px;
+      overflow: visible;
+    }
+    #foldy-svg .logo-paint {
+      fill: var(--logo-fill);
+      transition: fill 0.25s ease;
+    }
+    #m-flap {
+      fill: var(--flap-fill);
+      transition: fill 0.25s ease;
+    }
+    .floor-shadow {
+      width: 120px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--shadow);
+      margin-top: 6px;
+      transition: transform 0.1s ease-out;
+    }
+    .hint-badge {
+      margin-top: 12px;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      width: 100%;
+      margin-top: 18px;
+    }
+    button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      padding: 10px 13px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+    button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: translateY(-1px);
+    }
+    button.active {
+      background: var(--accent);
+      color: var(--accent-fg);
+      border-color: var(--accent);
+    }
+    button.active:hover {
+      background: var(--accent-hover);
+      color: var(--accent-fg);
+    }
+    button .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.7;
+      flex-shrink: 0;
+    }
+
+    /* Mini gallery of expressions */
+    h2 {
+      font-size: 17px;
+      margin: 0 0 10px 0;
+      letter-spacing: -0.01em;
+    }
+    .expr-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .expr-chip {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--bg);
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .expr-chip:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent-soft-text);
+      transform: scale(1.03);
+    }
+    .expr-chip:hover span {
+      color: var(--accent-soft-text);
+    }
+    .expr-chip span {
+      display: block;
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+    ul.anatomy {
+      margin: 0;
+      padding-left: 18px;
+      line-height: 1.6;
+      font-size: 13.8px;
+      color: var(--muted);
+    }
+    ul.anatomy li { margin-bottom: 8px; }
+    ul.anatomy strong { color: var(--text); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Craftfolio — Foldy Expressive Character Rig (v2 Live Physics)</h1>
+        <p class="sub">Klik langsung badan Foldy untuk memicu reaksi kejutan, gerakkan kursor, atau pilih 8 ekspresi karakter di bawah.</p>
+      </div>
+      <button onclick="document.body.classList.toggle('dark')" style="width:auto; cursor:pointer;" id="theme-toggle">🌓 Ganti Mode (Light / Dark)</button>
+    </header>
+
+    <div class="stage-grid">
+      <div class="card mascot-stage">
+        <div class="speech-bubble" id="bubble">Halo! Arahkan mouse atau klik aku!</div>
+
+        <div class="mascot-click-zone" id="click-zone" title="Klik Foldy untuk reaksi!">
+          <svg id="foldy-svg" viewBox="0 0 256 256" role="img" aria-label="Foldy expressive mascot">
+            <defs>
+              <mask id="foldy-live-mask">
+                <rect width="256" height="256" fill="white"/>
+
+                <!-- Baris CV Utama / Alis Ekspresif (#m-brow) -->
+                <g id="m-brow-group">
+                  <rect id="m-brow" x="60" y="52" width="58" height="14" rx="7" fill="black"/>
+                </g>
+
+                <!-- Baris CV Tambahan saat mode AI Mengetik (#m-typing-lines) -->
+                <g id="m-typing-lines" fill="black" opacity="0">
+                  <rect id="m-line-1" x="60" y="76" width="0" height="10" rx="5"/>
+                  <rect id="m-line-2" x="60" y="94" width="0" height="10" rx="5"/>
+                </g>
+
+                <!-- Grup Wajah Utama -->
+                <g id="m-face" fill="black">
+                  <!-- MATA KIRI (bisa berganti bentuk: oval, happy-arc, star-sparkle, wink) -->
+                  <g id="m-eye-l-wrap">
+                    <!-- Normal Oval -->
+                    <rect id="eye-l-oval" x="81" y="118" width="25" height="36" rx="12.5"/>
+                    <!-- Happy Curved Arch (^ shape) -->
+                    <path id="eye-l-happy" opacity="0" d="
+                      M 76 142
+                      A 19 19 0 0 1 112 142
+                      A 5.5 5.5 0 0 1 101.5 145
+                      A 8.5 8.5 0 0 0 86.5 145
+                      A 5.5 5.5 0 0 1 76 142 Z
+                    "/>
+                    <!-- AI 4-Point Sparkle Star (✦) -->
+                    <path id="eye-l-star" opacity="0" d="
+                      M 94 112
+                      Q 94 136 118 136
+                      Q 94 136 94 160
+                      Q 94 136 70 136
+                      Q 94 136 94 112 Z
+                    "/>
+                  </g>
+
+                  <!-- MATA KANAN -->
+                  <g id="m-eye-r-wrap">
+                    <!-- Normal Oval -->
+                    <rect id="eye-r-oval" x="150" y="118" width="25" height="36" rx="12.5"/>
+                    <!-- Happy Curved Arch (^ shape) -->
+                    <path id="eye-r-happy" opacity="0" d="
+                      M 144 142
+                      A 19 19 0 0 1 180 142
+                      A 5.5 5.5 0 0 1 169.5 145
+                      A 8.5 8.5 0 0 0 154.5 145
+                      A 5.5 5.5 0 0 1 144 142 Z
+                    "/>
+                    <!-- AI 4-Point Sparkle Star (✦) -->
+                    <path id="eye-r-star" opacity="0" d="
+                      M 162 112
+                      Q 162 136 186 136
+                      Q 162 136 162 160
+                      Q 162 136 138 136
+                      Q 162 136 162 112 Z
+                    "/>
+                  </g>
+
+                  <!-- MULUT (4 bentuk ekspresi berbeda) -->
+                  <g id="m-mouth-wrap">
+                    <!-- 1. Warm Smile -->
+                    <path id="mouth-smile" d="
+                      M 98.6 177
+                      A 34 34 0 0 0 157.4 177
+                      A 6 6 0 0 0 147 171
+                      A 22 22 0 0 1 109 171
+                      A 6 6 0 0 0 98.6 177 Z
+                    "/>
+                    <!-- 2. Big Laughing D-Grin -->
+                    <path id="mouth-grin" opacity="0" d="
+                      M 98 166
+                      H 158
+                      A 6 6 0 0 1 164 172
+                      A 36 32 0 0 1 92 172
+                      A 6 6 0 0 1 98 166 Z
+                    "/>
+                    <!-- 3. Surprised / Thinking 'O' Mouth -->
+                    <circle id="mouth-o" opacity="0" cx="128" cy="178" r="14"/>
+                    <!-- 4. Cute Wavy / Cat 'w' Smirk -->
+                    <path id="mouth-w" opacity="0" d="
+                      M 100 175
+                      A 16 15 0 0 0 128 177
+                      A 16 15 0 0 0 156 175
+                      A 5 5 0 0 0 147 170
+                      A 8 8 0 0 1 132 170
+                      A 4 4 0 0 0 124 170
+                      A 8 8 0 0 1 109 170
+                      A 5 5 0 0 0 100 175 Z
+                    "/>
+                  </g>
+                </g>
+              </mask>
+            </defs>
+
+            <g id="m-body" class="logo-paint">
+              <path mask="url(#foldy-live-mask)" d="
+                M 64 20
+                H 142
+                V 68
+                A 30 30 0 0 0 172 98
+                H 220
+                V 208
+                A 28 28 0 0 1 192 236
+                H 64
+                A 28 28 0 0 1 36 208
+                V 48
+                A 28 28 0 0 1 64 20 Z
+              "/>
+              <path id="m-flap" d="
+                M 156 20
+                L 220 84
+                H 172
+                A 16 16 0 0 1 156 68
+                Z
+              "/>
+            </g>
+          </svg>
+          <div class="floor-shadow" id="floor-shadow"></div>
+        </div>
+
+        <div class="hint-badge">Tips: Klik maskot Foldy di atas untuk melihat reaksi interaktif!</div>
+
+        <div class="controls">
+          <button class="active" onclick="setState('showcase', this)"><span class="dot"></span>1. Auto Showcase (Hidup &amp; Beragam)</button>
+          <button onclick="setState('cursor', this)"><span class="dot"></span>2. Ikuti Kursor (2.5D Spring)</button>
+          <button onclick="setState('happy', this)"><span class="dot"></span>3. Senang Banget! (^ ^ + Lompat)</button>
+          <button onclick="setState('ai', this)"><span class="dot"></span>4. AI Magic Nulis CV (✦ + Ketik)</button>
+          <button onclick="setState('wink', this)"><span class="dot"></span>5. Wink &amp; Sapa (Kedip Sebelah)</button>
+          <button onclick="setState('eureka', this)"><span class="dot"></span>6. Eureka / Dapat Ide! (Kaget 'O')</button>
+          <button onclick="setState('crafty', this)"><span class="dot"></span>7. Mode Crafty / Bangga ('w' Smirk)</button>
+          <button onclick="setState('sleepy', this)"><span class="dot"></span>8. Ngantuk / Menunggu User</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Apa yang Membuat Versi Ini Jauh Lebih Ekspresif?</h2>
+        <div class="expr-grid">
+          <div class="expr-chip" onclick="triggerBtn(2)">^ ◡ ^<span>Happy Arch Eyes</span></div>
+          <div class="expr-chip" onclick="triggerBtn(3)">✦ o ●<span>AI Sparkle Eye</span></div>
+          <div class="expr-chip" onclick="triggerBtn(4)">● ◡ ^<span>Cheeky Wink</span></div>
+          <div class="expr-chip" onclick="triggerBtn(5)">● o ●<span>Eureka 'O'</span></div>
+          <div class="expr-chip" onclick="triggerBtn(6)">● ω ●<span>Crafty Smirk</span></div>
+          <div class="expr-chip" onclick="triggerBtn(7)">ー o ー<span>Sleepy Yawn</span></div>
+        </div>
+
+        <ul class="anatomy">
+          <li>
+            <strong>1. Morphing Bentuk Mata &amp; Mulut Asli (Bukan Sekadar Gepeng):</strong><br>
+            Selain mata oval standar, sekarang ada mata melengkung bahagia (<code>^ ^</code>), mata bintang AI (<code>✦</code>), mulut tertawa lebar (<code>D-grin</code>), mulut kaget/berpikir (<code>O</code>), dan senyum <em>crafty</em> (<code>ω</code>).
+          </li>
+          <li>
+            <strong>2. Squash &amp; Stretch Физика (Spring Physics 60fps):</strong><br>
+            Seluruh lembar kertas Foldy ikut memantul, memiringkan badan (<em>head-tilt</em>), memipih saat mendarat, dan menggerakkan bayangan di lantai — seperti karakter animasi Pixar/Duolingo.
+          </li>
+          <li>
+            <strong>3. Asimetri 2.5D &amp; Alis Ekspresif:</strong><br>
+            Saat menoleh ke kanan, mata kanan sedikit membesar (efek perspektif 2.5D). Garis CV di kiri atas berfungsi sebagai <strong>alis aktif</strong> yang bisa miring penasaran, terangkat saat kaget, atau ditemani <strong>2 baris CV tambahan yang mengetik otomatis</strong> saat AI bekerja!
+          </li>
+          <li>
+            <strong>4. Telinga Origami Hidup:</strong><br>
+            Lipatan segitiga kanan atas berkibar cepat (*ear wiggle*) saat Foldy senang atau menyapa user.
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const bodyEl = document.getElementById('m-body');
+    const faceEl = document.getElementById('m-face');
+    const browEl = document.getElementById('m-brow');
+    const flapEl = document.getElementById('m-flap');
+    const shadowEl = document.getElementById('floor-shadow');
+    const bubbleEl = document.getElementById('bubble');
+    const svgEl = document.getElementById('foldy-svg');
+
+    const eyeLOval = document.getElementById('eye-l-oval');
+    const eyeLHappy = document.getElementById('eye-l-happy');
+    const eyeLStar = document.getElementById('eye-l-star');
+    const eyeROval = document.getElementById('eye-r-oval');
+    const eyeRHappy = document.getElementById('eye-r-happy');
+    const eyeRStar = document.getElementById('eye-r-star');
+
+    const eyeLWrap = document.getElementById('m-eye-l-wrap');
+    const eyeRWrap = document.getElementById('m-eye-r-wrap');
+    const mouthWrap = document.getElementById('m-mouth-wrap');
+
+    const mouthSmile = document.getElementById('mouth-smile');
+    const mouthGrin = document.getElementById('mouth-grin');
+    const mouthO = document.getElementById('mouth-o');
+    const mouthW = document.getElementById('mouth-w');
+
+    const typingGroup = document.getElementById('m-typing-lines');
+    const line1 = document.getElementById('m-line-1');
+    const line2 = document.getElementById('m-line-2');
+
+    let mode = 'showcase';
+    let mouseX = 0, mouseY = 0;
+    let curX = 0, curY = 0;
+    let jumpVel = 0, jumpY = 0;
+    let squashX = 1, squashY = 1;
+    let bodyTilt = 0;
+    let showcaseStep = 0;
+    let showcaseTimer = null;
+
+    function setBubble(text) {
+      bubbleEl.textContent = text;
+      bubbleEl.classList.remove('pop');
+      void bubbleEl.offsetWidth;
+      bubbleEl.classList.add('pop');
+      setTimeout(() => bubbleEl.classList.remove('pop'), 250);
+    }
+
+    function showShapes({ eyeL = 'oval', eyeR = 'oval', mouth = 'smile', typing = false }) {
+      eyeLOval.setAttribute('opacity', eyeL === 'oval' ? '1' : '0');
+      eyeLHappy.setAttribute('opacity', eyeL === 'happy' ? '1' : '0');
+      eyeLStar.setAttribute('opacity', eyeL === 'star' ? '1' : '0');
+
+      eyeROval.setAttribute('opacity', eyeR === 'oval' ? '1' : '0');
+      eyeRHappy.setAttribute('opacity', eyeR === 'happy' ? '1' : '0');
+      eyeRStar.setAttribute('opacity', eyeR === 'star' ? '1' : '0');
+
+      mouthSmile.setAttribute('opacity', mouth === 'smile' ? '1' : '0');
+      mouthGrin.setAttribute('opacity', mouth === 'grin' ? '1' : '0');
+      mouthO.setAttribute('opacity', mouth === 'o' ? '1' : '0');
+      mouthW.setAttribute('opacity', mouth === 'w' ? '1' : '0');
+
+      typingGroup.setAttribute('opacity', typing ? '1' : '0');
+    }
+
+    function triggerJump(power = -16, tilt = 5) {
+      jumpVel = power;
+      squashX = 0.9;
+      squashY = 1.12;
+      bodyTilt = tilt;
+    }
+
+    const showcaseSequence = ['happy', 'wink', 'ai', 'eureka', 'crafty'];
+
+    function setState(newMode, btn) {
+      mode = newMode;
+      if (btn) {
+        document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+      if (showcaseTimer) {
+        clearInterval(showcaseTimer);
+        showcaseTimer = null;
+      }
+
+      if (mode === 'showcase') {
+        setBubble('Auto Showcase: Foldy berganti ekspresi otomatis!');
+        showcaseStep = 0;
+        applyPreset(showcaseSequence[0]);
+        showcaseTimer = setInterval(() => {
+          showcaseStep = (showcaseStep + 1) % showcaseSequence.length;
+          applyPreset(showcaseSequence[showcaseStep]);
+        }, 2600);
+      } else {
+        applyPreset(mode);
+      }
+    }
+
+    function triggerBtn(idx) {
+      const btns = document.querySelectorAll('.controls button');
+      if (btns[idx]) btns[idx].click();
+    }
+
+    let activePreset = 'happy';
+
+    function applyPreset(p) {
+      activePreset = p;
+      if (p === 'cursor') {
+        showShapes({ eyeL: 'oval', eyeR: 'oval', mouth: 'smile' });
+        setBubble('Gerakkan mouse! Aku mengikuti arah kursor dengan perspektif 2.5D.');
+        triggerJump(-8, 2);
+      } else if (p === 'happy') {
+        showShapes({ eyeL: 'happy', eyeR: 'happy', mouth: 'grin' });
+        setBubble('Yeay! CV kamu sudah rapi tanpa perlu ngoding LaTeX!');
+        triggerJump(-18, -5);
+      } else if (p === 'ai') {
+        showShapes({ eyeL: 'star', eyeR: 'oval', mouth: 'o', typing: true });
+        setBubble('✨ AI sedang merangkai kalimat pengalaman kerjamu...');
+        triggerJump(-10, 3);
+      } else if (p === 'wink') {
+        showShapes({ eyeL: 'oval', eyeR: 'happy', mouth: 'grin' });
+        setBubble('Hai! Siap bikin HRD terkesan hari ini? 😉');
+        triggerJump(-14, 6);
+      } else if (p === 'eureka') {
+        showShapes({ eyeL: 'oval', eyeR: 'oval', mouth: 'o' });
+        setBubble('💡 Aha! Kata kunci ATS yang pas sudah ketemu!');
+        triggerJump(-20, -4);
+      } else if (p === 'crafty') {
+        showShapes({ eyeL: 'happy', eyeR: 'oval', mouth: 'w' });
+        setBubble('Hehe, tata letak garis CV sudah otomatis presisi! ✨');
+        triggerJump(-10, -4);
+      } else if (p === 'sleepy') {
+        showShapes({ eyeL: 'oval', eyeR: 'oval', mouth: 'o' });
+        setBubble('Zzz... santai saja, biar aku yang atur format dokumennya...');
+      }
+    }
+
+    // Click on Foldy triggers immediate playful reaction!
+    const clickReactions = ['happy', 'wink', 'eureka', 'crafty', 'ai'];
+    let clickIdx = 0;
+    document.getElementById('click-zone').addEventListener('click', () => {
+      clickIdx = (clickIdx + 1) % clickReactions.length;
+      applyPreset(clickReactions[clickIdx]);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      const rect = svgEl.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      mouseX = Math.max(-1, Math.min(1, (e.clientX - cx) / 240));
+      mouseY = Math.max(-1, Math.min(1, (e.clientY - cy) / 240));
+    });
+
+    // 60fps animation & spring physics loop
+    let lastBlink = 0;
+    let isBlinking = false;
+
+    function tick(t) {
+      const sec = t / 1000;
+
+      // Smooth cursor interpolation
+      curX += (mouseX - curX) * 0.14;
+      curY += (mouseY - curY) * 0.14;
+
+      // Vertical jump & squash-stretch spring
+      jumpY += jumpVel;
+      if (jumpY < 0) {
+        jumpVel += 1.15; // gravity
+      } else if (jumpY > 0) {
+        jumpY = 0;
+        if (Math.abs(jumpVel) > 2) {
+          // Landing squash!
+          squashX = 1.09;
+          squashY = 0.91;
+        }
+        jumpVel = 0;
+      }
+      squashX += (1 - squashX) * 0.18;
+      squashY += (1 - squashY) * 0.18;
+      bodyTilt += (0 - bodyTilt) * 0.12;
+
+      // Spontaneous periodic blink
+      if (t - lastBlink > 2800) {
+        lastBlink = t;
+        isBlinking = true;
+        setTimeout(() => { isBlinking = false; }, 130);
+      }
+
+      let bx = 0, by = jumpY, bRot = bodyTilt, sx = squashX, sy = squashY;
+      let fx = curX * 14, fy = curY * 10;
+      let browX = curX * 8, browY = curY * 5, browRot = curX * 10, browScaleX = 1;
+      let flapRot = curX * 8;
+      let eyeLScaleX = 1, eyeLScaleY = isBlinking ? 0.08 : 1;
+      let eyeRScaleX = 1, eyeRScaleY = isBlinking ? 0.08 : 1;
+      let mouthScaleX = 1, mouthScaleY = 1, mouthX = 0, mouthY = 0;
+
+      if (activePreset === 'cursor') {
+        bRot += curX * 6;
+        bx = curX * 6;
+        by += Math.sin(sec * 3) * 3;
+        // 2.5D asymmetric eye perspective
+        eyeLScaleX = 1 - curX * 0.12;
+        eyeRScaleX = 1 + curX * 0.12;
+        browY -= 3;
+        flapRot += Math.sin(sec * 4) * 5;
+      } else if (activePreset === 'happy') {
+        const bounce = Math.abs(Math.sin(sec * 7)) * -10;
+        by += bounce;
+        bRot += Math.sin(sec * 7) * 5;
+        sx *= 1 - bounce * 0.004;
+        sy *= 1 + bounce * 0.004;
+        fy = -5 + Math.sin(sec * 14) * 2;
+        browY = -9 + Math.sin(sec * 7) * 3;
+        browRot = -6;
+        browScaleX = 1.15;
+        flapRot = -14 + Math.sin(sec * 16) * 10; // excited ear wiggle!
+        mouthScaleX = 1.08 + Math.sin(sec * 14) * 0.06;
+        mouthScaleY = 1.08 - Math.sin(sec * 14) * 0.06;
+      } else if (activePreset === 'ai') {
+        // Scanning left to right while typing CV lines!
+        const scan = Math.sin(sec * 5.5);
+        fx = scan * 12;
+        fy = -8;
+        bRot += scan * 3;
+        by += Math.sin(sec * 6) * 2.5;
+        browY = -6;
+        browRot = -4;
+        browScaleX = 0.7 + (Math.sin(sec * 8) + 1) * 0.25;
+        // Animate extra CV lines typing out
+        const w1 = 22 + ((Math.sin(sec * 4) + 1) / 2) * 52;
+        const w2 = 16 + ((Math.cos(sec * 4) + 1) / 2) * 44;
+        line1.setAttribute('width', w1.toFixed(1));
+        line2.setAttribute('width', w2.toFixed(1));
+        // Pulse the AI sparkle star eye
+        eyeLScaleX = 0.95 + Math.sin(sec * 10) * 0.18;
+        eyeLScaleY = 0.95 + Math.sin(sec * 10) * 0.18;
+        mouthX = scan * 5;
+        mouthScaleX = 0.75 + Math.sin(sec * 8) * 0.15;
+        mouthScaleY = 0.75 - Math.sin(sec * 8) * 0.15;
+        flapRot = -8 + Math.sin(sec * 10) * 7;
+      } else if (activePreset === 'wink') {
+        bRot += -5 + Math.sin(sec * 4) * 2.5;
+        fx = 6 + curX * 6;
+        fy = -4 + curY * 4;
+        browX = 6;
+        browY = -10;
+        browRot = -11;
+        browScaleX = 1.12;
+        flapRot = -12 + Math.sin(sec * 14) * 11; // playful ear wave
+        mouthX = 4;
+      } else if (activePreset === 'eureka') {
+        by += Math.sin(sec * 8) * 3;
+        eyeLScaleX = 1.22; eyeLScaleY = isBlinking ? 0.1 : 1.25;
+        eyeRScaleX = 1.22; eyeRScaleY = isBlinking ? 0.1 : 1.25;
+        browY = -13;
+        browRot = -14;
+        browScaleX = 1.22;
+        mouthScaleX = 1.15 + Math.sin(sec * 10) * 0.12;
+        mouthScaleY = 1.25 - Math.sin(sec * 10) * 0.12;
+        flapRot = -18 + Math.sin(sec * 12) * 6;
+      } else if (activePreset === 'crafty') {
+        bRot += 4 + Math.sin(sec * 3.5) * 3;
+        fx = 8 + curX * 6;
+        fy = -2;
+        browX = 8;
+        browY = -7;
+        browRot = 9;
+        flapRot = -6 + Math.sin(sec * 7) * 6;
+      } else if (activePreset === 'sleepy') {
+        const breath = Math.sin(sec * 1.8);
+        by += breath * 3;
+        sx *= 1 - breath * 0.02;
+        sy *= 1 + breath * 0.02;
+        fy = 6 + breath * 3;
+        eyeLScaleY = 0.22;
+        eyeRScaleY = 0.22;
+        browY = 6 + breath * 2;
+        browRot = 8;
+        mouthScaleX = 0.65 + (breath + 1) * 0.28;
+        mouthScaleY = 0.55 + (breath + 1) * 0.45;
+        flapRot = 6 + breath * 4;
+      }
+
+      bodyEl.setAttribute('transform',
+        `translate(128,228) translate(${bx.toFixed(1)},${by.toFixed(1)}) rotate(${bRot.toFixed(2)}) scale(${sx.toFixed(3)},${sy.toFixed(3)}) translate(-128,-228)`
+      );
+      faceEl.setAttribute('transform', `translate(${fx.toFixed(1)},${fy.toFixed(1)})`);
+      browEl.setAttribute('transform',
+        `translate(89,59) translate(${browX.toFixed(1)},${browY.toFixed(1)}) rotate(${browRot.toFixed(1)}) scale(${browScaleX.toFixed(2)},1) translate(-89,-59)`
+      );
+      eyeLWrap.setAttribute('transform',
+        `translate(94,136) scale(${eyeLScaleX.toFixed(2)},${eyeLScaleY.toFixed(2)}) translate(-94,-136)`
+      );
+      eyeRWrap.setAttribute('transform',
+        `translate(162,136) scale(${eyeRScaleX.toFixed(2)},${eyeRScaleY.toFixed(2)}) translate(-162,-136)`
+      );
+      mouthWrap.setAttribute('transform',
+        `translate(128,175) translate(${mouthX.toFixed(1)},${mouthY.toFixed(1)}) scale(${mouthScaleX.toFixed(2)},${mouthScaleY.toFixed(2)}) translate(-128,-175)`
+      );
+      flapEl.setAttribute('transform',
+        `translate(156,84) rotate(${flapRot.toFixed(1)}) translate(-156,-84)`
+      );
+
+      const shadowScale = Math.max(0.65, 1 + by * 0.015);
+      shadowEl.style.transform = `translateX(${(bx * 0.6).toFixed(1)}px) scale(${shadowScale.toFixed(2)})`;
+
+      requestAnimationFrame(tick);
+    }
+
+    setState('showcase', document.querySelector('.controls button'));
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>

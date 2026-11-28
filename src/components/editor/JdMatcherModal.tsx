@@ -16,7 +16,11 @@ import {
   matchJobDescription,
   type HiddenMatchSource,
 } from "@/lib/jd-matcher";
+import type { FoldyMood } from "@/lib/foldy-coach";
+import { emitFoldyEvent } from "@/lib/foldy-events";
+import { useFoldyPrefs } from "@/lib/foldy-prefs";
 import { useResumeStore } from "@/store/use-resume-store";
+import { FoldyMascot } from "@/components/mascot/FoldyMascot";
 
 interface JdMatcherModalProps {
   open: boolean;
@@ -31,6 +35,8 @@ export function JdMatcherModal({ open, onClose, doc }: JdMatcherModalProps) {
   const [jdText, setJdText] = useState("");
   const [duplicatedNotice, setDuplicatedNotice] = useState(false);
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const highMatchNotifiedRef = useRef<string>("");
+  const foldyPrefs = useFoldyPrefs();
 
   const duplicateDocument = useResumeStore((s) => s.duplicateDocument);
   const reorderSections = useResumeStore((s) => s.reorderSections);
@@ -52,6 +58,32 @@ export function JdMatcherModal({ open, onClose, doc }: JdMatcherModalProps) {
     () => matchJobDescription(doc, jdText),
     [doc, jdText]
   );
+
+  const matchRatio =
+    result.keywords.length > 0
+      ? result.matchedActive.length / result.keywords.length
+      : 0;
+
+  useEffect(() => {
+    if (!open || result.keywords.length < 4 || matchRatio < 0.75) return;
+    const signature = `${doc.id}:${result.keywords.length}:${result.matchedActive.length}`;
+    if (highMatchNotifiedRef.current === signature) return;
+    highMatchNotifiedRef.current = signature;
+    emitFoldyEvent({
+      type: "jd-high-match",
+      docId: doc.id,
+      detail: `${result.matchedActive.length}/${result.keywords.length} kata kunci JD sudah aktif di CV-mu!`,
+    });
+  }, [open, doc.id, matchRatio, result.keywords.length, result.matchedActive.length]);
+
+  const jdFoldyMood: FoldyMood =
+    result.keywords.length === 0
+      ? "idle"
+      : matchRatio >= 0.75
+        ? "happy"
+        : result.matchedHiddenInMaster.length > 0
+          ? "eureka"
+          : "crafty";
 
   if (!open) return null;
 
@@ -103,22 +135,35 @@ export function JdMatcherModal({ open, onClose, doc }: JdMatcherModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl bg-white border border-[#E4E4E7] rounded-lg shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div className="w-full max-w-2xl bg-ui-card border border-ui-border rounded-lg shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-[#E4E4E7] flex items-center justify-between gap-3 shrink-0">
-          <div>
-            <h2 className="text-[14px] font-semibold text-[#09090B]">
-              JD Keyword Matcher & Master Profile
-            </h2>
-            <p className="text-[11px] text-[#52525B]">
-              Bandingkan kata kunci lowongan dengan CV aktif dan item tersembunyi di Master Profile Anda.
-            </p>
+        <div className="px-4 py-3 border-b border-ui-border flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {foldyPrefs.visibility !== "hidden" && (
+              <div className="w-9 h-9 rounded-lg bg-ui-panel border border-ui-divider flex items-center justify-center shrink-0">
+                <FoldyMascot
+                  mood={jdFoldyMood}
+                  size="xs"
+                  engine="ambient"
+                  interactiveClick
+                  ariaLabel="Reaksi Foldy pada JD Matcher"
+                />
+              </div>
+            )}
+            <div className="min-w-0">
+              <h2 className="text-[14px] font-semibold text-ui-text">
+                JD Keyword Matcher & Master Profile
+              </h2>
+              <p className="text-[11px] text-ui-text-secondary">
+                Bandingkan kata kunci lowongan dengan CV aktif dan item tersembunyi di Master Profile Anda.
+              </p>
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Tutup modal JD Matcher"
-            className="p-1 text-[#52525B] hover:text-[#09090B] rounded hover:bg-[#F4F4F5]"
+            className="p-1 text-ui-text-secondary hover:text-ui-text rounded hover:bg-ui-subtle"
           >
             <X className="w-4 h-4" />
           </button>
@@ -131,7 +176,7 @@ export function JdMatcherModal({ open, onClose, doc }: JdMatcherModalProps) {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <label
                 htmlFor="jd-matcher-input"
-                className="text-[11px] font-medium text-[#52525B]"
+                className="text-[11px] font-medium text-ui-text-secondary"
               >
                 Tempel Teks Job Description (ID / EN)
               </label>
@@ -139,7 +184,7 @@ export function JdMatcherModal({ open, onClose, doc }: JdMatcherModalProps) {
                 <button
                   type="button"
                   onClick={() => setJdText(SAMPLE_JD)}
-                  className="inline-flex items-center gap-1 h-7 px-2 rounded border border-[#E4E4E7] bg-[#FAFAFA] hover:bg-[#F4F4F5] text-[11px] font-medium text-[#52525B] hover:text-[#09090B]"
+                  className="inline-flex items-center gap-1 h-7 px-2 rounded border border-ui-border bg-ui-panel hover:bg-ui-subtle text-[11px] font-medium text-ui-text-secondary hover:text-ui-text"
                 >
                   <Sparkles className="w-3 h-3" />
                   Contoh JD
@@ -148,7 +193,7 @@ export function JdMatcherModal({ open, onClose, doc }: JdMatcherModalProps) {
                   <button
                     type="button"
                     onClick={() => setJdText("")}
-                    className="inline-flex items-center gap-1 h-7 px-2 rounded border border-[#E4E4E7] bg-white hover:bg-[#F4F4F5] text-[11px] font-medium text-[#52525B]"
+                    className="inline-flex items-center gap-1 h-7 px-2 rounded border border-ui-border bg-ui-card hover:bg-ui-subtle text-[11px] font-medium text-ui-text-secondary"
                   >
                     <Trash2 className="w-3 h-3" />
                     Kosongkan
@@ -163,20 +208,20 @@ export function JdMatcherModal({ open, onClose, doc }: JdMatcherModalProps) {
               value={jdText}
               onChange={(e) => setJdText(e.target.value)}
               placeholder="Tempel kualifikasi atau deskripsi lowongan kerja di sini untuk mengekstrak kata kunci teknis..."
-              className="w-full p-2.5 text-[12.5px] text-[#09090B] bg-[#FAFAFA] border border-[#E4E4E7] rounded-md focus:outline-none focus:ring-1 focus:ring-[#18181B] placeholder:text-[#A1A1AA]"
+              className="w-full p-2.5 text-[12.5px] text-ui-text bg-ui-panel border border-ui-border rounded-md focus:outline-none focus:ring-1 focus:ring-ui-focus placeholder:text-ui-text-placeholder"
             />
 
             <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
               <button
                 type="button"
                 onClick={handleDuplicate}
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-white border border-[#E4E4E7] hover:bg-[#F4F4F5] text-[12px] font-medium text-[#09090B] transition-colors"
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-ui-card border border-ui-border hover:bg-ui-subtle text-[12px] font-medium text-ui-text transition-colors"
               >
-                <Copy className="w-3.5 h-3.5 text-[#52525B]" />
+                <Copy className="w-3.5 h-3.5 text-ui-text-secondary" />
                 Duplikasi CV untuk Lowongan Ini
               </button>
               {duplicatedNotice && (
-                <span className="text-[11px] font-medium text-[#10B981]">
+                <span className="text-[11px] font-medium text-ui-success">
                   Salinan CV baru dibuat & sedang aktif.
                 </span>
               )}
@@ -185,28 +230,28 @@ export function JdMatcherModal({ open, onClose, doc }: JdMatcherModalProps) {
 
           {/* Results */}
           {result.keywords.length === 0 ? (
-            <div className="border border-dashed border-[#E4E4E7] rounded-lg p-6 text-center text-[12px] text-[#52525B]">
+            <div className="border border-dashed border-ui-border rounded-lg p-6 text-center text-[12px] text-ui-text-secondary">
               Tempel teks lowongan kerja di atas untuk mulai mencocokkan kata kunci dengan CV Anda.
             </div>
           ) : (
             <div className="space-y-4">
               {/* Summary Strip */}
-              <div className="px-3.5 py-2.5 rounded-lg bg-[#FAFAFA] border border-[#E4E4E7] flex flex-wrap items-center justify-between gap-2 text-[12px]">
+              <div className="px-3.5 py-2.5 rounded-lg bg-ui-panel border border-ui-border flex flex-wrap items-center justify-between gap-2 text-[12px]">
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className="inline-flex items-center gap-1 text-[#10B981] font-medium">
+                  <span className="inline-flex items-center gap-1 text-ui-success font-medium">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     {result.matchedActive.length} Aktif di CV
                   </span>
-                  <span className="inline-flex items-center gap-1 text-[#F59E0B] font-medium">
+                  <span className="inline-flex items-center gap-1 text-ui-warning font-medium">
                     <EyeOff className="w-3.5 h-3.5" />
                     {result.matchedHiddenInMaster.length} Tersembunyi di Master
                   </span>
-                  <span className="inline-flex items-center gap-1 text-[#52525B] font-medium">
+                  <span className="inline-flex items-center gap-1 text-ui-text-secondary font-medium">
                     <HelpCircle className="w-3.5 h-3.5" />
                     {result.missing.length} Belum Ada
                   </span>
                 </div>
-                <span className="text-[11px] font-mono tabular-nums text-[#52525B]">
+                <span className="text-[11px] font-mono tabular-nums text-ui-text-secondary">
                   {result.matchedActive.length} / {result.keywords.length} kata kunci aktif
                 </span>
               </div>
@@ -214,20 +259,20 @@ export function JdMatcherModal({ open, onClose, doc }: JdMatcherModalProps) {
               {/* 1. Hidden in Master Profile */}
               {result.matchedHiddenInMaster.length > 0 && (
                 <div className="space-y-2">
-                  <h3 className="text-[12px] font-semibold text-[#09090B]">
+                  <h3 className="text-[12px] font-semibold text-ui-text">
                     Ada di Master Profile (Tersembunyi)
                   </h3>
                   <div className="space-y-2">
                     {result.matchedHiddenInMaster.map((entry) => (
                       <div
                         key={entry.keyword}
-                        className="p-3 rounded-lg border border-[#FDE68A] bg-[#FFFBEB] flex flex-col gap-2"
+                        className="p-3 rounded-lg border border-ui-warning-border bg-ui-warning-bg flex flex-col gap-2"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[12.5px] font-semibold text-[#09090B]">
+                          <span className="text-[12.5px] font-semibold text-ui-text">
                             {entry.keyword}
                           </span>
-                          <span className="px-2 py-0.5 rounded bg-white border border-[#FDE68A] text-[#B45309] text-[10px] font-semibold uppercase">
+                          <span className="px-2 py-0.5 rounded bg-ui-card border border-ui-warning-border text-ui-warning-text text-[10px] font-semibold uppercase">
                             Tersembunyi
                           </span>
                         </div>
@@ -235,18 +280,18 @@ export function JdMatcherModal({ open, onClose, doc }: JdMatcherModalProps) {
                           {entry.sources.map((src, idx) => (
                             <div
                               key={`${src.sectionKey}-${src.itemId ?? ""}-${src.bulletId ?? ""}-${idx}`}
-                              className="flex items-center justify-between gap-2 text-[11.5px] bg-white border border-[#E4E4E7] rounded-md px-2.5 py-1.5"
+                              className="flex items-center justify-between gap-2 text-[11.5px] bg-ui-card border border-ui-border rounded-md px-2.5 py-1.5"
                             >
-                              <span className="text-[#52525B] truncate">
+                              <span className="text-ui-text-secondary truncate">
                                 Ditemukan di:{" "}
-                                <strong className="text-[#09090B] font-medium">
+                                <strong className="text-ui-text font-medium">
                                   {src.label}
                                 </strong>
                               </span>
                               <button
                                 type="button"
                                 onClick={() => handleRevealSource(src)}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#18181B] text-white text-[11px] font-medium hover:bg-[#27272A] shrink-0"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-ui-primary text-white text-[11px] font-medium hover:bg-ui-primary-hover shrink-0"
                               >
                                 <Eye className="w-3 h-3" />
                                 Tampilkan
@@ -263,14 +308,14 @@ export function JdMatcherModal({ open, onClose, doc }: JdMatcherModalProps) {
               {/* 2. Matched Active */}
               {result.matchedActive.length > 0 && (
                 <div className="space-y-2">
-                  <h3 className="text-[12px] font-semibold text-[#09090B]">
+                  <h3 className="text-[12px] font-semibold text-ui-text">
                     Sudah Tertulis di CV Aktif ({result.matchedActive.length})
                   </h3>
                   <div className="flex flex-wrap gap-1.5">
                     {result.matchedActive.map((kw) => (
                       <span
                         key={kw}
-                        className="px-2.5 py-1 rounded-md bg-[#ECFDF5] text-[#10B981] text-[11.5px] font-medium"
+                        className="px-2.5 py-1 rounded-md bg-ui-success-bg text-ui-success text-[11.5px] font-medium"
                       >
                         {kw}
                       </span>
@@ -283,10 +328,10 @@ export function JdMatcherModal({ open, onClose, doc }: JdMatcherModalProps) {
               {result.missing.length > 0 && (
                 <div className="space-y-2">
                   <div>
-                    <h3 className="text-[12px] font-semibold text-[#09090B]">
+                    <h3 className="text-[12px] font-semibold text-ui-text">
                       Belum Ditemukan di CV ({result.missing.length})
                     </h3>
-                    <p className="text-[11px] text-[#52525B]">
+                    <p className="text-[11px] text-ui-text-secondary">
                       Tambahkan ke CV hanya jika Anda benar-benar menguasai atau pernah menggunakannya.
                     </p>
                   </div>
@@ -294,7 +339,7 @@ export function JdMatcherModal({ open, onClose, doc }: JdMatcherModalProps) {
                     {result.missing.map((kw) => (
                       <span
                         key={kw}
-                        className="px-2.5 py-1 rounded-md bg-[#F4F4F5] border border-[#E4E4E7] text-[#52525B] text-[11.5px] font-medium"
+                        className="px-2.5 py-1 rounded-md bg-ui-subtle border border-ui-border text-ui-text-secondary text-[11.5px] font-medium"
                       >
                         {kw}
                       </span>
@@ -303,7 +348,7 @@ export function JdMatcherModal({ open, onClose, doc }: JdMatcherModalProps) {
                 </div>
               )}
 
-              <p className="text-[11px] text-[#A1A1AA] pt-2 border-t border-[#F4F4F5]">
+              <p className="text-[11px] text-ui-text-placeholder pt-2 border-t border-ui-divider">
                 Catatan: Hasil ini merupakan pencocokan kata kunci deterministik di browser Anda, bukan prediksi kelulusan mutlak dari sistem ATS tertentu.
               </p>
             </div>

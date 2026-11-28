@@ -29,17 +29,17 @@ export function ItemCardWrapper({
 }: ItemCardWrapperProps) {
   return (
     <div
-      className={`border border-[#E4E4E7] rounded-lg p-3 bg-white transition-opacity ${
+      className={`border border-ui-border rounded-lg p-3 bg-ui-card transition-opacity ${
         isVisible ? "" : "opacity-50"
       }`}
     >
-      <div className="flex items-start justify-between gap-2 pb-2 mb-2.5 border-b border-[#F4F4F5]">
+      <div className="flex items-start justify-between gap-2 pb-2 mb-2.5 border-b border-ui-divider">
         <div className="min-w-0">
-          <div className="text-[12.5px] font-semibold text-[#09090B] truncate">
+          <div className="text-[12.5px] font-semibold text-ui-text truncate">
             {title || "(Belum diisi)"}
           </div>
           {subtitle ? (
-            <div className="text-[11px] text-[#52525B] truncate">
+            <div className="text-[11px] text-ui-text-secondary truncate">
               {subtitle}
             </div>
           ) : null}
@@ -50,7 +50,7 @@ export function ItemCardWrapper({
             disabled={!canMoveUp}
             onClick={onMoveUp}
             title="Naikkan item"
-            className="p-1 text-[#52525B] hover:text-[#09090B] disabled:opacity-30 rounded hover:bg-[#F4F4F5]"
+            className="p-1 text-ui-text-secondary hover:text-ui-text disabled:opacity-30 rounded hover:bg-ui-subtle"
           >
             <ArrowUp className="w-3.5 h-3.5" />
           </button>
@@ -59,7 +59,7 @@ export function ItemCardWrapper({
             disabled={!canMoveDown}
             onClick={onMoveDown}
             title="Turunkan item"
-            className="p-1 text-[#52525B] hover:text-[#09090B] disabled:opacity-30 rounded hover:bg-[#F4F4F5]"
+            className="p-1 text-ui-text-secondary hover:text-ui-text disabled:opacity-30 rounded hover:bg-ui-subtle"
           >
             <ArrowDown className="w-3.5 h-3.5" />
           </button>
@@ -67,7 +67,7 @@ export function ItemCardWrapper({
             type="button"
             onClick={onToggleVisibility}
             title={isVisible ? "Sembunyikan item dari CV" : "Tampilkan item"}
-            className="p-1 text-[#52525B] hover:text-[#09090B] rounded hover:bg-[#F4F4F5]"
+            className="p-1 text-ui-text-secondary hover:text-ui-text rounded hover:bg-ui-subtle"
           >
             {isVisible ? (
               <Eye className="w-3.5 h-3.5" />
@@ -79,7 +79,7 @@ export function ItemCardWrapper({
             type="button"
             onClick={onRemove}
             title="Hapus item"
-            className="p-1 text-[#A1A1AA] hover:text-[#EF4444] rounded hover:bg-[#F4F4F5]"
+            className="p-1 text-ui-text-placeholder hover:text-ui-error rounded hover:bg-ui-subtle"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>

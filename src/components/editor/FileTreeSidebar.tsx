@@ -106,8 +106,8 @@ function SortableFileRow({
         isDragging ? "shadow-md z-20 opacity-90" : ""
       } ${
         isActive
-          ? "bg-[#18181B] text-white font-medium"
-          : "text-[#52525B] hover:bg-[#E4E4E7]/70 hover:text-[#09090B]"
+          ? "bg-ui-primary text-white font-medium"
+          : "text-ui-text-secondary hover:bg-ui-border/70 hover:text-ui-text"
       }`}
     >
       <button
@@ -118,8 +118,8 @@ function SortableFileRow({
         title="Seret untuk ubah urutan file"
         className={`p-0.5 rounded cursor-grab active:cursor-grabbing shrink-0 transition-opacity ${
           isActive
-            ? "text-[#A1A1AA] hover:text-white opacity-70 group-hover:opacity-100"
-            : "text-[#A1A1AA] hover:text-[#52525B] opacity-0 group-hover:opacity-100 focus:opacity-100"
+            ? "text-white/70 hover:text-white opacity-70 group-hover:opacity-100"
+            : "text-ui-text-placeholder hover:text-ui-text-secondary opacity-0 group-hover:opacity-100 focus:opacity-100"
         }`}
       >
         <GripVertical className="w-3 h-3" />
@@ -129,7 +129,7 @@ function SortableFileRow({
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
           <FileText
             className={`w-3.5 h-3.5 shrink-0 ${
-              isActive ? "text-[#D4D4D8]" : "text-[#52525B]"
+              isActive ? "text-white/80" : "text-ui-text-secondary"
             }`}
           />
           <input
@@ -154,7 +154,7 @@ function SortableFileRow({
               }
             }}
             aria-label="Ubah nama file CV"
-            className="w-full h-6 px-1.5 text-[12px] font-normal text-[#09090B] bg-white border border-[#18181B] rounded focus:outline-none"
+            className="w-full h-6 px-1.5 text-[12px] font-normal text-ui-text bg-ui-card border border-ui-primary rounded focus:outline-none"
           />
         </div>
       ) : (
@@ -176,13 +176,13 @@ function SortableFileRow({
         >
           <FileText
             className={`w-3.5 h-3.5 shrink-0 ${
-              isActive ? "text-[#E4E4E7]" : "text-[#52525B]"
+              isActive ? "text-white/80" : "text-ui-text-secondary"
             }`}
           />
           <span className="truncate flex-1">{title || "Tanpa Judul"}</span>
           {isOpenInTab && !isActive && (
             <span
-              className="w-1.5 h-1.5 rounded-full bg-[#71717A] shrink-0"
+              className="w-1.5 h-1.5 rounded-full bg-ui-text-muted shrink-0"
               title="Terbuka di tab lembar kerja"
             />
           )}
@@ -200,8 +200,8 @@ function SortableFileRow({
           title="Aksi file"
           className={`p-1 rounded shrink-0 transition-colors ${
             isActive
-              ? "text-[#D4D4D8] hover:text-white hover:bg-white/15"
-              : "text-[#A1A1AA] hover:text-[#09090B] hover:bg-white/80 opacity-0 group-hover:opacity-100 focus:opacity-100"
+              ? "text-white/80 hover:text-white hover:bg-ui-card/15"
+              : "text-ui-text-placeholder hover:text-ui-text hover:bg-ui-card/80 opacity-0 group-hover:opacity-100 focus:opacity-100"
           }`}
         >
           <MoreVertical className="w-3.5 h-3.5" />
@@ -401,7 +401,7 @@ export function FileTreeSidebar({
         aria-label="File Tree CV"
         aria-hidden={!isFileTreeOpen}
         inert={!isFileTreeOpen ? true : undefined}
-        className={`fixed inset-y-0 left-0 z-40 lg:static lg:z-auto h-full shrink-0 select-none overflow-hidden bg-[#F4F4F5] border-r border-[#E4E4E7] shadow-lg lg:shadow-none transition-[width,opacity,transform,border-color] duration-200 ease-out motion-reduce:duration-100 ${
+        className={`fixed inset-y-0 left-0 z-40 lg:static lg:z-auto h-full shrink-0 select-none overflow-hidden bg-ui-subtle border-r border-ui-border shadow-lg lg:shadow-none transition-[width,opacity,transform,border-color] duration-200 ease-out motion-reduce:duration-100 ${
           isFileTreeOpen
             ? "w-60 opacity-100 translate-x-0 pointer-events-auto"
             : "w-60 lg:w-0 opacity-0 -translate-x-3 lg:translate-x-0 lg:border-r-0 pointer-events-none"
@@ -409,13 +409,13 @@ export function FileTreeSidebar({
       >
         <div className="w-60 h-full flex flex-col">
         {/* Header */}
-        <div className="h-9 px-2.5 border-b border-[#E4E4E7] bg-[#FAFAFA] flex items-center justify-between gap-1 shrink-0">
+        <div className="h-9 px-2.5 border-b border-ui-border bg-ui-panel flex items-center justify-between gap-1 shrink-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <ChevronDown className="w-3.5 h-3.5 text-[#52525B] shrink-0" />
-            <span className="text-[12px] font-semibold text-[#09090B] tracking-tight truncate">
+            <ChevronDown className="w-3.5 h-3.5 text-ui-text-secondary shrink-0" />
+            <span className="text-[12px] font-semibold text-ui-text tracking-tight truncate">
               File tree
             </span>
-            <span className="text-[10.5px] font-medium text-[#71717A] tabular-nums">
+            <span className="text-[10.5px] font-medium text-ui-text-muted tabular-nums">
               ({totalDocs})
             </span>
           </div>
@@ -438,7 +438,7 @@ export function FileTreeSidebar({
                   : "Buat file CV baru"
               }
               aria-label="Buat file CV baru"
-              className="w-6 h-6 inline-flex items-center justify-center rounded text-[#52525B] hover:text-[#09090B] hover:bg-[#E4E4E7]/70 transition-colors"
+              className="w-6 h-6 inline-flex items-center justify-center rounded text-ui-text-secondary hover:text-ui-text hover:bg-ui-border/70 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
@@ -451,7 +451,7 @@ export function FileTreeSidebar({
                   : "Urutkan berdasarkan nama (A-Z)"
               }
               aria-label="Urutkan daftar file CV"
-              className="w-6 h-6 inline-flex items-center justify-center rounded text-[#52525B] hover:text-[#09090B] hover:bg-[#E4E4E7]/70 transition-colors"
+              className="w-6 h-6 inline-flex items-center justify-center rounded text-ui-text-secondary hover:text-ui-text hover:bg-ui-border/70 transition-colors"
             >
               <ArrowUpDown className="w-3.5 h-3.5" />
             </button>
@@ -461,7 +461,7 @@ export function FileTreeSidebar({
                 onClick={onOpenImportCvModal}
                 title="Import File CV (PDF / DOCX / Teks / .json)"
                 aria-label="Import File CV"
-                className="w-6 h-6 inline-flex items-center justify-center rounded text-[#52525B] hover:text-[#09090B] hover:bg-[#E4E4E7]/70 transition-colors"
+                className="w-6 h-6 inline-flex items-center justify-center rounded text-ui-text-secondary hover:text-ui-text hover:bg-ui-border/70 transition-colors"
               >
                 <FileUp className="w-3.5 h-3.5" />
               </button>
@@ -471,7 +471,7 @@ export function FileTreeSidebar({
               onClick={() => fileInputRef.current?.click()}
               title="Upload / Import file .json"
               aria-label="Upload file JSON CV"
-              className="w-6 h-6 inline-flex items-center justify-center rounded text-[#52525B] hover:text-[#09090B] hover:bg-[#E4E4E7]/70 transition-colors"
+              className="w-6 h-6 inline-flex items-center justify-center rounded text-ui-text-secondary hover:text-ui-text hover:bg-ui-border/70 transition-colors"
             >
               <Upload className="w-3.5 h-3.5" />
             </button>
@@ -480,7 +480,7 @@ export function FileTreeSidebar({
               onClick={() => toggleFileTree(false)}
               title="Tutup File Tree (Ctrl+B)"
               aria-label="Tutup File Tree Sidebar"
-              className="w-6 h-6 inline-flex items-center justify-center rounded text-[#52525B] hover:text-[#09090B] hover:bg-[#E4E4E7]/70 transition-colors"
+              className="w-6 h-6 inline-flex items-center justify-center rounded text-ui-text-secondary hover:text-ui-text hover:bg-ui-border/70 transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -530,13 +530,13 @@ export function FileTreeSidebar({
         </div>
 
         {/* Footer */}
-        <div className="px-2.5 py-2 border-t border-[#E4E4E7] bg-[#FAFAFA] shrink-0">
+        <div className="px-2.5 py-2 border-t border-ui-border bg-ui-panel shrink-0">
           {importError ? (
-            <p className="text-[11px] text-[#EF4444] leading-snug">
+            <p className="text-[11px] text-ui-error leading-snug">
               {importError}
             </p>
           ) : (
-            <div className="flex items-center justify-between text-[10.5px] text-[#71717A]">
+            <div className="flex items-center justify-between text-[10.5px] text-ui-text-muted">
               <span>Klik ganda untuk rename</span>
               <span className="font-mono">Ctrl+B</span>
             </div>
@@ -559,15 +559,15 @@ export function FileTreeSidebar({
           ref={menuRef}
           role="menu"
           style={{ top: contextMenu.top, left: contextMenu.left }}
-          className="fixed w-44 bg-white border border-[#E4E4E7] rounded-lg shadow-xl py-1 z-50 text-[12px]"
+          className="fixed w-44 bg-ui-card border border-ui-border rounded-lg shadow-xl py-1 z-50 text-[12px]"
         >
           <button
             type="button"
             role="menuitem"
             onClick={() => handleStartRename(menuTargetDoc.id)}
-            className="w-full text-left px-3 py-1.5 hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
+            className="w-full text-left px-3 py-1.5 hover:bg-ui-subtle flex items-center gap-2 text-ui-text"
           >
-            <Pencil className="w-3.5 h-3.5 text-[#52525B]" />
+            <Pencil className="w-3.5 h-3.5 text-ui-text-secondary" />
             Rename
           </button>
           <button
@@ -584,18 +584,18 @@ export function FileTreeSidebar({
               duplicateDocument(menuTargetDoc.id);
               setContextMenu(null);
             }}
-            className="w-full text-left px-3 py-1.5 hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
+            className="w-full text-left px-3 py-1.5 hover:bg-ui-subtle flex items-center gap-2 text-ui-text"
           >
-            <Copy className="w-3.5 h-3.5 text-[#52525B]" />
+            <Copy className="w-3.5 h-3.5 text-ui-text-secondary" />
             Duplikasi CV
           </button>
           <button
             type="button"
             role="menuitem"
             onClick={() => handleDownloadJson(menuTargetDoc.id)}
-            className="w-full text-left px-3 py-1.5 hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
+            className="w-full text-left px-3 py-1.5 hover:bg-ui-subtle flex items-center gap-2 text-ui-text"
           >
-            <Download className="w-3.5 h-3.5 text-[#52525B]" />
+            <Download className="w-3.5 h-3.5 text-ui-text-secondary" />
             Download (.json)
           </button>
           <button
@@ -606,13 +606,13 @@ export function FileTreeSidebar({
               deleteDocument(menuTargetDoc.id);
               setContextMenu(null);
             }}
-            className="w-full text-left px-3 py-1.5 hover:bg-[#FEF2F2] disabled:opacity-40 disabled:hover:bg-transparent flex items-center gap-2 text-[#EF4444]"
+            className="w-full text-left px-3 py-1.5 hover:bg-ui-error-bg disabled:opacity-40 disabled:hover:bg-transparent flex items-center gap-2 text-ui-error"
           >
             <Trash2 className="w-3.5 h-3.5" />
             Delete
           </button>
 
-          <div className="my-1 border-t border-[#F4F4F5]" />
+          <div className="my-1 border-t border-ui-divider" />
 
           <button
             type="button"
@@ -628,9 +628,9 @@ export function FileTreeSidebar({
               createDocument(`CV Baru ${totalDocs + 1}`);
               setContextMenu(null);
             }}
-            className="w-full text-left px-3 py-1.5 hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
+            className="w-full text-left px-3 py-1.5 hover:bg-ui-subtle flex items-center gap-2 text-ui-text"
           >
-            <FilePlus className="w-3.5 h-3.5 text-[#52525B]" />
+            <FilePlus className="w-3.5 h-3.5 text-ui-text-secondary" />
             New file
           </button>
           <button
@@ -640,9 +640,9 @@ export function FileTreeSidebar({
               setContextMenu(null);
               fileInputRef.current?.click();
             }}
-            className="w-full text-left px-3 py-1.5 hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
+            className="w-full text-left px-3 py-1.5 hover:bg-ui-subtle flex items-center gap-2 text-ui-text"
           >
-            <Upload className="w-3.5 h-3.5 text-[#52525B]" />
+            <Upload className="w-3.5 h-3.5 text-ui-text-secondary" />
             Upload (.json)
           </button>
         </div>

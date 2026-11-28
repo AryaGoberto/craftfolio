@@ -103,7 +103,7 @@ function SortableSectionCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-white border border-[#E4E4E7] rounded-lg transition-shadow ${
+      className={`bg-ui-card border border-ui-border rounded-lg transition-shadow ${
         isDragging ? "shadow-lg z-20" : ""
       } ${isVisible ? "" : "opacity-60"}`}
     >
@@ -114,7 +114,7 @@ function SortableSectionCard({
             {...attributes}
             {...listeners}
             title="Seret untuk ubah urutan"
-            className="text-[#A1A1AA] hover:text-[#52525B] cursor-grab active:cursor-grabbing p-0.5 shrink-0"
+            className="text-ui-text-placeholder hover:text-ui-text-secondary cursor-grab active:cursor-grabbing p-0.5 shrink-0"
           >
             <GripVertical className="w-4 h-4" />
           </button>
@@ -124,26 +124,26 @@ function SortableSectionCard({
             onClick={onToggleExpand}
             className="flex items-center gap-2.5 min-w-0 flex-1 text-left"
           >
-            <span className="w-7 h-7 rounded-md bg-[#F4F4F5] text-[#18181B] flex items-center justify-center shrink-0">
+            <span className="w-7 h-7 rounded-md bg-ui-primary-soft text-ui-link-soft-text flex items-center justify-center shrink-0">
               <SectionIcon sectionKey={sectionKey} />
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="text-[13px] font-semibold text-[#09090B] truncate">
+                <span className="text-[13px] font-semibold text-ui-text truncate">
                   {title}
                 </span>
                 {badge}
               </div>
               {!isExpanded && subtitle && (
-                <p className="text-[11px] text-[#52525B] truncate">
+                <p className="text-[11px] text-ui-text-secondary truncate">
                   {subtitle}
                 </p>
               )}
             </div>
             {isExpanded ? (
-              <ChevronUp className="w-4 h-4 text-[#52525B] shrink-0" />
+              <ChevronUp className="w-4 h-4 text-ui-text-secondary shrink-0" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-[#52525B] shrink-0" />
+              <ChevronDown className="w-4 h-4 text-ui-text-secondary shrink-0" />
             )}
           </button>
         </div>
@@ -154,7 +154,7 @@ function SortableSectionCard({
             disabled={!canMoveUp}
             onClick={onMoveUp}
             title="Pindah ke atas"
-            className="p-1 text-[#A1A1AA] hover:text-[#09090B] disabled:opacity-25 rounded hover:bg-[#F4F4F5]"
+            className="p-1 text-ui-text-placeholder hover:text-ui-text disabled:opacity-25 rounded hover:bg-ui-subtle"
           >
             <ArrowUp className="w-3.5 h-3.5" />
           </button>
@@ -163,7 +163,7 @@ function SortableSectionCard({
             disabled={!canMoveDown}
             onClick={onMoveDown}
             title="Pindah ke bawah"
-            className="p-1 text-[#A1A1AA] hover:text-[#09090B] disabled:opacity-25 rounded hover:bg-[#F4F4F5]"
+            className="p-1 text-ui-text-placeholder hover:text-ui-text disabled:opacity-25 rounded hover:bg-ui-subtle"
           >
             <ArrowDown className="w-3.5 h-3.5" />
           </button>
@@ -171,7 +171,7 @@ function SortableSectionCard({
             type="button"
             onClick={onToggleVisibility}
             title={isVisible ? "Sembunyikan bagian" : "Tampilkan bagian"}
-            className="p-1 text-[#52525B] hover:text-[#09090B] rounded hover:bg-[#F4F4F5]"
+            className="p-1 text-ui-text-secondary hover:text-ui-text rounded hover:bg-ui-subtle"
           >
             {isVisible ? (
               <Eye className="w-3.5 h-3.5" />
@@ -184,7 +184,7 @@ function SortableSectionCard({
               type="button"
               onClick={onRemoveCustom}
               title="Hapus section kustom"
-              className="p-1 text-[#A1A1AA] hover:text-[#EF4444] rounded hover:bg-[#F4F4F5]"
+              className="p-1 text-ui-text-placeholder hover:text-ui-error rounded hover:bg-ui-subtle"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -193,7 +193,7 @@ function SortableSectionCard({
       </div>
 
       {isExpanded && (
-        <div className="px-3.5 pb-3.5 pt-2 border-t border-[#F4F4F5]">
+        <div className="px-3.5 pb-3.5 pt-2 border-t border-ui-divider">
           {children}
         </div>
       )}
@@ -269,8 +269,8 @@ export function EditorPanel() {
           <span
             className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
               isIdeal
-                ? "bg-[#ECFDF5] text-[#10B981]"
-                : "bg-[#F4F4F5] text-[#52525B]"
+                ? "bg-ui-success-bg text-ui-success"
+                : "bg-ui-subtle text-ui-text-secondary"
             }`}
           >
             {words} kata {isIdeal ? "(Ideal)" : ""}
@@ -325,15 +325,15 @@ export function EditorPanel() {
     doc.config.sectionOrder.filter((k) => getSectionMeta(k).isVisible).length;
 
   return (
-    <aside className="w-full lg:w-[480px] xl:w-[520px] shrink-0 bg-[#FAFAFA] border-r border-[#E4E4E7] h-full overflow-y-auto p-4 sm:p-5 space-y-3">
+    <aside className="w-full lg:w-[480px] xl:w-[520px] shrink-0 bg-ui-panel border-r border-ui-border h-full overflow-y-auto p-4 sm:p-5 space-y-3">
       {/* Header Bar */}
       <div className="flex items-center justify-between pb-1">
         <div className="flex items-center gap-2">
-          <span className="w-1 h-3.5 rounded-full bg-[#18181B]" />
-          <h2 className="text-[11px] font-semibold tracking-wider uppercase text-[#09090B]">
+          <span className="w-1 h-3.5 rounded-full bg-ui-primary" />
+          <h2 className="text-[11px] font-semibold tracking-wider uppercase text-ui-text">
             Struktur Dokumen
           </h2>
-          <span className="px-2 py-0.5 rounded bg-[#F4F4F5] border border-[#E4E4E7] text-[10.5px] font-medium text-[#52525B]">
+          <span className="px-2 py-0.5 rounded bg-ui-subtle border border-ui-border text-[10.5px] font-medium text-ui-text-secondary">
             {activeCount} Bagian Aktif
           </span>
         </div>
@@ -344,7 +344,7 @@ export function EditorPanel() {
             onClick={() => undo()}
             title="Undo (Ctrl+Z)"
             aria-label="Undo"
-            className="w-7 h-7 inline-flex items-center justify-center rounded-md text-[#52525B] hover:text-[#09090B] hover:bg-[#E4E4E7]/60 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+            className="w-7 h-7 inline-flex items-center justify-center rounded-md text-ui-text-secondary hover:text-ui-text hover:bg-ui-border/60 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
           >
             <Undo2 className="w-3.5 h-3.5" />
           </button>
@@ -354,7 +354,7 @@ export function EditorPanel() {
             onClick={() => redo()}
             title="Redo (Ctrl+Y)"
             aria-label="Redo"
-            className="w-7 h-7 inline-flex items-center justify-center rounded-md text-[#52525B] hover:text-[#09090B] hover:bg-[#E4E4E7]/60 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+            className="w-7 h-7 inline-flex items-center justify-center rounded-md text-ui-text-secondary hover:text-ui-text hover:bg-ui-border/60 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
           >
             <Redo2 className="w-3.5 h-3.5" />
           </button>
@@ -362,29 +362,29 @@ export function EditorPanel() {
       </div>
 
       {/* Personal Info Card (Fixed at top) */}
-      <div className="bg-white border border-[#E4E4E7] rounded-lg">
+      <div className="bg-ui-card border border-ui-border rounded-lg">
         <button
           type="button"
           onClick={() => setBasicsExpanded((v) => !v)}
           className="w-full px-3.5 py-3 flex items-center justify-between gap-2 text-left"
         >
           <div className="flex items-center gap-2.5">
-            <span className="w-7 h-7 rounded-md bg-[#F4F4F5] text-[#18181B] flex items-center justify-center">
+            <span className="w-7 h-7 rounded-md bg-ui-primary-soft text-ui-link-soft-text flex items-center justify-center">
               <User className="w-3.5 h-3.5" />
             </span>
-            <span className="text-[13px] font-semibold text-[#09090B]">
+            <span className="text-[13px] font-semibold text-ui-text">
               Informasi Pribadi
             </span>
           </div>
           {basicsExpanded ? (
-            <ChevronUp className="w-4 h-4 text-[#52525B]" />
+            <ChevronUp className="w-4 h-4 text-ui-text-secondary" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-[#52525B]" />
+            <ChevronDown className="w-4 h-4 text-ui-text-secondary" />
           )}
         </button>
 
         {basicsExpanded && (
-          <div className="px-3.5 pb-3.5 pt-2 border-t border-[#F4F4F5]">
+          <div className="px-3.5 pb-3.5 pt-2 border-t border-ui-divider">
             <BasicsForm />
           </div>
         )}
@@ -437,7 +437,7 @@ export function EditorPanel() {
       <button
         type="button"
         onClick={() => addCustomSection("Sertifikasi")}
-        className="w-full h-10 rounded-lg border border-dashed border-[#D4D4D8] bg-white hover:border-[#18181B] text-[12px] font-medium text-[#52525B] hover:text-[#09090B] inline-flex items-center justify-center gap-1.5 transition-colors"
+        className="w-full h-10 rounded-lg border border-dashed border-ui-border-strong bg-ui-card hover:border-ui-primary text-[12px] font-medium text-ui-text-secondary hover:text-ui-text inline-flex items-center justify-center gap-1.5 transition-colors"
       >
         <Plus className="w-3.5 h-3.5" />
         Tambah Section (Sertifikasi / Kustom)

@@ -57,14 +57,14 @@ export function DocumentSwitcher() {
         value={activeDoc.title}
         onChange={(e) => renameDocument(activeDoc.id, e.target.value)}
         aria-label="Judul Dokumen CV"
-        className="h-7 px-2 text-[12.5px] font-medium text-[#09090B] bg-[#FAFAFA] border border-[#E4E4E7] rounded-md w-32 sm:w-44 truncate focus:outline-none focus:ring-1 focus:ring-[#18181B]"
+        className="h-7 px-2 text-[12.5px] font-medium text-ui-text bg-ui-panel border border-ui-border rounded-md w-32 sm:w-44 truncate focus:outline-none focus:ring-1 focus:ring-ui-focus"
       />
 
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         title="Kelola & ganti dokumen CV"
-        className="inline-flex items-center gap-1 h-7 px-2 rounded-md bg-white border border-[#E4E4E7] text-[11.5px] font-medium text-[#52525B] hover:text-[#09090B] hover:bg-[#F4F4F5] shrink-0 transition-colors"
+        className="inline-flex items-center gap-1 h-7 px-2 rounded-md bg-ui-card border border-ui-border text-[11.5px] font-medium text-ui-text-secondary hover:text-ui-text hover:bg-ui-subtle shrink-0 transition-colors"
       >
         <Files className="w-3.5 h-3.5" />
         <span className="hidden sm:inline">{docList.length}</span>
@@ -72,9 +72,9 @@ export function DocumentSwitcher() {
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1.5 w-72 bg-white border border-[#E4E4E7] rounded-lg shadow-xl p-2 z-50">
+        <div className="absolute left-0 top-full mt-1.5 w-72 bg-ui-card border border-ui-border rounded-lg shadow-xl p-2 z-50">
           <div className="px-2 py-1 flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#52525B]">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-ui-text-secondary">
               Dokumen CV ({docList.length})
             </span>
             <button
@@ -89,7 +89,7 @@ export function DocumentSwitcher() {
                 createDocument(`CV Baru ${docList.length + 1}`);
                 setOpen(false);
               }}
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-[#09090B] hover:underline"
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-ui-text hover:underline"
             >
               <Plus className="w-3 h-3" />
               Baru
@@ -105,8 +105,8 @@ export function DocumentSwitcher() {
                   key={item.id}
                   className={`group flex items-center justify-between gap-1.5 px-2 py-1.5 rounded-md text-[12px] transition-colors ${
                     isActive
-                      ? "bg-[#F4F4F5] text-[#09090B] font-medium"
-                      : "text-[#52525B] hover:bg-[#FAFAFA] hover:text-[#09090B]"
+                      ? "bg-ui-subtle text-ui-text font-medium"
+                      : "text-ui-text-secondary hover:bg-ui-panel hover:text-ui-text"
                   }`}
                 >
                   <button
@@ -119,12 +119,12 @@ export function DocumentSwitcher() {
                   >
                     <Check
                       className={`w-3.5 h-3.5 shrink-0 ${
-                        isActive ? "text-[#10B981]" : "opacity-0"
+                        isActive ? "text-ui-success" : "opacity-0"
                       }`}
                     />
                     <div className="min-w-0 flex-1">
                       <div className="truncate">{item.title || "Tanpa Judul"}</div>
-                      <div className="text-[10.5px] text-[#A1A1AA] truncate">
+                      <div className="text-[10.5px] text-ui-text-placeholder truncate">
                         {item.basics.fullName || "Belum ada nama"}
                       </div>
                     </div>
@@ -138,7 +138,7 @@ export function DocumentSwitcher() {
                         setOpen(false);
                       }}
                       title="Duplikasi CV ini"
-                      className="p-1 text-[#A1A1AA] hover:text-[#09090B] rounded hover:bg-white"
+                      className="p-1 text-ui-text-placeholder hover:text-ui-text rounded hover:bg-ui-card"
                     >
                       <Copy className="w-3 h-3" />
                     </button>
@@ -147,7 +147,7 @@ export function DocumentSwitcher() {
                         type="button"
                         onClick={() => deleteDocument(item.id)}
                         title="Hapus CV ini"
-                        className="p-1 text-[#A1A1AA] hover:text-[#EF4444] rounded hover:bg-white"
+                        className="p-1 text-ui-text-placeholder hover:text-ui-error rounded hover:bg-ui-card"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
@@ -158,7 +158,7 @@ export function DocumentSwitcher() {
             })}
           </div>
 
-          <div className="my-2 border-t border-[#F4F4F5]" />
+          <div className="my-2 border-t border-ui-divider" />
 
           {/* Quick Actions for Active Document */}
           <div className="space-y-1 text-[12px]">
@@ -168,9 +168,9 @@ export function DocumentSwitcher() {
                 duplicateDocument(activeDoc.id);
                 setOpen(false);
               }}
-              className="w-full text-left px-2 py-1.5 rounded-md hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
+              className="w-full text-left px-2 py-1.5 rounded-md hover:bg-ui-subtle flex items-center gap-2 text-ui-text"
             >
-              <Copy className="w-3.5 h-3.5 text-[#52525B]" />
+              <Copy className="w-3.5 h-3.5 text-ui-text-secondary" />
               Duplikasi CV Aktif
             </button>
             <button
@@ -179,9 +179,9 @@ export function DocumentSwitcher() {
                 loadSampleResume();
                 setOpen(false);
               }}
-              className="w-full text-left px-2 py-1.5 rounded-md hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
+              className="w-full text-left px-2 py-1.5 rounded-md hover:bg-ui-subtle flex items-center gap-2 text-ui-text"
             >
-              <Sparkles className="w-3.5 h-3.5 text-[#52525B]" />
+              <Sparkles className="w-3.5 h-3.5 text-ui-text-secondary" />
               Isi dengan Data Contoh
             </button>
             <button
@@ -190,7 +190,7 @@ export function DocumentSwitcher() {
                 clearActiveResume();
                 setOpen(false);
               }}
-              className="w-full text-left px-2 py-1.5 rounded-md hover:bg-[#FEF2F2] flex items-center gap-2 text-[#EF4444]"
+              className="w-full text-left px-2 py-1.5 rounded-md hover:bg-ui-error-bg flex items-center gap-2 text-ui-error"
             >
               <Eraser className="w-3.5 h-3.5" />
               Kosongkan Form Aktif

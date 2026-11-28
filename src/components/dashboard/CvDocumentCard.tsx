@@ -18,7 +18,6 @@ import {
   formatDashboardDate,
   getCvCompletionStatus,
 } from "@/lib/dashboard-utils";
-import { downloadResumePdf, downloadResumeTex } from "@/lib/pdf-download";
 import { ResumeHtmlRenderer } from "@/components/preview/ResumeHtmlRenderer";
 
 interface CvDocumentCardProps {
@@ -100,6 +99,7 @@ export const CvDocumentCard = memo(function CvDocumentCard({
     setMenuOpen(false);
     setIsDownloading(true);
     try {
+      const { downloadResumePdf } = await import("@/lib/pdf-download");
       await downloadResumePdf(doc);
     } catch (err) {
       console.error("Failed to download PDF from dashboard:", err);
@@ -115,14 +115,14 @@ export const CvDocumentCard = memo(function CvDocumentCard({
         contentVisibility: "auto",
         containIntrinsicSize: "auto 380px",
       }}
-      className="bg-white border border-[#E4E4E7] hover:border-[#A1A1AA] rounded-lg flex flex-col justify-between transition-colors"
+      className="bg-ui-card border border-ui-border hover:border-ui-border-strong rounded-lg flex flex-col justify-between transition-colors"
     >
       {/* Top Miniature A4 Paper Preview */}
       <button
         type="button"
         onClick={onOpenEditor}
         aria-label={`Buka ${doc.title || "CV"} di Editor`}
-        className="group relative w-full bg-[#FAFAFA] border-b border-[#E4E4E7] p-4 flex justify-center overflow-hidden rounded-t-lg cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#18181B]"
+        className="group relative w-full bg-ui-panel border-b border-ui-border p-4 flex justify-center overflow-hidden rounded-t-lg cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-focus"
       >
         <div className="w-[216px] h-[272px] bg-white border border-[#E4E4E7] shadow-xs rounded-xs overflow-hidden relative pointer-events-none select-none">
           <div
@@ -140,15 +140,15 @@ export const CvDocumentCard = memo(function CvDocumentCard({
         <span
           className={`absolute top-3 right-3 px-2 py-0.5 rounded text-[10.5px] font-medium border ${
             status === "ready"
-              ? "bg-[#ECFDF5] text-[#065F46] border-[#A7F3D0]"
-              : "bg-[#FFFBEB] text-[#92400E] border-[#FDE68A]"
+              ? "bg-ui-success-bg text-ui-success-text border-ui-success-border"
+              : "bg-ui-warning-bg text-ui-warning-text border-ui-warning-border"
           }`}
         >
           {status === "ready" ? "Siap" : "Draf"}
         </span>
 
         {/* Subtle Hover Hint */}
-        <span className="absolute bottom-3 right-3 px-2.5 py-1 rounded-md bg-[#18181B]/90 text-white text-[11px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+        <span className="absolute bottom-3 right-3 px-2.5 py-1 rounded-md bg-ui-primary/90 text-white text-[11px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">
           Buka Editor →
         </span>
       </button>
@@ -176,35 +176,35 @@ export const CvDocumentCard = memo(function CvDocumentCard({
                 if (!cancelledRef.current) commitRename();
               }}
               aria-label="Ubah judul CV"
-              className="w-full h-7 px-2 text-[13.5px] font-semibold text-[#09090B] bg-white border border-[#18181B] rounded focus:outline-none"
+              className="w-full h-7 px-2 text-[13.5px] font-semibold text-ui-text bg-ui-card border border-ui-primary rounded focus:outline-none"
             />
           ) : (
             <h2
               onDoubleClick={startRename}
               title="Klik ganda untuk ubah judul"
-              className="text-[14px] font-semibold text-[#09090B] truncate"
+              className="text-[14px] font-semibold text-ui-text truncate"
             >
               {doc.title || "Tanpa Judul"}
             </h2>
           )}
 
-          <p className="mt-0.5 text-[12px] text-[#52525B] truncate">
+          <p className="mt-0.5 text-[12px] text-ui-text-secondary truncate">
             {doc.targetRole || doc.basics.fullName || "Belum ada target posisi"}
           </p>
-          <p className="mt-1 text-[11px] font-mono text-[#71717A] truncate">
+          <p className="mt-1 text-[11px] font-mono text-ui-text-muted truncate">
             {TEMPLATE_DISPLAY_NAMES[doc.config.templateId]} ·{" "}
             {formatDashboardDate(doc.updatedAt)}
           </p>
         </div>
 
         {/* Action Strip: Direct PDF Download + Edit + ⋮ Context Menu */}
-        <div className="pt-3 border-t border-[#F4F4F5] flex items-center justify-between gap-2">
+        <div className="pt-3 border-t border-ui-divider flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={handleDownloadPdf}
               disabled={isDownloading}
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-[#18181B] hover:bg-[#27272A] disabled:opacity-60 text-white text-[12px] font-medium transition-colors"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-ui-primary hover:bg-ui-primary-hover disabled:opacity-60 text-white text-[12px] font-medium transition-colors"
             >
               {isDownloading ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -217,7 +217,7 @@ export const CvDocumentCard = memo(function CvDocumentCard({
             <button
               type="button"
               onClick={onOpenEditor}
-              className="inline-flex items-center h-8 px-2.5 rounded-md bg-white border border-[#E4E4E7] hover:bg-[#F4F4F5] text-[12px] font-medium text-[#09090B] transition-colors"
+              className="inline-flex items-center h-8 px-2.5 rounded-md bg-ui-card border border-ui-border hover:bg-ui-subtle text-[12px] font-medium text-ui-text transition-colors"
             >
               Edit
             </button>
@@ -234,8 +234,8 @@ export const CvDocumentCard = memo(function CvDocumentCard({
               aria-expanded={menuOpen}
               className={`w-8 h-8 inline-flex items-center justify-center rounded-md transition-colors ${
                 menuOpen
-                  ? "bg-[#F4F4F5] text-[#09090B]"
-                  : "text-[#52525B] hover:text-[#09090B] hover:bg-[#F4F4F5]"
+                  ? "bg-ui-subtle text-ui-text"
+                  : "text-ui-text-secondary hover:text-ui-text hover:bg-ui-subtle"
               }`}
             >
               <MoreVertical className="w-4 h-4" />
@@ -244,7 +244,7 @@ export const CvDocumentCard = memo(function CvDocumentCard({
             {menuOpen && (
               <div
                 role="menu"
-                className="absolute right-0 bottom-full mb-1.5 w-52 bg-white border border-[#E4E4E7] rounded-lg shadow-xl py-1 z-40 text-[12px]"
+                className="absolute right-0 bottom-full mb-1.5 w-52 bg-ui-card border border-ui-border rounded-lg shadow-xl py-1 z-40 text-[12px]"
               >
                 <button
                   type="button"
@@ -253,18 +253,18 @@ export const CvDocumentCard = memo(function CvDocumentCard({
                     setMenuOpen(false);
                     onOpenEditor();
                   }}
-                  className="w-full text-left px-3 py-1.5 hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
+                  className="w-full text-left px-3 py-1.5 hover:bg-ui-subtle flex items-center gap-2 text-ui-text"
                 >
-                  <ExternalLink className="w-3.5 h-3.5 text-[#52525B]" />
+                  <ExternalLink className="w-3.5 h-3.5 text-ui-text-secondary" />
                   Buka di Editor
                 </button>
                 <button
                   type="button"
                   role="menuitem"
                   onClick={startRename}
-                  className="w-full text-left px-3 py-1.5 hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
+                  className="w-full text-left px-3 py-1.5 hover:bg-ui-subtle flex items-center gap-2 text-ui-text"
                 >
-                  <Pencil className="w-3.5 h-3.5 text-[#52525B]" />
+                  <Pencil className="w-3.5 h-3.5 text-ui-text-secondary" />
                   Ubah Nama
                 </button>
                 <button
@@ -274,18 +274,18 @@ export const CvDocumentCard = memo(function CvDocumentCard({
                     setMenuOpen(false);
                     onDuplicate();
                   }}
-                  className="w-full text-left px-3 py-1.5 hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
+                  className="w-full text-left px-3 py-1.5 hover:bg-ui-subtle flex items-center gap-2 text-ui-text"
                 >
-                  <Copy className="w-3.5 h-3.5 text-[#52525B]" />
+                  <Copy className="w-3.5 h-3.5 text-ui-text-secondary" />
                   Duplikasi CV
                 </button>
                 <button
                   type="button"
                   role="menuitem"
                   onClick={handleDownloadPdf}
-                  className="w-full text-left px-3 py-1.5 hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
+                  className="w-full text-left px-3 py-1.5 hover:bg-ui-subtle flex items-center gap-2 text-ui-text"
                 >
-                  <Download className="w-3.5 h-3.5 text-[#52525B]" />
+                  <Download className="w-3.5 h-3.5 text-ui-text-secondary" />
                   Download PDF
                 </button>
                 <button
@@ -293,11 +293,13 @@ export const CvDocumentCard = memo(function CvDocumentCard({
                   role="menuitem"
                   onClick={() => {
                     setMenuOpen(false);
-                    downloadResumeTex(doc);
+                    void import("@/lib/pdf-download").then(({ downloadResumeTex }) =>
+                      downloadResumeTex(doc)
+                    );
                   }}
-                  className="w-full text-left px-3 py-1.5 hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
+                  className="w-full text-left px-3 py-1.5 hover:bg-ui-subtle flex items-center gap-2 text-ui-text"
                 >
-                  <FileCode2 className="w-3.5 h-3.5 text-[#52525B]" />
+                  <FileCode2 className="w-3.5 h-3.5 text-ui-text-secondary" />
                   Export LaTeX (.tex)
                 </button>
                 <button
@@ -307,13 +309,13 @@ export const CvDocumentCard = memo(function CvDocumentCard({
                     setMenuOpen(false);
                     onExportJson();
                   }}
-                  className="w-full text-left px-3 py-1.5 hover:bg-[#F4F4F5] flex items-center gap-2 text-[#09090B]"
+                  className="w-full text-left px-3 py-1.5 hover:bg-ui-subtle flex items-center gap-2 text-ui-text"
                 >
-                  <FileJson className="w-3.5 h-3.5 text-[#52525B]" />
+                  <FileJson className="w-3.5 h-3.5 text-ui-text-secondary" />
                   Export Backup .json
                 </button>
 
-                <div className="my-1 border-t border-[#F4F4F5]" />
+                <div className="my-1 border-t border-ui-divider" />
 
                 <button
                   type="button"
@@ -328,7 +330,7 @@ export const CvDocumentCard = memo(function CvDocumentCard({
                     setConfirmDelete(false);
                     onDelete();
                   }}
-                  className="w-full text-left px-3 py-1.5 hover:bg-[#FEF2F2] disabled:opacity-40 disabled:hover:bg-transparent flex items-center gap-2 text-[#EF4444]"
+                  className="w-full text-left px-3 py-1.5 hover:bg-ui-error-bg disabled:opacity-40 disabled:hover:bg-transparent flex items-center gap-2 text-ui-error"
                 >
                   <Trash2 className="w-3.5 h-3.5 shrink-0" />
                   <span>

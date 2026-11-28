@@ -32,9 +32,109 @@
   font-display: swap;
 }
 
-:root {
-  --background: #F8F9FA;
-  --foreground: #09090B;
+:root,
+[data-color-scheme="light"] {
+  color-scheme: light;
+
+  /* Warm Forest Sage — Light Mode */
+  --ui-canvas: #F5F4EF;
+  --ui-panel: #FAF9F5;
+  --ui-subtle: #EAE8E0;
+  --ui-card: #FFFFFF;
+  --ui-border: #E6E4DD;
+  --ui-border-strong: #D6D3C9;
+  --ui-divider: #F0EEE7;
+
+  --ui-text: #181917;
+  --ui-text-secondary: #57564F;
+  --ui-text-muted: #78756C;
+  --ui-text-placeholder: #9C9A90;
+
+  --ui-primary: #165B48;
+  --ui-primary-hover: #114839;
+  --ui-primary-soft: #E9F3EF;
+  --ui-primary-soft-text: #114839;
+  --ui-link: #165B48;
+  --ui-link-hover: #114839;
+  --ui-focus: #165B48;
+
+  /* Semantic Status — Light Mode */
+  --ui-success: #10B981;
+  --ui-success-bg: #ECFDF5;
+  --ui-success-border: #A7F3D0;
+  --ui-success-text: #065F46;
+
+  --ui-warning: #F59E0B;
+  --ui-warning-bg: #FFFBEB;
+  --ui-warning-border: #FDE68A;
+  --ui-warning-text: #92400E;
+
+  --ui-error: #EF4444;
+  --ui-error-bg: #FEF2F2;
+  --ui-error-border: #FECACA;
+  --ui-error-text: #B91C1C;
+
+  --ui-backdrop: rgba(24, 25, 23, 0.48);
+
+  /* Foldy Mascot Tokens — Warm Forest Sage Light Mode */
+  --foldy-body: #1F7A61;
+  --foldy-flap: #114839;
+  --foldy-shadow: rgba(17, 72, 57, 0.18);
+
+  --background: var(--ui-canvas);
+  --foreground: var(--ui-text);
+}
+
+[data-color-scheme="dark"] {
+  color-scheme: dark;
+
+  /* Warm Forest Sage — Dark Mode (CV paper surfaces stay pure #FFFFFF) */
+  --ui-canvas: #111311;
+  --ui-panel: #171A17;
+  --ui-subtle: #222622;
+  --ui-card: #1B1E1B;
+  --ui-border: #2C312C;
+  --ui-border-strong: #3C433C;
+  --ui-divider: #232723;
+
+  --ui-text: #ECEEE8;
+  --ui-text-secondary: #B2B5AC;
+  --ui-text-muted: #8E9288;
+  --ui-text-placeholder: #6E726A;
+
+  --ui-primary: #1D6A54;
+  --ui-primary-hover: #258066;
+  --ui-primary-soft: #17332A;
+  --ui-primary-soft-text: #7ED9B7;
+  --ui-link: #58C4A0;
+  --ui-link-hover: #7ED9B7;
+  --ui-focus: #58C4A0;
+
+  /* Semantic Status — Dark Mode */
+  --ui-success: #34D399;
+  --ui-success-bg: #0D2820;
+  --ui-success-border: #1B4D3E;
+  --ui-success-text: #6EE7B7;
+
+  --ui-warning: #FBBF24;
+  --ui-warning-bg: #2B210B;
+  --ui-warning-border: #574115;
+  --ui-warning-text: #FCD34D;
+
+  --ui-error: #F87171;
+  --ui-error-bg: #2C1414;
+  --ui-error-border: #5C2323;
+  --ui-error-text: #FCA5A5;
+
+  --ui-backdrop: rgba(0, 0, 0, 0.72);
+
+  /* Foldy Mascot Tokens — Warm Forest Sage Dark Mode */
+  --foldy-body: #258066;
+  --foldy-flap: #165B48;
+  --foldy-shadow: rgba(0, 0, 0, 0.45);
+
+  --background: var(--ui-canvas);
+  --foreground: var(--ui-text);
 }
 
 @theme inline {
@@ -44,16 +144,57 @@
   --font-serif-academic: "CMU Serif", Georgia, serif;
   --font-serif-editorial: var(--font-merriweather), Georgia, serif;
 
-  --color-surface-canvas: #F8F9FA;
-  --color-surface-panel: #FAFAFA;
-  --color-surface-card: #FFFFFF;
-  --color-border-subtle: #E4E4E7;
-  --color-border-divider: #F4F4F5;
+  --color-surface-canvas: var(--ui-canvas);
+  --color-surface-panel: var(--ui-panel);
+  --color-surface-card: var(--ui-card);
+  --color-border-subtle: var(--ui-border);
+  --color-border-divider: var(--ui-divider);
+
+  --color-ui-canvas: var(--ui-canvas);
+  --color-ui-panel: var(--ui-panel);
+  --color-ui-subtle: var(--ui-subtle);
+  --color-ui-card: var(--ui-card);
+  --color-ui-border: var(--ui-border);
+  --color-ui-border-strong: var(--ui-border-strong);
+  --color-ui-divider: var(--ui-divider);
+  --color-ui-text: var(--ui-text);
+  --color-ui-text-secondary: var(--ui-text-secondary);
+  --color-ui-text-muted: var(--ui-text-muted);
+  --color-ui-text-placeholder: var(--ui-text-placeholder);
+  --color-ui-primary: var(--ui-primary);
+  --color-ui-primary-hover: var(--ui-primary-hover);
+  --color-ui-primary-soft: var(--ui-primary-soft);
+  --color-ui-primary-soft-text: var(--ui-primary-soft-text);
+  --color-ui-link: var(--ui-link);
+  --color-ui-link-hover: var(--ui-link-hover);
+  --color-ui-focus: var(--ui-focus);
+
+  --color-ui-success: var(--ui-success);
+  --color-ui-success-bg: var(--ui-success-bg);
+  --color-ui-success-border: var(--ui-success-border);
+  --color-ui-success-text: var(--ui-success-text);
+  --color-ui-warning: var(--ui-warning);
+  --color-ui-warning-bg: var(--ui-warning-bg);
+  --color-ui-warning-border: var(--ui-warning-border);
+  --color-ui-warning-text: var(--ui-warning-text);
+  --color-ui-error: var(--ui-error);
+  --color-ui-error-bg: var(--ui-error-bg);
+  --color-ui-error-border: var(--ui-error-border);
+  --color-ui-error-text: var(--ui-error-text);
+
+  --color-foldy-body: var(--foldy-body);
+  --color-foldy-flap: var(--foldy-flap);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body {
+    transition: background-color 150ms ease, color 150ms ease;
+  }
 }
 
 /* Native top-layer modal dialog backdrop, scroll containment & fade-in / fade-out */
@@ -92,7 +233,7 @@ dialog.craftfolio-dialog[open]:where(:not([data-closing])) {
   }
 
   &::backdrop {
-    background-color: rgba(9, 9, 11, 0.48);
+    background-color: var(--ui-backdrop);
     backdrop-filter: blur(2px);
 
     @starting-style {

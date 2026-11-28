@@ -1,5 +1,5 @@
 import { createEmptyResume } from "@/lib/default-resume";
-import { isFirebaseConfigured } from "@/lib/firebase/config";
+import { isFirebaseConfigured } from "@/lib/firebase/env";
 import { syncFileOrder, syncOpenTabs } from "../store-helpers";
 import type {
   ResumeStoreState,

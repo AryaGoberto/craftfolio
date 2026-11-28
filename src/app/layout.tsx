@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Roboto, Merriweather } from "next/font/google";
+import { COLOR_SCHEME_INIT_SCRIPT } from "@/lib/color-scheme";
 import "./globals.css";
 
 const inter = Inter({
@@ -37,9 +38,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="id"
+      suppressHydrationWarning
       className={`${inter.variable} ${roboto.variable} ${merriweather.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#F8F9FA] text-[#09090B] font-sans">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{ __html: COLOR_SCHEME_INIT_SCRIPT }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col bg-ui-canvas text-ui-text font-sans">
         {children}
       </body>
     </html>

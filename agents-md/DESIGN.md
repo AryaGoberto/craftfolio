@@ -170,49 +170,63 @@ export interface AtsLintReport {
 ### 4.1 Component Tree (`/editor`)
 ```text
 EditorPage
+├── CloudSyncManager (next/dynamic ssr: false, sync Firestore saat login)
 ├── EditorTopBar
-│   ├── FileTreeToggleButton (buka/tutup sidebar File Tree) + BrandLogo
-│   ├── DocumentSwitcher + SaveStatusBadge (Saved / Saving / Unsaved)
-│   ├── UndoRedoButtons (terhubung ke useResumeStore.temporal)
+│   ├── BrandLogo (currentColor) + DocumentSwitcher + SaveStatusBadge (Saved / Saving / Error)
 │   ├── TemplateAndLayoutPopover (Template, PaperSize, Density, Font, TargetPages, Language)
 │   ├── JdMatcherButton + AtsCheckerPill
-│   ├── JsonBackupMenu (Export .json, Import .json)
-│   └── PdfExportButton (dynamic ssr: false)
+│   ├── ColorSchemeToggle (Light / Dark Mode — Warm Forest Sage)
+│   ├── OverflowMenu (Undo/Redo, Galeri, Export .tex/.json, Import File/.json, Sample, Reset)
+│   ├── AuthUserMenu / Masuk & Daftar
+│   └── PdfExportButton (next/dynamic ssr: false)
 └── OuterWorkspace (flex-row)
-    ├── FileTreeSidebar (collapsible di luar area buat CV, ~240px)
-    │   ├── FileTreeHeader ("File tree", + New File, Sort/Reorder, × Close)
+    ├── FileTreeSidebar (next/dynamic ssr: false, collapsible ~240px)
+    │   ├── FileTreeHeader ("File tree", + New File, Sort/Reorder, Upload, × Close)
     │   ├── FileTreeList (daftar seluruh dokumen CV, inline rename, drag-and-drop)
     │   │   └── FileTreeItemContextMenu (⋮ -> Rename, Duplikasi, Download .json, Delete, New file, Upload .json)
     │   └── FileTreeFooter (Quick Upload / Backup info)
     └── MainEditorColumn (flex-1 flex-col)
         ├── WorkspaceTabBar (tab lembar kerja CV bergaya browser, sortable via @dnd-kit)
-        │   ├── SortableDocumentTab (ikon file, judul CV, double-click rename, tombol × close tab)
+        │   ├── FileTreeOpenButton + SortableDocumentTab (ikon file, judul CV, double-click rename, tombol × close tab)
         │   └── NewTabButton (+)
         ├── MobileViewSwitcher (Edit | Preview — tampil < lg)
-        └── SplitWorkspace
-            ├── EditorPanel (kiri)
-            │   ├── SectionNavigator (drag-and-drop & move up/down urutan section)
-            │   ├── BasicsForm (Personal Info, Links, Summary + word counter)
-            │   ├── RepeatableSectionForm (Experience, Education, Projects, Certifications, Awards, Volunteering, Languages, Custom)
-            │   │   └── ItemCard (visibility toggle, reorder, edit fields, BulletListEditor)
-            │   └── SkillsSectionForm
-            └── PreviewPanel (kanan)
-                ├── OverflowWarningBanner (kondisional)
-                ├── PaperCanvas (skala zoom, garis batas halaman)
-                │   └── ResumeHtmlRenderer (ClassicTemplate | ModernTemplate | CompactTemplate | ExecutiveTemplate)
-                └── PreviewFooterBar (Page 1/1, Zoom - / + / Fit)
+        ├── SplitWorkspace
+        │   ├── EditorPanel (kiri)
+        │   │   ├── BasicsForm (Personal Info, Links)
+        │   │   ├── SectionNavigator (drag-and-drop & move up/down urutan section)
+        │   │   │   └── RepeatableSectionForm (Summary + word counter, Experience, Education, Projects, Skills, Certifications, Awards, Volunteering, Languages, Custom)
+        │   │   │       └── ItemCardWrapper (visibility toggle, reorder, edit fields, BulletListEditor)
+        │   └── PreviewPanel (kanan)
+        │       ├── Visual / ATS X-Ray Mode Switcher + Panduan Ghost Toggle + Zoom/Paper Controls
+        │       ├── OverflowWarningBanner (kondisional)
+        │       ├── PaperCanvas (skala zoom, garis batas halaman, kertas tetap #FFFFFF)
+        │       │   └── ResumeHtmlRenderer (atau AtsXRayView via dynamic import)
+        │       └── PreviewFooterBar (Page counter)
+        └── Conditional Modals (next/dynamic ssr: false: AtsCheckerModal, JdMatcherModal, AuthModal, CvImportModal)
 ```
 
 ### 4.2 Spesifikasi UI States
 - **Initial Loading / Hydration State:**
   - Saat `hasHydrated === false`, tampilkan skeleton minimalis di panel kiri & kanan (menghindari *flash of default content* dan React hydration error).
 - **Empty State:**
-  - *Section kosong:* Kartu dashed border halus (`#E4E4E7`) dengan teks singkat + tombol `+ Tambah <Section>`.
-  - *CV dikosongkan total:* Tampilkan tombol cepat **"Isi dengan Data Contoh"** di panel editor dan pratinjau kertas bersih di panel preview.
+  - *Section kosong:* Kartu dashed border halus (`border-ui-border`) dengan teks singkat + tombol `+ Tambah <Section>`.
+  - *CV dikosongkan total:* Tampilkan tombol cepat **"Isi dengan Data Contoh"** atau **Import File CV** di panel editor dan pratinjau kertas bersih di panel preview.
 - **Error State:**
-  - *Validasi field:* Border `#EF4444` (`Red-500`) + pesan error ringkas `11px` tepat di bawah input.
-  - *Import JSON gagal:* Tampilkan pesan error spesifik (misal *"Format JSON tidak valid atau skema tidak cocok"*) tanpa menimpa dokumen aktif yang sedang dibuka.
-  - *Ekspor PDF gagal:* Nonaktifkan tombol selama proses (`Menyiapkan PDF...`), tangkap error via `try/catch` dan tampilkan notifikasi toast/alert agar UI tidak crash.
+  - *Validasi field:* Border error (`ui-error`) + pesan error ringkas `11px` tepat di bawah input.
+  - *Import JSON / CV gagal:* Tampilkan banner `ui-error-bg` / `ui-error-border` / `ui-error-text` dengan pesan error spesifik tanpa menimpa dokumen aktif yang sedang dibuka.
+  - *Ekspor PDF gagal:* Nonaktifkan tombol selama proses (`Menyiapkan...`), tangkap error via `try/catch` dan tampilkan notifikasi agar UI tidak crash.
+
+### 4.3 Sistem Tema & Dark Mode (**Warm Forest Sage**)
+- **Single Source of Tokens:** Seluruh warna aplikasi didefinisikan lewat CSS custom properties di `src/app/globals.css` (`[data-color-scheme="light"]` dan `[data-color-scheme="dark"]`) dan dipetakan ke Tailwind v4 via `@theme inline` (`ui-canvas`, `ui-panel`, `ui-subtle`, `ui-card`, `ui-border`, `ui-text`, `ui-primary`, `ui-primary-soft`, `ui-link`, `ui-focus`, serta token status `ui-success*`, `ui-warning*`, `ui-error*`).
+- **State & Persistensi Tanpa FOUC:**
+  - `src/lib/color-scheme.ts` menyediakan `COLOR_SCHEME_STORAGE_KEY` (`"craftfolio-color-scheme"`), resolver fallback ke `prefers-color-scheme` sistem, dan `COLOR_SCHEME_INIT_SCRIPT` yang dijalankan sinkron di `<head>` (`src/app/layout.tsx`) sebelum first paint.
+  - `src/components/ColorSchemeToggle.tsx` memakai `useSyncExternalStore` agar sinkron antar-tab (`storage` event) tanpa *hydration mismatch*, dipasang di header `/`, `/templates`, `/dashboard`, dan `EditorTopBar` di `/editor`.
+- **Isolasi Kertas Dokumen (`Paper Isolation Rule`):** `ResumeHtmlRenderer`, `PdfDocument`, dan container kertas putih di `PreviewPanel`, `/templates`, `CvDocumentCard`, `HeroWorkspacePreview`, serta `TemplateStripSection` sengaja tidak menggunakan token `ui-*` agar dokumen CV selalu tampil di atas kertas `#FFFFFF` dengan tinta gelap di Light Mode maupun Dark Mode.
+
+### 4.4 Sistem Maskot Adaptif Foldy (*Dual-Engine Auto-Sleep*)
+- **Core Renderer (`src/components/mascot/FoldyMascot.tsx`):** Rig SVG dengan unique mask ID (`React.useId()`), 8 ekspresi (`idle`, `cursor`, `happy`, `ai`, `wink`, `eureka`, `crafty`, `sleepy`), serta 2 engine: `ambient` (0% rAF saat diam, hanya *spring burst* singkat 1,35 detik saat transisi atau aktif saat mood `ai`) dan `interactive` (2.5D cursor tracking + spring 60fps yang otomatis berhenti via `IntersectionObserver`, `visibilitychange`, dan `prefers-reduced-motion`).
+- **Coach & Maturity Logic (`src/lib/foldy-coach.ts`):** Fungsi deterministik murni untuk skor kesiapan ATS (`computeAtsReadinessScore`), pemetaan mood (`deriveFoldyMood`), pemilihan 1 aksi prioritas (`getNextBestCoachTip`), tahap adaptif (`resolveMaturityStage`: `onboarding` → `guided` → `quiet-pro`), serta guard anti-spam *hysteresis + typing lock 1,2s + cooldown 45s* (`shouldTriggerMilestone`).
+- **Preferensi & Event Bus (`src/lib/foldy-prefs.ts`, `src/lib/foldy-events.ts`):** Preferensi `visibility` (`full` | `quiet` | `hidden`), `hasExportedPdf`, dan `achievedMilestones` disimpan terpisah di `localStorage` (`craftfolio-foldy-prefs`) via `useSyncExternalStore`, sehingga tidak mencemari Undo/Redo `zundo` maupun schema dokumen CV. Event AI, Import CV, JD High Match, dan Export PDF dikirim melalui CustomEvent ringan tanpa menyebabkan re-render ekstra pada store editor.
 
 ---
 
